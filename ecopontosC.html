@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pontos de Coleta - Moomate</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+  <!-- CSS -->
+  <link rel="stylesheet" href="src/styles/ecopontoC.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate" />
+    </div>
+
+    <nav class="nav-links" id="navMenu">
+  <a href="homeC.html">Home</a>
+  <a href="pedidosC.html">Pedidos</a>
+  <a href="carteiraC.html">Carteira</a>
+  <a href="suporteC.html">Suporte</a>
+  <a href="chatC.html">CHAT</a>
+  <a href="ecopontosC.html">Pontos de coleta</a>
+</nav>
+
+    <div class="header-icons">
+  <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+  <a href="dadospessoaisC.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+  <a href="configuraçõesC.html" title="Configurações"><i class="fa-solid fa-gear"></i></a> <!-- NOVO ÍCONE -->
+  <button class="menu-toggle" id="menuToggle">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+  </div>
+  </header>
+ 
+    <section class="banner">
+  <img src="src/images/bannerecopontos.png" alt="Banner mudança" />
+  <div class="banner-text">
+    <h2>Influenciando a sua reciclagem</h2>
+  </div>
+</section>
+
+
+  <!-- ECOPONTO -->
+  <section id="ecoponto">
+    <div class="content">
+      <div class="box">
+        <div id="map"></div>
+        <div id="info">
+          <strong>Selecione um ecoponto no mapa para ver os detalhes aqui.</strong>
+        </div>
+        <div class="button-wrapper">
+         <a href="descarteC.html"> <button>Preciso de um motorista para o descarte</button> </a>
+        </div>
+      </div>
+    </div>
+  </section>
+    
+    <section id="pontosdecoleta">
+  <div class="pontosdecoleta-container">
+    <div class="pontosdecoleta-imagem">
+      <img src="src/images/pontosdecoleta.png" alt="Cliente usando a Moomate">
+    </div>
+    <div class="pontosdecoleta-conteudo">
+      <h2 class="section-title">Motivos para contratar a Moomate para sua reciclagem</h2>
+      <ul class="beneficios-lista">
+        <li>
+          <i class="fa-solid fa-recycle"></i>
+          <div>
+            <strong>Ajude o planeta</strong>
+            <p>Reciclar é uma atitude consciente que contribui para um futuro mais sustentável.</p>
+          </div>
+        </li>
+        <li>
+          <i class="fa-solid fa-truck"></i>
+          <div>
+            <strong>Motoristas disponíveis</strong>
+            <p>Escolha um motorista da Moomate para levar seus materiais aos ecopontos da sua cidade.</p>
+          </div>
+        </li>
+        <li>
+            <i class="fa-solid fa-house"></i>
+            <div>
+            <strong>Contribua sem sair de casa </strong>
+            <p>Ajude o planeta com poucos cliques, direto do seu celular.</p>
+          </div>
+        </li>
+        <li>
+          <div class="nav-buttons">
+            <button class="btn-default">SOLICITAR MOTORISTA</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="requisitos-container">
+    <h2 class="section-title">O que você precisa para começar</h2>
+    <div class="requisitos-itens">
+      <div class="requisito">
+        <i class="fa-solid fa-dumpster"></i>
+        <strong>Separe seus resíduos corretamente</strong>
+        <p>Organize o que deseja descartar: plástico, papel, vidro e metal.</p>
+      </div>
+      <div class="requisito">
+        <i class="fa-solid fa-map-location-dot"></i>
+        <strong>Encontre um ecoponto</strong>
+        <p>Use nosso mapa interativo para localizar pontos de descarte mais próximos de você.</p>
+      </div>
+      <div class="requisito">
+        <i class="fa-solid fa-truck-moving"></i>
+        <strong>Agende o transporte</strong>
+        <p>Solicite um motorista para realizar o descarte com praticidade e segurança.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+    <footer>
+    <div id="footer_content">
+      <div class="footer-left">
+        <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
+      </div>
+      <div class="footer-social">
+        <span class="social-text">Acompanhe nós</span>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
+            <i class="fa-brands fa-instagram"></i>
+          </a>
+          <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank">
+            <i class="fa-brands fa-linkedin-in"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div id="footer_items">
+      <span id="copyright">
+        © 2024 Moomate. Todos os direitos reservados.
+      </span>
+    </div>
+  </footer>
+
+  <!-- JS do Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- JS menu -->
+  <script src="src/javascript/ecopontoC.js"></script>
+</body>
+</html>

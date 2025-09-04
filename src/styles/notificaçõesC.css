@@ -1,0 +1,257 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Quicksand', sans-serif;
+}
+
+body {
+  background-color: #f2eae5;
+  color: #1c1c1c;
+}
+
+/* HEADER */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 2rem;
+  background-color: #e3dfdc;
+  border-bottom: 3px solid #ff6c0c;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo-area img {
+  height: 45px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  font-size: 1rem;
+  position: relative;
+}
+
+.nav-links a:hover {
+  color: #ff6c0c;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.header-icons a {
+  color: #333;
+  font-size: 1.4rem;
+  transition: color 0.3s ease;
+}
+
+.header-icons a:hover {
+  color: #ff6c0c;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #333;
+  cursor: pointer;
+}
+
+/* CONTEÚDO */
+.notificacoes-container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+.title-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1c1c1c;
+}
+
+#clearBtn {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: #ff6c0c;
+  transition: color 0.3s ease;
+}
+
+#clearBtn:hover {
+  color: #d95500;
+}
+
+.notificacoes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* NOTIFICAÇÃO */
+.notificacao {
+  background: #fff;
+  border-radius: 16px;
+  padding: 0.8rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease;
+}
+
+.notificacao:hover {
+  transform: scale(1.01);
+  background-color: #fdfaf7;
+}
+
+.icon-area {
+  font-size: 1.3rem;
+  margin-right: 0.9rem;
+  color: #1c1c1c;
+  flex-shrink: 0;
+}
+
+.text-area {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.mensagem {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1c1c1c;
+  margin-bottom: 0.2rem;
+}
+
+.hora {
+  font-size: 0.75rem;
+  color: #888;
+  align-self: flex-end;
+}
+
+/* MENSAGEM VAZIA */
+.vazia {
+  text-align: center;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #999;
+}
+
+.mensagem-vazio {
+  font-size: 1rem;
+  color: #666;
+}
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-box {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.modal-box p {
+  font-size: 1rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.modal-buttons button {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#confirmDelete {
+  background-color: #ff6c0c;
+  color: #fff;
+}
+
+#confirmDelete:hover {
+  background-color: #d95500;
+}
+
+#cancelDelete {
+  background-color: #ccc;
+  color: #333;
+}
+
+#cancelDelete:hover {
+  background-color: #bbb;
+}
+
+/* RESPONSIVO */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 70px;
+    right: 0;
+    background-color: #fff;
+    width: 100%;
+    padding: 1rem 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 200;
+  }
+
+  .nav-links.show {
+    display: flex;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+}

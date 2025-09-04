@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sacar Saldo - Moomate</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="src/styles/saldoM.css" />
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate" />
+    </div>
+
+    <nav class="nav-links" id="navMenu">
+      <a href="homeM.html">Home</a>
+      <a href="pedidosM.html">Corridas</a>
+      <a href="carteiraM.html">Carteira</a>
+      <a href="suporteM.html">Suporte</a>
+      <a href="chatM.html">CHAT</a>
+    </nav>
+
+    <div class="header-icons">
+      <a href="notificaçõesM.html"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisM.html"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesM.html"><i class="fa-solid fa-gear"></i></a>
+      <button class="menu-toggle" id="menuToggle">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- BOTÃO VOLTAR -->
+  <div class="voltar-box">
+    <a href="carteiraM.html" class="btn-voltar">
+      <i class="fa-solid fa-chevron-left"></i> Voltar
+    </a>
+  </div>
+
+  <!-- CONTEÚDO -->
+  <main class="add-saldo-container">
+    <h1>Sacar Saldo</h1>
+
+    <form id="form-saque">
+      <label for="valor">Valor:</label>
+      <div class="input-wrapper">
+        <span>R$</span>
+        <input type="number" id="valor" required />
+      </div>
+
+      <label for="metodo">Método de saque:</label>
+      <select id="metodo" required>
+        <option value="">Selecione</option>
+        <option value="pix">PIX</option>
+        <option value="conta">Conta Bancária</option>
+      </select>
+
+      <button type="submit" class="btn-confirmar">Confirmar</button>
+    </form>
+
+    <div id="resultado" class="resultado" style="display: none;"></div>
+  </main>
+
+  <div id="toast" class="toast">Solicitação enviada!</div>
+
+  <script src="src/javascript/saldoM.js"></script>
+</body>
+</html>

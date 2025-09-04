@@ -1,0 +1,153 @@
+footer {
+  background-color: #1e1e1e;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 100%;
+}
+
+#footer_content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem 4%;
+  background-color: #de5114;
+  position: relative;
+  gap: 1rem;
+}
+
+.footer-left {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+}
+
+#moomate_logo {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+}
+
+.footer-left p {
+  font-size: 1rem;
+  margin-top: 0.5rem;
+}
+
+.footer-list {
+  list-style: none;
+  padding: 0;
+  flex: 1 1 120px;
+}
+
+.footer-title {
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  color: #1e1e1e;
+  font-weight: bold;
+}
+
+.footer-link {
+  color: white;
+  text-decoration: none;
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 1rem;
+  transition: color 0.3s;
+}
+
+.footer-link:hover {
+  color: #1e1e1e;
+}
+
+.footer-social {
+  position: absolute;
+  right: 4%;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.social-text {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #1e1e1e;
+  margin: 0;
+  padding: 0;
+}
+
+.social-icons {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.social-icon {
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e1e1e;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 1rem;
+  transition: transform 0.3s;
+}
+
+.social-icon:hover {
+  transform: scale(1.1);
+}
+#footer_items {
+  background-color: #141414;
+  text-align: center;
+  padding: 0.6rem 1rem;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+/* Responsividade do Footer */
+@media screen and (max-width: 768px) {
+  #footer_content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+
+  .footer-left,
+  .footer-list {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex: 1 1 100%;
+  }
+
+  .footer-left p {
+    font-size: 0.95rem;
+  }
+
+  .footer-title {
+    font-size: 1.1rem;
+  }
+
+  .footer-link {
+    font-size: 0.95rem;
+  }
+
+  .footer-social {
+    position: static;
+    transform: none;
+    margin-top: 1rem;
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .social-text {
+    display: none; /* Esconde o texto "Siga-nos" para economizar espaço */
+  }
+}

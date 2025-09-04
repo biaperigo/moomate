@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap' );
+
+* {
+  font-family: 'Quicksand', sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #ffe8dc;
+  background-image: url('../images/bg-caminhoes.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 0;
+}
+
+.form-wrapper {
+  width: 100%;
+  max-width: 600px;
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cadastro-container {
+  background: rgba(255, 255, 255, 0.96);
+  padding: 1.5rem 2rem;
+  border-radius: 16px;
+  width: 100%;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.08);
+}
+
+.logo-box img {
+  width: 80px;
+  margin: 0 auto 1rem;
+  display: block;
+}
+
+h2 {
+  font-size: 1.4rem;
+  color: #1e1e1e;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+h3 {
+  font-size: 1.1rem;
+  margin: 1.2rem 0 0.8rem;
+  color: #de5114;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 30px;
+  border: 1px solid #ccc;
+  background-color: #f5f5f5;
+  margin-bottom: 0.9rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+input:focus, select:focus {
+    border-color: #de5114;
+}
+
+/* Estilo para campos readonly (preenchidos pela API) */
+input:read-only {
+    background-color: #e9e9e9;
+    color: #555;
+}
+
+.dupla {
+  display: flex;
+  gap: 10px;
+}
+
+.dupla input {
+  flex: 1;
+}
+
+.foto-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+  display: block;
+}
+
+/* Esconde o input de arquivo padrão */
+.file-input {
+    display: none;
+}
+
+.foto-upload {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 1rem;
+  border: 2px dashed #ccc;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #888;
+  cursor: pointer;
+  transition: 0.3s ease;
+  position: relative;
+  overflow: hidden; /* Para a imagem não vazar */
+}
+
+.foto-upload img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Garante que a imagem cubra o círculo */
+}
+
+.foto-upload:hover {
+  border-color: #de5114;
+  color: #de5114;
+  background-color: #fff6f2;
+}
+
+.radio-group {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 0.8rem;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.btn-laranja {
+  width: 100%;
+  background-color: #ff6c0c;
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+  padding: 12px;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  box-shadow: 0 4px 10px rgba(255, 108, 12, 0.3);
+}
+
+.btn-laranja:hover {
+  background-color: #e55b00;
+}
+
+/* Estilo para o botão desabilitado */
+.btn-laranja:disabled {
+    background-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 600px) {
+  .form-wrapper {
+    padding: 0.5rem;
+  }
+  .cadastro-container {
+    padding: 1rem;
+  }
+}
+    .loader {
+      display: none;
+      text-align: center;
+      margin-top: 10px;
+    }

@@ -1,0 +1,378 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Quicksand', sans-serif;
+}
+
+body {
+  background-color: #f2eae5;
+  color: #1c1c1c;
+}
+
+/* HEADER */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 2rem;
+  background-color: #e3dfdc;
+  border-bottom: 3px solid #ff6c0c;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-wrap: wrap;
+}
+
+.logo-area img {
+  height: 45px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.nav-links a:hover {
+  color: #ff6c0c;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.header-icons a {
+  color: #333;
+  font-size: 1.4rem;
+  transition: color 0.3s ease;
+}
+
+.header-icons a:hover {
+  color: #ff6c0c;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #333;
+  cursor: pointer;
+}
+
+/* CONTEÚDO */
+.add-saldo {
+  background-color: #ff6c0c;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+  text-align: center;
+  display: inline-block;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  text-decoration: none;
+}
+
+.add-saldo:hover {
+  background-color: #d95500;
+}
+
+.add-saldo-container {
+  max-width: 500px;
+  margin: 2rem auto;
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.add-saldo-container h1 {
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.form-adicionar label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #333;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.input-wrapper span {
+  font-size: 1rem;
+  color: #888;
+  margin-right: 0.5rem;
+}
+
+.input-wrapper input {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  width: 100%;
+  outline: none;
+}
+
+select {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  font-size: 1rem;
+  margin-bottom: 2rem;
+}
+
+.btn-confirmar {
+  background-color: #ff6c0c;
+  color: #fff;
+  padding: 0.9rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.3s;
+}
+
+.btn-confirmar:hover {
+  background-color: #d95500;
+}
+
+/* VOLTAR */
+.voltar-box {
+  margin: 1rem 2rem 0;
+}
+
+.btn-voltar {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-voltar:hover {
+  color: #ff6c0c;
+}
+
+/* RESULTADO */
+.resultado {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.metodo-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.qr-img {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
+}
+
+.copiar {
+  font-size: 0.9rem;
+  color: #ff6c0c;
+  cursor: pointer;
+}
+
+/* FORM CARTAO */
+.form-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.form-cartao input {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.cartao-linha {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  max-width: 300px;
+}
+
+.cartao-linha input {
+  flex: 1;
+}
+
+.btn-salvar {
+  background-color: #ff6c0c;
+  color: #fff;
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.btn-salvar:hover {
+  background-color: #d95500;
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #28a745;
+  color: #fff;
+  padding: 0.8rem 1.5rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 999;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-10px);
+}
+
+/* MODAL SUCESSO */
+.modal-sucesso {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-sucesso.hidden {
+  display: none;
+}
+
+.modal-conteudo-sucesso {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 20px;
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-conteudo-sucesso h3 {
+  font-size: 1.4rem;
+  margin-top: 1rem;
+  color: #28a745;
+}
+
+.modal-conteudo-sucesso p {
+  font-size: 1rem;
+  color: #333;
+  margin: 1rem 0 2rem;
+}
+
+.imagem-sucesso {
+  width: 100%;
+  max-width: 240px;
+  border-radius: 12px;
+  margin: 0 auto;
+}
+
+.botoes-modal {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.botao-principal {
+  padding: 0.6rem 1.2rem;
+  background-color: #02BAB1;
+  color: white;
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.botao-principal:hover {
+  background-color: #019b92;
+}
+
+/* RESPONSIVO */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    background-color: #fff;
+    position: absolute;
+    top: 75px;
+    right: 0;
+    width: 100%;
+    padding: 1rem 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 200;
+  }
+
+  .nav-links.show {
+    display: flex;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .top-bar {
+    flex-wrap: wrap;
+  }
+
+  .add-saldo-container {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+}

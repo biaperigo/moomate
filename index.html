@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moomate</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="src/styles/index.css" />
+
+  <!-- jQuery e ScrollReveal -->
+  <script src="src/javascript/jquery-3.7.1.min.js"></script>
+  <script src="https://unpkg.com/scrollreveal"></script>
+
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+
+<body>
+  <header id="header">
+    <nav id="navbar">
+      <img src="src/images/favicon.png" alt="Logo Moomate" id="navlogo" />
+
+      <ul id="nav_list">
+        <li class="nav-item active"><a href="#home">Início</a></li>
+        <li class="nav-item"><a href="#ecoponto">Ecopontos</a></li>
+        <li class="nav-item"><a href="#sobre">Sobre nós</a></li>
+        <li class="nav-item"><a href="#motorista">Motorista</a></li>
+        <li class="nav-item"><a href="#usuario">Usuário</a></li>
+      </ul>
+
+      <div class="nav-buttons">
+        <a href="login.html"><button class="btn-default">Entrar</button></a>
+        <a href=""><button class="btn-outline">Cadastrar</button></a>
+      </div>
+
+      <button id="mobile_btn"><i class="fa-solid fa-bars"></i></button>
+
+      <div id="mobile_menu">
+        <ul id="mobile_nav_list">
+          <li class="nav-item"><a href="#home">Início</a></li>
+          <li class="nav-item"><a href="#ecoponto">Ecopontos</a></li>
+          <li class="nav-item"><a href="#sobre">Sobre nós</a></li>
+          <li class="nav-item"><a href="#motorista">Motorista</a></li>
+          <li class="nav-item"><a href="#usuario">Usuário</a></li>
+        </ul>
+        <div class="nav-buttons">
+          <button class="btn-default">Entrar</button>
+          <button class="btn-outline">Cadastrar</button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main id="content">
+    <section id="home">
+      <div class="shape"></div>
+      <div id="cta">
+        <h1 class="title">Deixe a sua mudança <span>conosco</span></h1>
+        <p class="description">Plataforma rápida, segura e econômica para conectar pessoas a motoristas de mudança disponíveis na sua região.</p>
+
+        <div id="cta_buttons">
+          <a href="#sobre" class="btn-laranja">Conheça a equipe</a>
+          <a href="#" class="btn-cinza">COMECE JÁ</a>
+        </div>
+
+        <div class="social_media_buttons">
+          <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
+            <i class="fa-brands fa-instagram"></i>
+          </a>
+        </div>
+      </div>
+
+      <div id="banner">
+        <img src="src/images/mudança.png" alt="Imagem de mudança" />
+      </div>
+    </section>
+
+    <section id="ecoponto">
+      <div class="content">
+        <div class="box">
+          <div id="map"></div>
+          <div id="info">
+            <strong>Selecione um ecoponto no mapa para ver os detalhes aqui.</strong>
+          </div>
+          <div class="button-wrapper">
+            <button id="btn-descarte">Preciso de um motorista para o descarte</button>
+          </div>  
+        </div>
+      </div>
+    </section>
+
+    <section id="sobre">
+      <h2 class="section-title">Sobre nós</h2>
+      <h3 class="section-subtitle">Conheça nossa equipe</h3>
+      <div class="team-container">
+        <div class="team-member">
+          <img src="src/images/Maria Eduarda Augusto.JPG" alt="" class="team-photo">
+          <h3 class="team-name">Maria Eduarda Augusto</h3>
+          <p class="team-role">Analista de Projeto</p>
+        </div>
+        <div class="team-member">
+          <img src="src/images/Gabriel Massao.JPG" alt="" class="team-photo">
+          <h3 class="team-name">Gabriel Massao</h3>
+          <p class="team-role">Analista de Dados e Gerente Financeiro</p>
+        </div>
+        <div class="team-member">
+          <img src="src/images/Beatriz.JPG" alt="" class="team-photo">
+          <h3 class="team-name">Beatriz Périgo</h3>
+          <p class="team-role">Desenvolvedora Back-End</p>
+        </div>
+        <div class="team-member">
+          <img src="src/images/Giovana Passos.JPG" alt="" class="team-photo">
+          <h3 class="team-name">Giovana Passos</h3>
+          <p class="team-role">Desenvolvedora Front-End e Designer</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="motorista">
+      <div class="motorista-container">
+        <div class="motorista-imagem">
+          <img src="src/images/motorista.png" alt="Parceiro Moomate">
+        </div>
+        <div class="motorista-conteudo">
+          <h2 class="section-title">Por que ser um motorista da Moomate?</h2>
+          <ul class="beneficios-lista">
+            <li>
+              <i class="fa-solid fa-sack-dollar"></i>
+              <div><strong>Complemento de renda</strong><p>Escolha suas entregas e defina seus valores.</p></div>
+            </li>
+            <li>
+              <i class="fa-solid fa-clock"></i>
+              <div><strong>Horários flexíveis</strong><p>Aceite apenas os pedidos que quiser, sem penalidades. Faça seu horário!</p></div>
+            </li>
+            <li>
+              <i class="fa-solid fa-mobile-screen-button"></i>
+              <div><strong>Ativação online</strong><p>Todo o processo é feito pelo celular, sem burocracia.</p></div>
+            </li>
+            <li>
+              <div class="nav-buttons">
+  <button class="btn-default" id="btn-motorista">Seja motorista</button>
+</div>
+
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="requisitos-container">
+        <h2 class="section-title">REQUISITOS PARA SER MOTORISTA MOOMATE</h2>
+        <div class="requisitos-itens">
+          <div class="requisito">
+            <i class="fa-solid fa-truck-fast"></i>
+            <strong>Tenha um veículo disponível</strong>
+            <p>Aceitamos Caminhão 3/4, Toco e Truck</p>
+          </div>
+          <div class="requisito">
+            <i class="fa-solid fa-id-card"></i>
+            <strong>Tenha uma CNH válida</strong>
+          </div>
+          <div class="requisito">
+            <i class="fa-solid fa-mobile"></i>
+            <strong>Tenha um celular</strong>
+            <p>Você precisa ter um smartphone conectado à internet</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="usuario">
+      <div class="usuario-container">
+        <div class="usuario-conteudo">
+          <h2 class="section-title">Vantagens de usar a Moomate para você</h2>
+          <br>
+          <ul class="beneficios-lista-usuario">
+            <li>
+              <i class="fa-solid fa-money-bill-wave"></i>
+              <div><strong>Melhor custo-benefício</strong><p>Compare preços e escolha a melhor oferta para sua mudança.</p></div>
+            </li>
+            <li>
+              <i class="fa-regular fa-clock"></i>
+              <div><strong>Agilidade no atendimento</strong><p>Motoristas disponíveis na sua região com poucos cliques.</p></div>
+            </li>
+            <li>
+              <i class="fa-solid fa-mobile-button"></i>
+              <div><strong>Plataforma intuitiva</strong><p>Solicite sua mudança pelo celular com rapidez e segurança.</p></div>
+            </li>
+            <li>
+              <div class="nav-buttons">
+  <button class="btn-default" id="btn-comecar">COMEÇAR</button>
+</div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="usuario-imagem">
+          <img src="src/images/usuario.png" alt="Usuário Moomate">
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div id="footer_content">
+      <div class="footer-left">
+        <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
+      </div>
+      <ul class="footer-list">
+        <li><h3 class="footer-title">Serviço</h3></li>
+        <li><a href="#motorista" class="footer-link">Motorista</a></li>
+        <li><a href="#ecoponto" class="footer-link">Ecopontos</a></li>
+      </ul>
+      <ul class="footer-list">
+        <li><h3 class="footer-title">Ajuda</h3></li>
+        <li><a href="#sobre" class="footer-link">Equipe Moomate</a></li>
+        <li><a href="#contato" class="footer-link">Contato</a></li>
+      </ul>
+      <div class="footer-social">
+        <span class="social-text">Acompanhe nós</span>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
+            <i class="fa-brands fa-instagram"></i>
+          </a>
+          <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank">
+            <i class="fa-brands fa-linkedin-in"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div id="footer_items">
+      <span id="copyright">
+        © 2024 Moomate. Todos os direitos reservados.
+      </span>
+    </div>
+  </footer>
+
+  <div id="modal-tipo-cadastro" class="modal hidden">
+  <div class="modal-content">
+    <h3>Como você deseja se cadastrar?</h3>
+    
+    <button class="btn-opcao" data-destino="cadastroM.html">
+      <i class="fa-solid fa-truck-moving"></i> Sou Motorista
+    </button>
+
+    <button class="btn-opcao" data-destino="cadastroC.html">
+      <i class="fa-solid fa-user"></i> Quero Contratar
+    </button>
+  </div>
+</div>
+
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="src/javascript/Index/ecoponto.js"></script>
+  <script src="src/javascript/Index/script.js"></script>
+
+  
+</body>
+</html>

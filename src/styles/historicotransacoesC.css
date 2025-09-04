@@ -1,0 +1,194 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Quicksand', sans-serif;
+}
+
+body {
+  background-color: #f2eae5;
+  color: #1c1c1c;
+}
+
+/* HEADER */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 2rem;
+  background-color: #e3dfdc;
+  border-bottom: 3px solid #ff6c0c;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo-area img {
+  height: 45px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.header-icons a {
+  color: #333;
+  font-size: 1.4rem;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+/* VOLTAR */
+.voltar-box {
+  margin: 1rem;
+}
+
+.btn-voltar {
+  color: #333;
+  text-decoration: none;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* CONTAINER PRINCIPAL */
+.historico-container {
+  max-width: 500px;
+  margin: 1rem auto;
+  padding: 1rem;
+}
+
+.historico-container h1 {
+  text-align: center;
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+}
+
+/* MENSAGEM DE HISTÓRICO VAZIO */
+.historico-vazio {
+  text-align: center;
+  background-color: #e8e8e8;
+  padding: 3rem 1rem;
+  border-radius: 10px;
+}
+
+.historico-vazio i {
+  font-size: 2.5rem;
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.historico-vazio .titulo {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.historico-vazio .descricao {
+  font-size: 0.9rem;
+  color: #777;
+  margin-top: 0.3rem;
+}
+
+/* CARDS DE TRANSAÇÃO */
+.transacao-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #ff6c0c;
+}
+
+.transacao-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.transacao-info .texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.transacao-info .texto strong {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1c1c1c;
+}
+
+.transacao-info .texto span {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.valor {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #28a745;
+}
+
+/* Para valores negativos como corrida */
+.valor.saida {
+  color: #d9534f;
+}
+
+/* Estiliza entrada e saída com lateral diferente */
+.transacao-card.entrada {
+  border-left: 4px solid #28a745;
+}
+
+.transacao-card.corrida {
+  border-left: 4px solid #d9534f;
+}
+
+/* RESPONSIVO */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 70px;
+    right: 0;
+    background-color: #fff;
+    width: 100%;
+    padding: 1rem 2rem;
+    z-index: 200;
+  }
+
+  .nav-links.show {
+    display: flex;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+}

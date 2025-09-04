@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Confirmação</title>
+  <link rel="stylesheet" href="src/styles/confirmacaoC.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://kit.fontawesome.com/yourkitid.js" crossorigin="anonymous"></script> <!-- Troque por sua Kit do FontAwesome -->
+</head>
+<body>
+
+  <header class="top-bar">
+    <a href="motoristadisponiveis.html" class="voltar-btn">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    <img src="src/images/favicon.png" alt="Logo Moomate" class="logo" />
+    <h2>Confirmação</h2>
+  </header>
+
+  <main class="confirmacao-container">
+    <p><strong>Local de <span class="retirada">Retirada</span>:</strong> Rua EXEMPLO, 123</p>
+    <p><strong>Local de <span class="entrega">Entrega</span>:</strong> Rua EXEMPLO, 598</p>
+
+    <div class="card-motorista">
+      <img src="src/images/motorista1.jpg" alt="Motorista" />
+      <div class="info">
+        <h3>Nome do Motorista</h3>
+        <span>000m</span>
+        <span>R$000,00</span>
+        <div class="avaliacao">⭐️⭐️⭐️⭐️☆</div>
+      </div>
+    </div>
+
+    <div id="map" class="mapa">
+      <!-- Rota Leaflet/OpenRouteService será inserida aqui -->
+    </div>
+
+    <div class="pagamento">
+      <i class="fa-brands fa-pix"></i>
+      <span>PIX</span>
+      <strong>R$700,00</strong>
+    </div>
+
+    <button class="botao-pagar">PAGAR</button>
+  </main>
+<!-- MODAL DE PAGAMENTO PIX -->
+<div id="modalPix" class="modal hidden">
+  <div class="modal-conteudo">
+    <h3>Pagamento via PIX</h3>
+    <p>Escaneie o QR Code abaixo para realizar o pagamento:</p>
+    
+    <div id="qrcode"></div>
+
+    <div class="copiar-container">
+      <span id="codigoPixTexto" style="display: none;">
+        00020126580014br.gov.bcb.pix0136qrpixexemplo@moomate.com5204000053039865407000.005802BR5920Moomate Mudanças6010São Paulo62070503***6304ABCD
+      </span>
+      <button class="copiar-btn" onclick="copiarCodigoPix()">
+        <i class="fa-solid fa-copy"></i> Copiar Código Pix
+      </button>
+      <span id="copiadoAviso" style="display: none; color: green; font-size: 0.9rem;">Copiado!</span>
+    </div>
+
+    <button class="fechar-modal" onclick="fecharModalPix()">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL DE PAGAMENTO CONFIRMADO deve aparecer quando for recebido o pix ou a transição do pagamento via cartao for feita-->
+<div id="modalConfirmado" class="modal-sucesso hidden">
+  <div class="modal-conteudo-sucesso">
+    <img src="src/images/pagamentoefetuado.png" alt="Pagamento Efetuado com Sucesso" class="imagem-sucesso" />
+    <h3>Pagamento Confirmado!</h3>
+    <p>Agora você pode acompanhar o motorista em tempo real pelo rastreamento.</p>
+    <div class="botoes-modal">
+      <button class="botao-secundario" onclick="fecharModalConfirmado()">Fechar</button>
+      <a href="rastreamento.html" class="botao-principal">Ir para Rastreamento</a>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="src/scripts/confirmacaoC.js"></script>
+
+</body>
+</html>

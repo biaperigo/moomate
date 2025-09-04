@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Conta Bancária - Moomate</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="src/styles/contabancariaM.css" />
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+</head>
+<body>
+
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate" />
+    </div>
+
+    <nav class="nav-links" id="navMenu">
+      <a href="homeM.html">Home</a>
+      <a href="entregasM.html">Entregas</a>
+      <a href="carteiraM.html">Carteira</a>
+      <a href="suporteM.html">Suporte</a>
+      <a href="chatM.html">CHAT</a>
+      <a href="ecopontosM.html">Pontos de coleta</a>
+    </nav>
+
+    <div class="header-icons">
+      <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+      <button class="menu-toggle" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
+    </div>
+  </header>
+
+  <!-- VOLTAR -->
+  <div class="voltar-box">
+    <a href="carteiraM.html" class="btn-voltar">
+      <i class="fa-solid fa-chevron-left"></i> Voltar
+    </a>
+  </div>
+
+  <!-- CONTEÚDO -->
+  <main class="conta-container">
+    <h1>Minha Conta Bancária</h1>
+
+    <form id="form-conta">
+      <label for="banco">Banco:</label>
+      <input type="text" id="banco" placeholder="Ex: Nubank, Itaú..." required />
+
+      <label for="agencia">Agência:</label>
+      <input type="text" id="agencia" placeholder="Digite a agência" required />
+
+      <label for="conta">Número da Conta:</label>
+      <input type="text" id="conta" placeholder="Conta com dígito" required />
+
+      <label for="cpf">CPF do Titular:</label>
+      <input type="text" id="cpf" placeholder="000.000.000-00" required />
+
+      <button type="submit" class="btn-salvar">Salvar</button>
+    </form>
+
+    <div id="mensagem" class="mensagem-sucesso" style="display: none;">Conta salva com sucesso!</div>
+  </main>
+
+  <script src="src/javascript/contabancariaM.js"></script>
+</body>
+</html>

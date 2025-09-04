@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Home - Moomate</title>
+
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+
+
+  <!-- Leaflet CSS para o mapa -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="src/styles/ecopontoC.css"/>
+ 
+  <style>
+    /* Estilos adicionais para os novos campos e mapa */
+    .form-section {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+   
+    .form-map-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+   
+    .map-container {
+      height: 250px;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+   
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+   
+    .form-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+   
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+   
+    .input-group input {
+      flex: 1;
+    }
+   
+    .input-box input, .input-group input, .volumes-input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+   
+    .input-box input:focus, .input-group input:focus, .volumes-input:focus {
+      outline: none;
+      border-color: #ff6b35;
+    }
+   
+    .vehicle-types {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 10px 0;
+    }
+   
+    .vehicle-option {
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: white;
+    }
+   
+    .vehicle-option:hover {
+      border-color: #ff6b35;
+      background: #fff5f2;
+    }
+   
+    .vehicle-option.selected {
+      border-color: #ff6b35;
+      background: #ff6b35;
+      color: white;
+    }
+   
+    .btn-cta {
+      background: #ff6b35;
+      color: white;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-top: 20px;
+    }
+   
+    .btn-cta:hover {
+      background: #e55a2b;
+    }
+   
+    .btn-cta:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+   
+    @media (max-width: 768px) {
+      .form-map-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 20px;
+      }
+     
+      .input-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+
+  <!-- HEADER -->
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate" />
+    </div>
+
+
+    <nav class="nav-links" id="navMenu">
+      <a href="homeC.html">Home</a>
+      <a href="pedidosC.html">Pedidos</a>
+      <a href="carteiraC.html">Carteira</a>
+      <a href="suporteC.html">Suporte</a>
+      <a href="chatC.html">CHAT</a>
+      <a href="ecopontosC.html">Pontos de coleta</a>
+    </nav>
+
+
+    <div class="header-icons">
+      <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisC.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesC.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+      <button class="menu-toggle" id="menuToggle">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+
+
+  </header>
+
+
+  <!-- BANNER -->
+  <section class="banner">
+    <img src="src/images/bannerecopontos.png" alt="Banner mudança" />
+    <div class="banner-text">
+      <h2>Para mudanças comerciais e pessoais.</h2>
+    </div>
+  </section>
+
+
+  <section id="ecoponto">
+    <div class="content">
+      <div class="box">
+        <div id="map"></div>
+        <div id="info">
+          <strong>Selecione um ecoponto no mapa para ver os detalhes aqui.</strong>
+        </div>
+     
+      <!-- Campos do formulário -->
+      <div class="form-fields">
+        <div class="input-box">
+          <label for="cep"><i class="fa-solid fa-map-pin"></i> CEP</label>
+          <input type="text" id="cep" placeholder="Digite o CEP" maxlength="9">
+        </div>
+       
+        <div class="input-box">
+          <label for="localRetirada"><i class="fa-solid fa-location-dot"></i> Local de retirada</label>
+          <input type="text" id="localRetirada" placeholder="Digite o endereço completo">
+        </div>
+       
+        <div class="input-group">
+          <input type="text" id="numeroRetirada" placeholder="Número">
+          <input type="text" id="complementoRetirada" placeholder="Complemento (opcional)">
+        </div>
+       
+       
+       
+        <div class="input-box">
+          <label for="volumes"><i class="fa-solid fa-boxes-stacked"></i> Número de volumes</label>
+          <input type="number" id="volumes" class="volumes-input" placeholder="Quantos itens serão transportados?" min="1">
+        </div>
+       
+       
+       
+        <button id="verMotoristas">Ver Motoristas Disponíveis</button>
+
+<div id="propostasContainer">
+<h3>Propostas dos Motoristas:</h3>
+<div id="propostas-container"></div>
+
+</div>
+
+   
+      </div>
+    </div>
+  </section>
+
+
+  <!-- RODAPÉ -->
+  <footer>
+    <div id="footer_content">
+      <div class="footer-left">
+        <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
+      </div>
+      <div class="footer-social">
+        <span class="social-text">Acompanhe nós</span>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a>
+        </div>
+      </div>
+    </div>
+    <div id="footer_items">
+      <span>© 2025 Moomate. Todos os direitos reservados.</span>
+    </div>
+  </footer>
+
+
+<!-- RODAPÉ (existente) -->
+
+
+<!-- Scripts -->
+<!-- 1. jQuery (opcional, mas bom ter se usar) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+<!-- 2. Leaflet (para o mapa ) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- 3. Firebase SDKs (essencial para o banco de dados ) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<!-- Seu script homeC.js deve vir depois destes -->
+<script src="src/javascript/ecopontoC.js"></script>
+
+
+
+ 
+</body>
+</html>
+</body>
+</html>

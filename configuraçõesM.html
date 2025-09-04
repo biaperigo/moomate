@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configurações - Moomate</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+  <!-- CSS -->
+  <link rel="stylesheet" href="src/styles/configuraçõesM.css" />
+</head>
+<body>
+
+  <header class="top-bar">
+      <div class="logo-area">
+        <img src="src/images/favicon.png" alt="Logo Moomate" />
+      </div>
+
+      <nav class="nav-links" id="navMenu">
+      <a href="homeM.html">Home</a>
+      <a href="entregasM.html">Entregas</a>
+      <a href="carteiraM.html">Carteira</a>
+      <a href="suporteM.html">Suporte</a>
+      <a href="chatM.html">CHAT</a>
+      <a href="ecopontosM.html">Pontos de coleta</a>
+    </nav>
+
+    <div class="header-icons">
+      <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+      
+      <!-- Aqui dentro -->
+      <button class="menu-toggle" id="menuToggle">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+
+</header>
+
+
+  <!-- CONTEÚDO -->
+  <main class="config-container">
+    <h1 class="title">Configurações</h1>
+
+    <section class="config-section">
+      <h2 class="section-title">Conta</h2>
+      <div class="config-item">
+        <span>Mudar senha</span>
+        <i class="fa-solid fa-chevron-right"></i>
+      </div>
+      <div class="config-item">
+        <span>Sair</span>
+        <i class="fa-solid fa-chevron-right"></i>
+      </div>
+    </section>
+
+    <section class="config-section">
+      <h2 class="section-title">Preferências</h2>
+
+      <div class="config-item toggle">
+        <span>Notificações</span>
+        <label class="switch">
+          <input type="checkbox" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Idioma -->
+      <div class="config-item idioma-toggle">
+        <span>Idioma</span>
+        <div class="right-label">
+          <span id="idioma-atual">Português</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+      </div>
+      <div class="idioma-opcoes">
+        <label><input type="radio" name="idioma" value="pt" checked> Português</label>
+        <label><input type="radio" name="idioma" value="es"> Espanhol</label>
+        <label><input type="radio" name="idioma" value="en"> Inglês</label>
+      </div>
+
+      <div class="config-item">
+        <span>Sobre Moomate</span>
+        <i class="fa-solid fa-chevron-right"></i>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div id="footer_content">
+      <div class="footer-left">
+        <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
+      </div>
+      <div class="footer-social">
+        <span class="social-text">Acompanhe nós</span>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
+            <i class="fa-brands fa-instagram"></i>
+          </a>
+          <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank">
+            <i class="fa-brands fa-linkedin-in"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div id="footer_items">
+      <span id="copyright">
+        © 2024 Moomate. Todos os direitos reservados.
+      </span>
+    </div>
+  </footer>
+
+  <!-- JS -->
+  <script src="src/javascript/configuraçõesM.js"></script>
+
+</body> 
+</html>

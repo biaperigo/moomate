@@ -1,0 +1,337 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Quicksand', sans-serif;
+}
+
+body {
+  background-color: #fefefe;
+  color: #1c1c1c;
+}
+
+/* HEADER */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background-color: #e3dfdc;
+  padding: 1rem;
+  border-bottom: 3px solid #ff6c0c;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: 1rem;
+}
+
+.voltar-btn {
+  color: #333;
+  font-size: 1.5rem;
+  text-decoration: none;
+}
+
+.voltar-btn:hover {
+  color: #ff6c0c;
+}
+
+.logo {
+  height: 40px;
+}
+
+.top-bar h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  flex: 1;
+  text-align: center;
+  margin-right: 2.5rem; /* para centralizar visualmente */
+}
+
+/* CONTEÚDO PRINCIPAL */
+.confirmacao-container {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 500px;
+  margin: auto;
+}
+
+.confirmacao-container p {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.retirada {
+  color: #e65c00;
+}
+
+.entrega {
+  color: #ff6c0c;
+}
+
+/* CARD DO MOTORISTA */
+.card-motorista {
+  display: flex;
+  gap: 1rem;
+  background-color: #fff;
+  border: 2px solid #ff6c0c;
+  border-radius: 16px;
+  padding: 1rem;
+  align-items: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.card-motorista img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 5px rgba(0,0,0,0.15);
+}
+
+.card-motorista .info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.card-motorista h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.card-motorista span {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.avaliacao {
+  font-size: 0.9rem;
+  color: #ffb400;
+}
+
+/* MAPA */
+.mapa {
+  width: 100%;
+  height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-top: 1rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* PAGAMENTO */
+.pagamento {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #e3dfdc;
+  padding: 1rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.pagamento i {
+  font-size: 1.4rem;
+  color: #02BAB1;
+  margin-right: 0.5rem;
+}
+
+/* BOTÃO PAGAR */
+.botao-pagar {
+  margin-top: 1rem;
+  background-color: #ff6c0c;
+  color: #fff;
+  padding: 0.8rem;
+  width: 100%;
+  border: none;
+  border-radius: 20px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.botao-pagar:hover {
+  background-color: #e65c00;
+}
+
+/* MODAL PIX */
+.modal {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-conteudo {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  max-width: 320px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.modal-conteudo h3 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+#qrcode {
+  margin: 1rem auto;
+  width: 200px;
+  height: 200px;
+}
+
+.fechar-modal {
+  background-color: #ff6c0c;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fechar-modal:hover {
+  background-color: #e65c00;
+}
+.copiar-container {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.copiar-btn {
+  background-color: #02bab1;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.copiar-btn i {
+  margin-right: 0.4rem;
+}
+
+.copiar-btn:hover {
+  background-color: #019c95;
+}
+.modal-sucesso {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px); /* aumentei o desfoque */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-sucesso.hidden {
+  display: none;
+}
+
+.modal-conteudo-sucesso {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 20px;
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-conteudo-sucesso h3 {
+  font-size: 1.4rem;
+  margin-top: 1rem;
+  color: #28a745;
+}
+
+.modal-conteudo-sucesso p {
+  font-size: 1rem;
+  color: #333;
+  margin: 1rem 0 2rem;
+}
+
+.imagem-sucesso {
+  width: 100%;
+  max-width: 240px;
+  border-radius: 12px;
+  margin: 0 auto;
+}
+
+.botoes-modal {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.botao-secundario {
+  padding: 0.6rem 1.2rem;
+  background-color: #e3dfdc;
+  color: #333;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.botao-secundario:hover {
+  background-color: #d1ccc7;
+}
+
+.botao-principal {
+  padding: 0.6rem 1.2rem;
+  background-color: #02BAB1;
+  color: white;
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.botao-principal:hover {
+  background-color: #019b92;
+}
+
+/* RESPONSIVO */
+@media (max-width: 480px) {
+  .top-bar h2 {
+    font-size: 1rem;
+    margin-right: 1rem;
+  }
+
+  .card-motorista {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .confirmacao-container {
+    padding: 1rem;
+  }
+
+  .botao-pagar {
+    font-size: 1rem;
+  }
+}

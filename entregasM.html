@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Entregas - Moomate</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+  <link rel="stylesheet" href="src/styles/entregasM.css" />
+</head>
+<body>
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate" />
+    </div>
+
+    <nav class="nav-links" id="navMenu">
+      <a href="homeM.html">Home</a>
+      <a href="entregasM.html">Entregas</a>
+      <a href="carteiraM.html">Carteira</a>
+      <a href="suporteM.html">Suporte</a>
+      <a href="chatM.html">CHAT</a>
+      <a href="ecopontosM.html">Pontos de coleta</a>
+    </nav>
+
+    <div class="header-icons">
+      <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+      <button class="menu-toggle" id="menuToggle">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </header>
+
+  <h1 class="title-pedidos">Entregas</h1>
+
+  <!-- ABAS -->
+  <div class="tabs">
+    <div class="tab active">Em andamento</div>
+    <div class="tab">Completo</div>
+    <div class="tab">Cancelado</div>
+  </div>
+
+  <!-- Como seria se n tivesse nada  
+  <div class="tab-content active">
+    <i class="fa-solid fa-truck-ramp-box"></i>
+    Nenhuma entrega no momento.
+  </div>
+
+  <div class="tab-content">
+    <i class="fa-solid fa-truck-ramp-box"></i>
+    Nenhuma entrega concluída.
+  </div>
+
+  <div class="tab-content">
+    <i class="fa-solid fa-truck-ramp-box"></i>
+    Nenhuma entrega cancelada.
+  </div> -->
+
+  <!-- EM ANDAMENTO -->
+  <div class="tab-content active">
+    <div class="delivery-card">
+      <div class="delivery-left">
+        <h3><i class="fa-solid fa-box"></i>Entrega #4521 - Mudança Residencial</h3>
+        <p><i class="fa-solid fa-location-dot"></i>Retirar em: Rua das Acácias, SP</p>
+        <p><i class="fa-solid fa-location-arrow"></i>Entregar em: Av. Brasil, SP</p>
+      </div>
+      <div class="delivery-right">
+        <span class="entrega-agora">Em andamento</span>
+        <span class="tempo">Entrega prevista: 29/07/2025</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPLETO -->
+  <div class="tab-content">
+    <div class="delivery-card">
+      <div class="delivery-left">
+        <h3><i class="fa-solid fa-circle-check"></i>Entrega #4488 - Mudança Escritório</h3>
+        <p><i class="fa-solid fa-location-dot"></i>Retirar em: R. Augusta, SP</p>
+        <p><i class="fa-solid fa-location-arrow"></i>Entregar em: Av. Faria Lima, SP</p>
+      </div>
+      <div class="delivery-right">
+        <span class="entrega-agora status-concluido">Concluído</span>
+        <span class="tempo">Entregue em: 25/07/2025</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANCELADO -->
+  <div class="tab-content">
+    <div class="delivery-card">
+      <div class="delivery-left">
+        <h3><i class="fa-solid fa-circle-xmark"></i>Entrega #4431 - Mudança Rápida</h3>
+        <p><i class="fa-solid fa-location-dot"></i>Retirar em: R. das Orquídeas</p>
+        <p><i class="fa-solid fa-location-arrow"></i>Entregar em: R. dos Cravos</p>
+      </div>
+      <div class="delivery-right">
+        <span class="entrega-agora status-cancelado">Cancelado</span>
+        <span class="tempo">Cancelado em: 20/07/2025</span>
+      </div>
+    </div>
+  </div>
+<script src="src/javascript/entregasM.js"></script>
+</body>
+</html>

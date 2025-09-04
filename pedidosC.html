@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pedidos - Moomate</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+  <link rel="stylesheet" href="src/styles/pedidosC.css" />
+</head>
+<body>
+
+<header class="top-bar">
+  <div class="logo-area">
+    <img src="src/images/favicon.png" alt="Logo Moomate" />
+  </div>
+
+  <nav class="nav-links" id="navMenu">
+    <a href="homeC.html">Home</a>
+    <a href="pedidosC.html">Pedidos</a>
+    <a href="carteiraC.html">Carteira</a>
+    <a href="suporteC.html">Suporte</a>
+    <a href="chatC.html">CHAT</a>
+    <a href="ecopontosC.html">Pontos de coleta</a>
+  </nav>
+
+  <div class="header-icons">
+    <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+    <a href="dadospessoaisC.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+    <a href="configuraçõesC.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+    <button class="menu-toggle" id="menuToggle">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </div>
+</header>
+
+<h1 class="title-pedidos">Pedidos</h1>
+
+<div class="tabs">
+  <div class="tab active">Em andamento</div>
+  <div class="tab">Completo</div>
+  <div class="tab">Cancelado</div>
+</div>
+
+<!-- EM ANDAMENTO -->
+<div class="tab-content active">
+  <div class="delivery-card">
+    <div class="delivery-left">
+      <h3><i class="fa-solid fa-truck"></i>Pedido #00123 - Mudança Residencial</h3>
+      <p><i class="fa-solid fa-location-dot"></i>Origem: Rua A, São Paulo</p>
+      <p><i class="fa-solid fa-location-arrow"></i>Destino: Rua B, São Paulo</p>
+      <span class="tempo">Previsão: 12/08/2025</span>
+    </div>
+    <div class="delivery-right">
+      <span class="entrega-agora">Em andamento</span>
+    </div>
+  </div>
+</div>
+
+<!-- COMPLETO -->
+<div class="tab-content">
+  <div class="delivery-card">
+    <div class="delivery-left">
+      <h3><i class="fa-solid fa-circle-check"></i>Pedido #00087 - Mudança Escritório</h3>
+      <p><i class="fa-solid fa-location-dot"></i>Origem: Av. Paulista, SP</p>
+      <p><i class="fa-solid fa-location-arrow"></i>Destino: Av. Faria Lima, SP</p>
+      <span class="tempo">Finalizado: 10/07/2025</span>
+    </div>
+    <div class="delivery-right">
+      <span class="entrega-agora status-concluido">Concluído</span>
+    </div>
+  </div>
+</div>
+
+<!-- CANCELADO -->
+<div class="tab-content">
+  <div class="delivery-card">
+    <div class="delivery-left">
+      <h3><i class="fa-solid fa-circle-xmark"></i>Pedido #00045 - Mudança Rápida</h3>
+      <p><i class="fa-solid fa-location-dot"></i>Origem: R. das Flores</p>
+      <p><i class="fa-solid fa-location-arrow"></i>Destino: R. das Palmeiras</p>
+      <span class="tempo">Cancelado em: 01/07/2025</span>
+    </div>
+    <div class="delivery-right">
+      <span class="entrega-agora status-cancelado">Cancelado</span>
+    </div>
+  </div>
+</div>
+
+<script src="src/javascript/pedidosC.js"> </script>
+
+</body>
+</html>

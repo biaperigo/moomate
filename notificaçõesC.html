@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notificações - Moomate</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="src/styles/notificaçõesC.css" />
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate" />
+    </div>
+
+    <nav class="nav-links" id="navMenu">
+      <a href="homeC.html">Home</a>
+      <a href="pedidosC.html">Pedidos</a>
+      <a href="carteiraC.html">Carteira</a>
+      <a href="suporteC.html">Suporte</a>
+      <a href="chatC.html">CHAT</a>
+      <a href="ecopontosC.html">Pontos de coleta</a>
+    </nav>
+
+    <div class="header-icons">
+      <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisC.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesC.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+      <button class="menu-toggle" id="menuToggle">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO -->
+  <main class="notificacoes-container">
+    <div class="title-area">
+      <h1 class="title">Notificações</h1>
+      <button id="clearBtn" title="Apagar todas">
+        <i class="fa-solid fa-trash-can"></i>
+      </button>
+    </div>
+
+    <div class="notificacoes-lista" id="listaNotificacoes">
+      <div class="notificacao">
+        <div class="icon-area">
+          <i class="fa-solid fa-check-circle"></i>
+        </div>
+        <div class="text-area">
+          <span class="mensagem">Pedido Concluído!</span>
+          <span class="hora">17:48</span>
+        </div>
+      </div>
+
+      <div class="notificacao">
+        <div class="icon-area">
+          <i class="fa-solid fa-truck-ramp-box"></i>
+        </div>
+        <div class="text-area">
+          <span class="mensagem">Pedido Enviado!</span>
+          <span class="hora">17:24</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notificacoes-lista vazia" id="mensagemVazia" style="display: none;">
+      <i class="fa-solid fa-truck-ramp-box"></i>
+      <p class="mensagem-vazio">Nenhuma notificação no momento.</p>
+    </div>
+  </main>
+
+  <!-- MODAL DE CONFIRMAÇÃO -->
+  <div class="modal-overlay" id="modalConfirm">
+    <div class="modal-box">
+      <p>Tem certeza que deseja apagar todas as notificações?<br>
+      <strong>Esta ação removerá todo o histórico.</strong></p>
+      <div class="modal-buttons">
+        <button id="confirmDelete">Sim, apagar</button>
+        <button id="cancelDelete">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script src="src/javascript/notificaçõesC.js"></script>
+</body>
+</html>

@@ -1,0 +1,364 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Quicksand', sans-serif;
+}
+
+body {
+  background-color: #f2eae5;
+  color: #1c1c1c;
+}
+
+/* HEADER */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 2rem;
+  background-color: #e3dfdc;
+  border-bottom: 3px solid #ff6c0c;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+/* Estilos para a seção e os cards de propostas */
+.propostas-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.proposta-card {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-left: 5px solid #ff6b35; /* Destaque laranja */
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.proposta-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    /* Ajustes no card de proposta para o novo layout */
+.proposta-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.proposta-details {
+  flex-grow: 1;
+}
+
+.proposta-actions {
+  text-align: right;
+  padding-left: 20px;
+}
+
+.proposta-price {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+}
+
+.proposta-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1em;
+}
+
+.proposta-header .fa-user-circle {
+    font-size: 1.5em;
+    color: #555;
+}
+
+.proposta-body p {
+  margin: 5px 0;
+  color: #333;
+  font-size: 1em;
+}
+
+.proposta-body p i {
+    color: #ff6b35;
+    margin-right: 8px;
+    width: 20px; /* Alinhamento dos ícones */
+    text-align: center;
+}
+
+.btn-aceitar-proposta {
+  background-color: #28a745; /* Verde para aceitar */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-aceitar-proposta:hover {
+  background-color: #218838;
+}
+
+.logo-area img {
+  height: 45px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  font-size: 1rem;
+  position: relative;
+}
+
+.nav-links a:hover {
+  color: #ff6c0c;
+}
+
+/* ÍCONES */
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.header-icons a {
+  color: #333;
+  font-size: 1.4rem;
+  transition: color 0.3s ease;
+}
+
+.header-icons a:hover {
+  color: #ff6c0c;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #333;
+  cursor: pointer;
+}
+
+/* BANNER */
+.banner {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  overflow: hidden;
+}
+
+.banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.banner-text {
+  position: absolute;
+  bottom: 30px;
+  left: 40px;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+}
+
+/* FORMULÁRIO */
+.form-section {
+  background-color: #ffffff;
+  max-width: 1000px;
+  margin: 3rem auto;
+  padding: 2rem 2rem 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 0 25px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.input-box label,
+.dropdown-box label {
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+  color: #ff6c0c;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.input-box input,
+.dropdown-box select {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  font-size: 1rem;
+  color: #333;
+}
+
+#verMotoristas{
+  background-color: #ff6c0c;
+  color: white;
+  padding: 1rem;
+  font-weight: bold;
+  font-size: 1rem;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 108, 12, 0.25);
+}
+
+.btn-cta:hover {
+  background-color: #d65300;
+}
+
+/* Estilo quando desabilitado */
+.btn-cta:disabled {
+  background-color: #ccc;
+  color: #888;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* RODAPÉ */
+footer {
+  width: 100%;
+  background-color: #1e1e1e;
+  color: #fff;
+  font-family: 'Quicksand', sans-serif;
+}
+
+#footer_content {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.5rem 4%;
+  background-color: #de5114;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.footer-left img {
+  height: 70px;
+}
+
+.footer-social {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.social-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e1e1e;
+}
+
+.social-icons {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.social-icon {
+  color: white;
+  background-color: #1e1e1e;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.3s;
+}
+
+.social-icon:hover {
+  transform: scale(1.1);
+}
+
+#footer_items {
+  background-color: #141414;
+  text-align: center;
+  padding: 0.8rem 1rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+@media screen and (max-width: 768px) {
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 70px;
+    right: 0;
+    width: 100%;
+    background-color: #fff;
+    padding: 1rem 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 200;
+  }
+
+  .nav-links.show {
+    display: flex;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .banner-text {
+    font-size: 1.3rem;
+    left: 20px;
+    bottom: 20px;
+  }
+
+  .form-section {
+    margin: 2rem 1rem;
+    padding: 1.5rem;
+  }
+
+  #footer_content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer-left {
+    justify-content: center;
+  }
+
+  .footer-social {
+    align-items: center;
+    margin-top: 1rem;
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .social-text {
+    display: none;
+  }
+}
