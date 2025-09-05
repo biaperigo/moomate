@@ -46,11 +46,33 @@
             Entrar com Google
           </button>
 
-          <p class="login">Não possui conta? <a href="HTML-C/cadastroC.html">Cadastre-se</a></p>
+          <p class="login">Não possui conta? <a>Cadastre-se</a></p>
         </form>
       </div>
     </div>
   </div>
+  
+<!-- Modal -->
+<div id="modal-tipo-cadastro" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="close-modal" aria-label="Fechar">&times;</button>
+
+    <h3>Como você deseja se cadastrar?</h3>
+
+    <button class="btn-opcao" data-destino="cadastroM.html">
+      <i class="fa-solid fa-truck-moving"></i> Sou Motorista
+    </button>
+
+    <button class="btn-opcao" data-destino="cadastroC.html">
+      <i class="fa-solid fa-user"></i> Quero Contratar
+    </button>
+  </div>
+</div>
+
+  <!-- Firebase App -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
 
   <script src="src/javascript/javalogin.js"></script>
 

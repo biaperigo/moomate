@@ -171,3 +171,74 @@ h2 {
     box-shadow: none;
   }
 }
+
+
+/* MODAL */
+.hidden { display: none !important; }
+
+/* Seu overlay */
+.modal {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 350px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0,0,0,.2);
+  position: relative;
+}
+
+.modal-content h3 {
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+  color: #1e1e1e;
+}
+
+.btn-opcao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  background-color: #de5114;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 30px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color .3s ease, transform .2s ease;
+}
+
+.btn-opcao i { font-size: 1.2rem; }
+
+.btn-opcao:hover {
+  background-color: #b23e0f;
+  transform: scale(1.02);
+}
+
+.close-modal {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #999;
+  cursor: pointer;
+}
+.close-modal:hover { color: #333; }

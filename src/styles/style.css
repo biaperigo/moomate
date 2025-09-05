@@ -28,6 +28,7 @@ section {
   display: flex;
   align-items: center;
   justify-content: center;
+  text-decoration: none;
   border-radius: 12px;
   padding: 10px 14px;
   font-weight: 600;
