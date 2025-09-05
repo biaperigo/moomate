@@ -36,7 +36,7 @@
       </ul>
 
       <div class="nav-buttons">
-        <a href="login.html"><button class="btn-default">Entrar</button></a>
+        <a href=""><button class="btn-default">Entrar</button></a>
         <a href=""><button class="btn-outline">Cadastrar</button></a>
       </div>
 
@@ -145,7 +145,8 @@
             </li>
             <li>
               <div class="nav-buttons">
-  <button class="btn-default" id="btn-motorista">Seja motorista</button>
+<a href="loginM.html" class="btn-custom-motorista">Seja motorista</a>
+
 </div>
 
             </li>
@@ -194,7 +195,7 @@
             </li>
             <li>
               <div class="nav-buttons">
-  <button class="btn-default" id="btn-comecar">COMEÇAR</button>
+  <button class="btn-default" class="btn-cinza" id="btn-comecar">COMEÇAR</button>
 </div>
             </li>
           </ul>
@@ -251,6 +252,19 @@
     </button>
 
     <button class="btn-opcao" data-destino="cadastroC.html">
+      <i class="fa-solid fa-user"></i> Quero Contratar
+    </button>
+  </div>
+</div>
+ <div id="modal-tipo-login" class="modal hidden">
+  <div class="modal-content">
+    <h3>Como você deseja entrar?</h3>
+    
+    <button class="btn-opcao" data-destino="loginM.html">
+      <i class="fa-solid fa-truck-moving"></i> Sou Motorista
+    </button>
+
+    <button class="btn-opcao" data-destino="login.html">
       <i class="fa-solid fa-user"></i> Quero Contratar
     </button>
   </div>

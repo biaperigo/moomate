@@ -11,10 +11,20 @@ const firebaseConfig = {
 
 
 
+
+
+
+
+
 // Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 // const storage = firebase.storage(); // Comentado para não usar o Firebase Storage
+
+
+
+
+
 
 
 
@@ -27,6 +37,12 @@ function formatarCPF(cpf) {
   cpf = cpf.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
   return cpf;
 }
+
+
+
+
+
+
 
 
 function formatarCEP(cep) {
@@ -769,7 +785,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
       // Redirecionar para login.html
-      window.location.href = 'login.html';
+      window.location.href = 'loginM.html';
 
 
 

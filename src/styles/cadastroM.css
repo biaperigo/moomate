@@ -19,6 +19,25 @@ body {
   align-items: center;
   padding: 2rem 0;
 }
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 30px;
+  background-color: white;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-google i {
+  font-size: 1.1rem;
+  color: #ff6c0c;
+}
 
 .form-wrapper {
   width: 100%;

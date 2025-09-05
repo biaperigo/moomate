@@ -116,36 +116,56 @@ $(document).ready(function(){
   });
 
   // Modal
-  $('.btn-outline, .btn-cinza').on('click', function (e) {
-    e.preventDefault();
-    $('#modal-tipo-cadastro').removeClass('hidden');
-  });
+$(document).ready(function() {
+    // CÓDIGO PARA O MODAL DE CADASTRO
+    $(".btn-outline, .btn-cinza").on("click", function (e) {
+        e.preventDefault();
+        $("#modal-tipo-cadastro").removeClass("hidden");
+    });
 
-  $('.btn-opcao').on('click', function () {
-    const destino = $(this).data('destino');
-    window.location.href = destino;
-  });
+    // Evento para redirecionar quando clicar nas opções do modal de cadastro
+    $("#modal-tipo-cadastro .btn-opcao").on("click", function () {
+        const destino = $(this).data("destino");
+        window.location.href = destino;
+    });
 
-  $('.modal-content').on('click', function (e) {
-    e.stopPropagation();
-  });
+    // Prevenir que cliques no conteúdo do modal de cadastro fechem o modal
+    $("#modal-tipo-cadastro .modal-content").on("click", function (e) {
+        e.stopPropagation();
+    });
 
-  $('#modal-tipo-cadastro').on('click', function (e) {
-    if ($(e.target).is('#modal-tipo-cadastro')) {
-      $(this).addClass('hidden');
-    }
-  });
+    // Fechar modal de cadastro ao clicar fora dele
+    $("#modal-tipo-cadastro").on("click", function (e) {
+        if ($(e.target).is("#modal-tipo-cadastro")) {
+            $(this).addClass("hidden");
+        }
+    });
 
-  // === Redirecionamentos Personalizados ===
-  $('#btn-descarte').on('click', function () {
-    window.location.href = 'login.html';
-  });
+    // CÓDIGO PARA O MODAL DE LOGIN (o que eu te passei)
+    $(".btn-default").on("click", function (e) {
+        e.preventDefault();
+        $("#modal-tipo-login").removeClass("hidden");
+    });
 
-  $('#btn-motorista').on('click', function () {
-    window.location.href = 'cadastromotorista.html';
-  });
+    // Evento para redirecionar quando clicar nas opções do modal de login
+    $("#modal-tipo-login .btn-opcao").on("click", function () {
+        const destino = $(this).data("destino");
+        window.location.href = destino;
+    });
 
-  $('#btn-comecar').on('click', function () {
-    window.location.href = 'login.html';
-  });
+    // Prevenir que cliques no conteúdo do modal de login fechem o modal
+    $("#modal-tipo-login .modal-content").on("click", function (e) {
+        e.stopPropagation();
+    });
+
+    // Fechar modal de login ao clicar fora dele
+    $("#modal-tipo-login").on("click", function (e) {
+        if ($(e.target).is("#modal-tipo-login")) {
+            $(this).addClass("hidden");
+        }
+    });
 });
+
+  });
+  
+  

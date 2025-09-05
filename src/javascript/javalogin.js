@@ -1,161 +1,217 @@
-// --- CONFIG FIREBASE ---
-const firebaseConfig = {
-  apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
-  authDomain: "moomate-39239.firebaseapp.com",
-  projectId: "moomate-39239",
-  storageBucket: "moomate-39239.appspot.com",
-  messagingSenderId: "637968714747",
-  appId: "1:637968714747:web:ad15dc3571c22f046b595e",
-  measurementId: "G-62J7Q8CKP4"
-};
+// Configurar provedor do Google
+const googleProvider = new GoogleAuthProvider();
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// --- ELEMENTOS ---
+// Elementos do DOM
 const form = document.querySelector(".cadastro-form");
+const emailInput = document.querySelector("input[type=\"email\"]");
+const passwordInput = document.querySelector("input[type=\"password\"]");
+const togglePassword = document.querySelector(".toggle-password");
 const googleBtn = document.querySelector(".btn-google");
+const modal = document.getElementById("modal-tipo-cadastro");
+const closeModal = document.querySelector(".close-modal");
+const cadastroLink = document.querySelector(".login a");
 
-// --- mostrar/ocultar senha ---
-document.querySelector(".toggle-password")?.addEventListener("click", (e) => {
-  const input = document.querySelector(".senha-container input");
-  if (!input) return;
-  if (input.type === "password") {
-    input.type = "text";
-    e.currentTarget.classList.replace("fa-eye-slash", "fa-eye");
-  } else {
-    input.type = "password";
-    e.currentTarget.classList.replace("fa-eye", "fa-eye-slash");
-  }
+// Função para mostrar/ocultar senha
+togglePassword.addEventListener("click", function() {
+  const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+  passwordInput.setAttribute("type", type);
+  
+  // Alternar ícone
+  this.classList.toggle("fa-eye");
+  this.classList.toggle("fa-eye-slash");
 });
 
-// --- LOGIN EMAIL/SENHA ---
-form.addEventListener("submit", async (ev) => {
-  ev.preventDefault();
-  const email = form.querySelector("input[type='email']").value.trim();
-  const senha = form.querySelector("input[type='password']").value;
+// Função para verificar se o usuário existe na tabela de usuários
+async function verificarUsuarioNaTabela(email, senha) {
+  try {
+    // Buscar na coleção 'usuarios' por email
+    const q = query(collection(db, "usuarios"), where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      throw new Error("Usuário não encontrado");
+    }
+    
+    let usuarioEncontrado = null;
+    querySnapshot.forEach((doc) => {
+      const userData = doc.data();
+      // Verificar se a senha confere
+      if (userData.senha === senha) {
+        usuarioEncontrado = { id: doc.id, ...userData };
+      }
+    });
+    
+    if (!usuarioEncontrado) {
+      throw new Error("Senha incorreta");
+    }
+    
+    return usuarioEncontrado;
+  } catch (error) {
+    throw error;
+  }
+}
 
+// Função para fazer login com email e senha
+async function loginComEmailSenha(email, senha) {
+  try {
+    // Verificar se o usuário existe na tabela usuarios
+    const usuario = await verificarUsuarioNaTabela(email, senha);
+    
+    console.log("Login realizado com sucesso:", usuario);
+    
+    // Salvar dados do usuário no localStorage para uso posterior
+    localStorage.setItem("usuarioLogado", JSON.stringify(usuario));
+    
+    // Redirecionar para homeC.html
+    window.location.href = "homeC.html";
+    
+  } catch (error) {
+    console.error("Erro no login:", error);
+    
+    // Mostrar mensagem de erro para o usuário
+    let mensagem = "Email ou senha incorretos.";
+    
+    if (error.message === "Usuário não encontrado" || error.message === "Senha incorreta") {
+      mensagem = "Email ou senha incorretos.";
+    }
+    
+    alert(mensagem);
+  }
+}
+
+// Função para login com Google
+async function loginComGoogle() {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+    
+    console.log("Login com Google realizado:", user);
+    
+    // Verificar se o usuário já existe na tabela de usuários
+    const q = query(collection(db, "usuarios"), where("email", "==", user.email));
+    const querySnapshot = await getDocs(q);
+    
+    let usuarioData;
+    
+    if (querySnapshot.empty) {
+      // Se não existe, criar um novo registro na tabela
+      const novoUsuario = {
+        email: user.email,
+        nome: user.displayName,
+        foto: user.photoURL,
+        loginGoogle: true,
+        criadoEm: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(collection(db, "usuarios"), novoUsuario);
+      usuarioData = { id: docRef.id, ...novoUsuario };
+      
+      console.log("Novo usuário criado na tabela");
+    } else {
+      // Se já existe, pegar os dados
+      querySnapshot.forEach((doc) => {
+        usuarioData = { id: doc.id, ...doc.data() };
+      });
+    }
+    
+    // Salvar dados do usuário no localStorage
+    localStorage.setItem("usuarioLogado", JSON.stringify(usuarioData));
+    
+    // Redirecionar para homeC.html
+    window.location.href = "homeC.html";
+    
+  } catch (error) {
+    console.error("Erro no login com Google:", error);
+    
+    let mensagem = "Erro no login com Google. Tente novamente.";
+    
+    switch (error.code) {
+      case "auth/popup-closed-by-user":
+        mensagem = "Login cancelado pelo usuário.";
+        break;
+      case "auth/popup-blocked":
+        mensagem = "Popup bloqueado. Permita popups para este site.";
+        break;
+    }
+    
+    alert(mensagem);
+  }
+}
+
+// Event listener para o formulário de login
+form.addEventListener("submit", function(e) {
+  e.preventDefault();
+  
+  const email = emailInput.value.trim();
+  const senha = passwordInput.value;
+  
   if (!email || !senha) {
-    alert("Preencha email e senha.");
+    alert("Por favor, preencha todos os campos.");
     return;
   }
-
-  try {
-    const cred = await auth.signInWithEmailAndPassword(email, senha);
-    await direcionarPorColecao(cred.user);
-  } catch (err) {
-    let msg = "Erro ao entrar.";
-    if (err.code === "auth/user-not-found") msg = "Usuário não encontrado.";
-    if (err.code === "auth/wrong-password") msg = "Senha incorreta.";
-    if (err.code === "auth/too-many-requests") msg = "Muitas tentativas. Tente novamente mais tarde.";
-    alert(msg);
-    console.error(err);
-  }
-});
-
-// --- LOGIN GOOGLE ---
-googleBtn.addEventListener("click", async () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  try {
-    const result = await auth.signInWithPopup(provider);
-    const user = result.user;
-
-    const destino = await buscarDestinoPorPerfil(user);
-    if (destino) {
-      window.location.href = destino;
-      return;
-    }
-
-    abrirPopupEscolha(user);
-  } catch (err) {
-    console.error("Erro Google:", err);
-    alert("Erro ao entrar com Google.");
-  }
-});
-
-// --- FUNÇÕES AUXILIARES ---
-async function direcionarPorColecao(user) {
-  const destino = await buscarDestinoPorPerfil(user);
-  if (destino) {
-    window.location.href = destino;
-  } else {
-    abrirPopupEscolha(user);
-  }
-}
-
-async function buscarDestinoPorPerfil(user) {
-  const uid = user.uid;
-  const email = user.email;
-
-  try {
-    // Checa se o doc do UID existe em "usuarios"
-    let doc = await db.collection("usuarios").doc(uid).get();
-    if (doc.exists) return "homeC.html";
-
-    // Checa se o doc do UID existe em "motoristas"
-    doc = await db.collection("motoristas").doc(uid).get();
-    if (doc.exists) return "homeM.html";
-
-    // Compatibilidade antiga (busca por email)
-    let snap = await db.collection("usuarios").where("email", "==", email).limit(1).get();
-    if (!snap.empty) return "homeC.html";
-
-    snap = await db.collection("motoristas").where("email", "==", email).limit(1).get();
-    if (!snap.empty) return "homeM.html";
-
-    // Se não encontrou nada
-    return null;
-  } catch (err) {
-    console.error("Erro Firestore:", err);
-    return null;
-  }
-}
-
-function abrirPopupEscolha(user) {
-  const overlay = document.createElement("div");
-  overlay.style.cssText = `
-    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-    background:rgba(0,0,0,.6); z-index:9999; padding:16px;
-  `;
-  overlay.innerHTML = `
-    <div style="background:#fff; border-radius:16px; padding:24px; width:min(420px,95%); text-align:center;">
-      <h3>Você é?</h3>
-      <p>Escolha para finalizar seu cadastro</p>
-      <div style="display:flex; gap:12px; justify-content:center;">
-        <button id="btnUsuario" style="flex:1; padding:12px; border:none; border-radius:12px; background:#ff6a00; color:#fff;">Sou Usuário</button>
-        <button id="btnMotorista" style="flex:1; padding:12px; border:1px solid #ccc; border-radius:12px; background:#fff;">Sou Motorista</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) overlay.remove();
+  
+  // Desabilitar botão durante o login
+  const submitBtn = form.querySelector(".btn-laranja");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "ENTRANDO...";
+  
+  loginComEmailSenha(email, senha).finally(() => {
+    // Reabilitar botão
+    submitBtn.disabled = false;
+    submitBtn.textContent = "ENTRAR";
   });
+});
 
-  document.getElementById("btnUsuario").onclick = async () => {
-    await criarPerfil(user, "usuarios");
-    window.location.href = "homeC.html";
-  };
-  document.getElementById("btnMotorista").onclick = async () => {
-    await criarPerfil(user, "motoristas");
-    window.location.href = "homeM.html";
-  };
-}
+// Event listener para o botão do Google
+googleBtn.addEventListener("click", function() {
+  this.disabled = true;
+  this.innerHTML = '<i class="fa-brands fa-google"></i> Entrando...';
+  
+  loginComGoogle().finally(() => {
+    this.disabled = false;
+    this.innerHTML = '<i class="fa-brands fa-google"></i> Entrar com Google';
+  });
+});
 
-async function criarPerfil(user, colecao) {
-  const uid = user.uid;
-  const payload = {
-    email: user.email,
-    nome: user.displayName || "",
-    criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-    emailVerificado: !!user.emailVerified
-  };
+// Event listeners para o modal de cadastro
+cadastroLink.addEventListener("click", function(e) {
+  e.preventDefault();
+  modal.classList.remove("hidden");
+});
 
-  try {
-    await db.collection(colecao).doc(uid).set(payload, { merge: true });
-  } catch (err) {
-    console.error("Erro criar perfil:", err);
+closeModal.addEventListener("click", function() {
+  modal.classList.add("hidden");
+});
+
+// Fechar modal clicando fora dele
+modal.addEventListener("click", function(e) {
+  if (e.target === modal) {
+    modal.classList.add("hidden");
   }
+});
+
+// Event listeners para os botões de opção do modal
+document.querySelectorAll(".btn-opcao").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const destino = this.getAttribute("data-destino");
+    window.location.href = destino;
+  });
+});
+
+
+
+// Função para logout (pode ser útil)
+function logout() {
+  // Remover dados do localStorage
+  localStorage.removeItem("usuarioLogado");
+  
+  // Fazer logout do Firebase Auth se estiver logado
+  signOut(auth).then(() => {
+    console.log("Logout realizado");
+    window.location.href = "login.html";
+  }).catch((error) => {
+    console.error("Erro no logout:", error);
+    // Mesmo com erro, redirecionar para login
+    window.location.href = "login.html";
+  });
 }
