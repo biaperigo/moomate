@@ -121,12 +121,13 @@
 
 
 <!-- E adicione o script do Firebase Auth no HTML -->
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-storage-compat.js"></script>
+<!-- Firebase compat v10 (ordem importa!) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
+<!-- Seu script de cadastro - sem type="module" -->
+<script src="src/javascript/cadastroM.js"></script>
 
- <script src="src/javascript/cadastroM.js"></script>
 </body>
 </html>

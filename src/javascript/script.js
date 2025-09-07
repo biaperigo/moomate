@@ -1,6 +1,6 @@
-$(document).ready(function(){
+$(document).ready(function () {
   // Toggle menu mobile
-  $('#mobile_btn').on('click', function (){
+  $('#mobile_btn').on('click', function () {
     $('#mobile_menu').toggleClass('active');
     $('#mobile_btn').find('i').toggleClass('fa-x');
   });
@@ -9,32 +9,30 @@ $(document).ready(function(){
   const navItems = $('.nav-item');
   const header = $('header');
 
-  $(window).on('scroll', function (){
+  $(window).on('scroll', function () {
     const scrollPosition = $(window).scrollTop() + header.outerHeight();
 
-    // Alterar background e sombra do header
     if ($(window).scrollTop() > 20) {
       header.addClass('scrolled');
     } else {
       header.removeClass('scrolled');
     }
 
-    if(scrollPosition < 0){
+    if (scrollPosition < 0) {
       header.css('box-shadow', 'none');
     } else {
       header.css('box-shadow', '5px 1px 5px rgba(0,0,0,0.1)');
     }
 
-    // Atualiza item ativo do menu
     let activeSectionIndex = 0;
-    sections.each(function(i){
+    sections.each(function (i) {
       const section = $(this);
       const sectionTop = section.offset().top - header.outerHeight() - 10;
       const sectionBottom = sectionTop + section.outerHeight();
 
-      if(scrollPosition >= sectionTop && scrollPosition < sectionBottom){
+      if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
         activeSectionIndex = i;
-        return false; // sai do each quando encontrar
+        return false;
       }
     });
 
@@ -43,8 +41,6 @@ $(document).ready(function(){
   });
 
   // === ScrollReveal Animations ===
-
-  // Anima todas as seções da esquerda
   ScrollReveal().reveal('section', {
     origin: 'left',
     distance: '60px',
@@ -54,7 +50,6 @@ $(document).ready(function(){
     delay: 100
   });
 
-  // CTA da home (título, descrição e botões)
   ScrollReveal().reveal('#cta .title', {
     origin: 'left',
     distance: '40px',
@@ -76,7 +71,6 @@ $(document).ready(function(){
     delay: 600
   });
 
-  // Banner da home (imagem)
   ScrollReveal().reveal('#banner img', {
     origin: 'right',
     distance: '60px',
@@ -84,7 +78,6 @@ $(document).ready(function(){
     delay: 400
   });
 
-  // Integrantes da equipe
   ScrollReveal().reveal('.team-member', {
     origin: 'bottom',
     distance: '40px',
@@ -92,7 +85,6 @@ $(document).ready(function(){
     interval: 200
   });
 
-  // Seção motorista
   ScrollReveal().reveal('.motorista-imagem img', {
     origin: 'left',
     distance: '50px',
@@ -107,18 +99,23 @@ $(document).ready(function(){
     delay: 400
   });
 
-});
-// Seção usuário
-ScrollReveal().reveal('.usuario-imagem img', {
-  origin: 'left',
-  distance: '50px',
-  duration: 1000,
-  delay: 200
-});
+  ScrollReveal().reveal('.usuario-imagem img', {
+    origin: 'left',
+    distance: '50px',
+    duration: 1000,
+    delay: 200
+  });
 
-ScrollReveal().reveal('.usuario-conteudo', {
-  origin: 'left',
-  distance: '50px',
-  duration: 1000,
-  delay: 400
-});
+  ScrollReveal().reveal('.usuario-conteudo', {
+    origin: 'left',
+    distance: '50px',
+    duration: 1000,
+    delay: 400
+  });
+
+  // === CÓDIGO PARA O MODAL DE CADASTRO ===
+  $(".btn-outline").on("click", function (e) {
+    e.preventDefault();
+    // aqui entra o resto do código do modal...
+  });
+}); // <-- fechamento único do document.ready

@@ -1,4 +1,21 @@
-// Configuração do Firebase
+/*********************************************************
+ * homeC.js — Moomate (CLIENTE)
+ * - Mapa travado no estado de São Paulo (com alerts)
+ * - Validação de CEP/endereço só-SP (input, autocomplete, blur)
+ * - Entrega + propostas em tempo real renderizadas no bloco azul
+ * - Mantém TODA a lógica original de pedidos e propostas
+ **********************************************************/
+
+// ===================== Estado de São Paulo =====================
+const SP_BOUNDS = L.latLngBounds(
+  L.latLng(-25.30, -53.10), // sudoeste
+  L.latLng(-19.80, -44.20)  // nordeste
+);
+function isWithinSaoPaulo(lat, lng) {
+  return SP_BOUNDS.contains([lat, lng]);
+}
+
+// ======================= Firebase config =======================
 const firebaseConfig = {
   apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
   authDomain: "moomate-39239.firebaseapp.com",
@@ -9,49 +26,46 @@ const firebaseConfig = {
   measurementId: "G-62J7Q8CKP4"
 };
 
-// Inicializar Firebase (será carregado via CDN)
+// ===================== Variáveis globais =======================
 let db;
-let currentEntregaId = null; // Para armazenar o ID da entrega atual
+let currentEntregaId = null;
 
 let map;
 let markerOrigem, markerDestino, routeLine;
 let origemCoords = null;
 let destinoCoords = null;
 
-// Inicializar mapa focado no estado de São Paulo
+// ===================== Mapa (travado em SP) ====================
 function initMap() {
-  // Coordenadas centrais do estado de São Paulo
   const defaultLatLng = [-23.5505, -46.6333]; // São Paulo capital
- 
-  // Bounds aproximados do estado de São Paulo
-  const spBounds = [
-    [-25.3, -53.1], // Southwest
-    [-19.8, -44.2]  // Northeast
-  ];
 
   map = L.map("map", {
     zoomControl: true,
     scrollWheelZoom: true,
     dragging: true,
-    // Limitar o mapa ao estado de São Paulo
-    maxBounds: spBounds,
-    maxBoundsViscosity: 1.0
-  }).setView(defaultLatLng, 7); // Zoom menor para mostrar mais do estado
+    minZoom: 6,
+    maxZoom: 18,
+    maxBounds: SP_BOUNDS,
+    maxBoundsViscosity: 1.0,
+    worldCopyJump: false
+  }).setView(defaultLatLng, 7);
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors",
+    noWrap: true,
+    bounds: SP_BOUNDS
   }).addTo(map);
 
-  // Marcador Origem
+  // Marcador origem
   markerOrigem = L.marker(defaultLatLng, { draggable: true })
     .addTo(map)
     .bindPopup("Origem (arraste para mudar)")
     .openPopup();
 
-  // Marcador Destino (vermelho)
+  // Marcador destino (vermelho)
   const redIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
     iconSize: [25, 41],
     iconAnchor: [12, 41],
     popupAnchor: [1, -34],
@@ -59,50 +73,48 @@ function initMap() {
   });
 
   markerDestino = L.marker(defaultLatLng, {
-    draggable: false,
+    draggable: false, // se quiser arrastar, troque para true
     opacity: 0.5,
     icon: redIcon
   }).addTo(map).bindPopup("Destino");
 
+  // Origem: impede sair de SP (alerta + volta)
   markerOrigem.on("dragend", () => {
-    const latlng = markerOrigem.getLatLng();
-    // Verificar se está dentro dos limites de SP
-    if (isWithinSaoPaulo(latlng.lat, latlng.lng)) {
-      origemCoords = [latlng.lat, latlng.lng];
-      reverseGeocode(latlng.lat, latlng.lng, "localRetirada", true);
+    const { lat, lng } = markerOrigem.getLatLng();
+    if (isWithinSaoPaulo(lat, lng)) {
+      origemCoords = [lat, lng];
+      reverseGeocode(lat, lng, "localRetirada", true);
       updateRoute();
     } else {
-      alert("Por favor, selecione um local dentro do estado de São Paulo.");
+      alert("Origem fora do estado de São Paulo. Selecione um local dentro de SP.");
       markerOrigem.setLatLng(origemCoords || defaultLatLng);
     }
   });
 
+  // Destino: se tornar arrastável, já fica protegido
   markerDestino.on("dragend", () => {
-    const latlng = markerDestino.getLatLng();
-    // Verificar se está dentro dos limites de SP
-    if (isWithinSaoPaulo(latlng.lat, latlng.lng)) {
-      destinoCoords = [latlng.lat, latlng.lng];
-      reverseGeocode(latlng.lat, latlng.lng, "localEntrega", true);
+    const { lat, lng } = markerDestino.getLatLng();
+    if (isWithinSaoPaulo(lat, lng)) {
+      destinoCoords = [lat, lng];
+      reverseGeocode(lat, lng, "localEntrega", true);
       updateRoute();
     } else {
-      alert("Por favor, selecione um local dentro do estado de São Paulo.");
+      alert("Destino fora do estado de São Paulo. Selecione um local dentro de SP.");
       markerDestino.setLatLng(destinoCoords || defaultLatLng);
     }
   });
 
-  // Geolocalização
+  // Geolocalização (só SP)
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        // Verificar se a localização atual está em SP
+      ({ coords }) => {
+        const { latitude, longitude } = coords;
         if (isWithinSaoPaulo(latitude, longitude)) {
           origemCoords = [latitude, longitude];
           map.setView(origemCoords, 15);
           markerOrigem.setLatLng(origemCoords);
           reverseGeocode(latitude, longitude, "localRetirada", true);
         } else {
-          // Se não estiver em SP, usar coordenadas padrão
           origemCoords = defaultLatLng;
           reverseGeocode(defaultLatLng[0], defaultLatLng[1], "localRetirada", true);
         }
@@ -118,22 +130,10 @@ function initMap() {
   }
 }
 
-// Função para verificar se as coordenadas estão dentro do estado de São Paulo
-function isWithinSaoPaulo(lat, lng) {
-  // Bounds aproximados do estado de São Paulo
-  const minLat = -25.3;
-  const maxLat = -19.8;
-  const minLng = -53.1;
-  const maxLng = -44.2;
- 
-  return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
-}
-
-// CEP - modificado para aceitar apenas CEPs de SP
+// =================== CEP (apenas SP) ===========================
 function checarCEP() {
   let cep = document.getElementById("cep").value.replace(/\D/g, "");
   if (cep.length === 8) {
-    // Verificar se é CEP de São Paulo (faixas de CEP de SP)
     if (isCEPSaoPaulo(cep)) {
       buscarEnderecoPorCEP(cep);
     } else {
@@ -142,22 +142,18 @@ function checarCEP() {
     }
   }
 }
-
-// Função para verificar se o CEP é do estado de São Paulo
 function isCEPSaoPaulo(cep) {
-  const cepNum = parseInt(cep);
-  // Faixas de CEP do estado de São Paulo
-  return (cepNum >= 1000000 && cepNum <= 19999999);
+  const cepNum = parseInt(cep, 10);
+  // Faixa SP (01000-000 a 19999-999)
+  return cepNum >= 1000000 && cepNum <= 19999999;
 }
-
 async function buscarEnderecoPorCEP(cep) {
   try {
     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
     const data = await res.json();
     if (data.erro) return alert("CEP não encontrado!");
-   
-    // Verificar se o CEP é realmente de São Paulo
-    if (data.uf !== 'SP') {
+
+    if (data.uf !== "SP") {
       alert("Este CEP não pertence ao estado de São Paulo.");
       document.getElementById("cep").value = "";
       return;
@@ -166,6 +162,7 @@ async function buscarEnderecoPorCEP(cep) {
     const endereco = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
     document.getElementById("localRetirada").value = endereco;
 
+    // geocodifica para posicionar no mapa
     const q = encodeURIComponent(`${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`);
     const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
     const nominatimData = await nominatimRes.json();
@@ -173,13 +170,12 @@ async function buscarEnderecoPorCEP(cep) {
 
     const lat = parseFloat(nominatimData[0].lat);
     const lon = parseFloat(nominatimData[0].lon);
-   
-    // Verificar se as coordenadas estão em SP
+
     if (!isWithinSaoPaulo(lat, lon)) {
-      alert("Endereço não encontrado no estado de São Paulo.");
+      alert("Por favor, selecione um endereço dentro do estado de São Paulo.");
       return;
     }
-   
+
     origemCoords = [lat, lon];
     map.setView(origemCoords, 15);
     markerOrigem.setLatLng(origemCoords);
@@ -190,7 +186,7 @@ async function buscarEnderecoPorCEP(cep) {
   }
 }
 
-// Reverse geocode
+// =================== Reverse geocode (só SP) ===================
 async function reverseGeocode(lat, lon, campo, setCep) {
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
@@ -198,16 +194,17 @@ async function reverseGeocode(lat, lon, campo, setCep) {
     if (!data.address) return;
 
     const a = data.address;
-   
-    // Verificar se o endereço é de São Paulo
-    if (a.state && !a.state.toLowerCase().includes('são paulo') && !a.state.toLowerCase().includes('sp')) {
-      return;
+    const state = (a.state || "").toLowerCase();
+    if (!isWithinSaoPaulo(lat, lon) || (!state.includes("são paulo") && !state.includes("sp"))) {
+      alert("Endereço localizado fora do estado de São Paulo.");
+      return; // não preenche o campo
     }
-   
-    const enderecoMontado = (a.road ? a.road + ", " : "") +
-                            (a.suburb ? a.suburb + ", " : "") +
-                            (a.city || a.town || a.village || "") +
-                            (a.state ? " - " + a.state : "");
+
+    const enderecoMontado =
+      (a.road ? a.road + ", " : "") +
+      (a.suburb ? a.suburb + ", " : "") +
+      (a.city || a.town || a.village || "") +
+      (a.state ? " - " + a.state : "");
     document.getElementById(campo).value = enderecoMontado;
 
     if (setCep && a.postcode && isCEPSaoPaulo(a.postcode.replace(/\D/g, ""))) {
@@ -218,12 +215,53 @@ async function reverseGeocode(lat, lon, campo, setCep) {
   }
 }
 
+// ============= Validação por texto digitado (blur) =============
+async function validarEnderecoSPPorTexto(fieldId) {
+  const input = document.getElementById(fieldId);
+  const val = (input.value || "").trim();
+  if (!val) return true;
+
+  const q =
+    val.toLowerCase().includes("são paulo") || val.toLowerCase().includes("sp")
+      ? val
+      : `${val}, São Paulo, Brasil`;
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&countrycodes=br&q=${encodeURIComponent(
+      q
+    )}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data[0]) {
+      alert("Endereço inválido. Digite um endereço dentro do estado de São Paulo.");
+      input.value = "";
+      return false;
+    }
+
+    const lat = parseFloat(data[0].lat),
+      lon = parseFloat(data[0].lon);
+    const state = (data[0].address?.state || "").toLowerCase();
+
+    if (!isWithinSaoPaulo(lat, lon) || (!state.includes("são paulo") && !state.includes("sp"))) {
+      alert("Este endereço não pertence ao estado de São Paulo.");
+      input.value = "";
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    console.error("Erro ao validar endereço:", e);
+    return true; // não bloqueia se der erro de rede
+  }
+}
+
 function formatarCEP(cep) {
   cep = cep.replace(/\D/g, "");
   return cep.length === 8 ? cep.substr(0, 5) + "-" + cep.substr(5, 3) : cep;
 }
 
-// Autocomplete - modificado para buscar apenas em São Paulo
+// ================== Autocomplete (apenas SP) ===================
 let timeoutAutocomplete;
 async function autocompleteEndereco(campo) {
   clearTimeout(timeoutAutocomplete);
@@ -231,22 +269,25 @@ async function autocompleteEndereco(campo) {
     const val = document.getElementById(campo).value.trim();
     if (val.length < 3) return closeAutocomplete(campo);
 
-    // Adicionar "São Paulo" à busca para filtrar apenas resultados de SP
-    const searchQuery = val.includes('SP') || val.includes('São Paulo') ? val : val + ', São Paulo, Brasil';
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=10&countrycodes=br`;
+    const searchQuery =
+      val.includes("SP") || val.includes("São Paulo") ? val : val + ", São Paulo, Brasil";
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+      searchQuery
+    )}&addressdetails=1&limit=10&countrycodes=br`;
     const res = await fetch(url);
     const data = await res.json();
-   
-    // Filtrar apenas resultados do estado de São Paulo
-    const spResults = data.filter(item => {
+
+    const spResults = data.filter((item) => {
       const lat = parseFloat(item.lat);
       const lng = parseFloat(item.lon);
-      return isWithinSaoPaulo(lat, lng) &&
-             (item.address?.state?.toLowerCase().includes('são paulo') ||
-              item.address?.state?.toLowerCase().includes('sp') ||
-              item.display_name.toLowerCase().includes('são paulo'));
+      return (
+        isWithinSaoPaulo(lat, lng) &&
+        (item.address?.state?.toLowerCase().includes("são paulo") ||
+          item.address?.state?.toLowerCase().includes("sp") ||
+          item.display_name.toLowerCase().includes("são paulo"))
+      );
     });
-   
+
     showAutocompleteList(campo, spResults);
   }, 300);
 }
@@ -260,9 +301,9 @@ function showAutocompleteList(campo, data) {
     document.getElementById(campo).parentNode.appendChild(container);
   }
   container.innerHTML = "";
-  if (!data.length) return container.style.display = "none";
+  if (!data.length) return (container.style.display = "none");
 
-  data.forEach(item => {
+  data.forEach((item) => {
     const div = document.createElement("div");
     div.textContent = item.display_name;
     div.addEventListener("click", () => {
@@ -284,7 +325,6 @@ async function selectAutocompleteItem(campo, item) {
   const lat = parseFloat(item.lat);
   const lon = parseFloat(item.lon);
 
-  // Verificar se está dentro de SP
   if (!isWithinSaoPaulo(lat, lon)) {
     alert("Por favor, selecione um endereço dentro do estado de São Paulo.");
     return;
@@ -294,7 +334,10 @@ async function selectAutocompleteItem(campo, item) {
     origemCoords = [lat, lon];
     markerOrigem.setLatLng(origemCoords).setOpacity(1);
     map.setView(origemCoords, 15);
-    document.getElementById("cep").value = item.address?.postcode && isCEPSaoPaulo(item.address.postcode.replace(/\D/g, "")) ? formatarCEP(item.address.postcode) : "";
+    document.getElementById("cep").value =
+      item.address?.postcode && isCEPSaoPaulo(item.address.postcode.replace(/\D/g, ""))
+        ? formatarCEP(item.address.postcode)
+        : "";
   } else {
     destinoCoords = [lat, lon];
     markerDestino.setLatLng(destinoCoords).setOpacity(1);
@@ -304,125 +347,169 @@ async function selectAutocompleteItem(campo, item) {
   updateRoute();
 }
 
-// Atualiza rota
+// ====================== Rota/Distância ========================
 function updateRoute() {
   if (routeLine) map.removeLayer(routeLine);
-
   if (origemCoords && destinoCoords) {
-    routeLine = L.polyline([origemCoords, destinoCoords], { color: "orange", weight: 4, opacity: 0.7, dashArray: "10,10" }).addTo(map);
+    routeLine = L.polyline([origemCoords, destinoCoords], {
+      color: "orange",
+      weight: 4,
+      opacity: 0.7,
+      dashArray: "10,10"
+    }).addTo(map);
     map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
   }
 }
-
-// Cálculo de distância
 function calcularDistancia(lat1, lon1, lat2, lon2) {
-  const toRad = v => v * Math.PI / 180;
+  const toRad = (v) => (v * Math.PI) / 180;
   const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Função para ouvir propostas em tempo real
+// ================= Propostas em tempo real (inline) ============
 function ouvirPropostas(entregaId) {
   if (!db || !entregaId) return;
-  
-  db.collection('entregas')
+
+  db.collection("entregas")
     .doc(entregaId)
-    .collection('propostas')
-    .onSnapshot(snapshot => {
+    .collection("propostas")
+    .orderBy("dataEnvio", "asc")
+    .onSnapshot(async (snapshot) => {
+      const container = document.getElementById("propostasContainer");
+      container.innerHTML = `
+        <h3>Propostas Recebidas</h3>
+        <div id="lista-propostas" class="lista-propostas"></div>
+      `;
+      const lista = document.getElementById("lista-propostas");
+
       if (snapshot.empty) {
+        lista.innerHTML = `<p>Aguardando propostas dos motoristas...</p>`;
         return;
       }
 
-      // Mostrar modal com propostas
-      mostrarModalPropostas(entregaId, snapshot);
+      // cache: evita buscar mesmo motorista várias vezes
+      const cacheMotoristas = {};
+
+      // pega nome + foto do Firestore (motoristas/{uid})
+      async function getMotorista(uid) {
+        if (!uid) return { nome: "Motorista", foto: null };
+        if (cacheMotoristas[uid]) return cacheMotoristas[uid];
+        try {
+          const snap = await db.collection("motoristas").doc(uid).get();
+          if (!snap.exists) return { nome: "Motorista", foto: null };
+          const data = snap.data();
+          const nome = data?.dadosPessoais?.nome || data?.nome || "Motorista";
+          const foto = data?.dadosPessoais?.foto || data?.foto || null;
+          cacheMotoristas[uid] = { nome, foto };
+          return cacheMotoristas[uid];
+        } catch {
+          return { nome: "Motorista", foto: null };
+        }
+      }
+
+      // formata data Firestore Timestamp ou ISO
+      const fmtData = (v) => {
+        try {
+          if (v && typeof v.toDate === "function") return v.toDate().toLocaleString();
+          if (typeof v === "string") return new Date(v).toLocaleString();
+        } catch {}
+        return "";
+      };
+
+      // iniciais para fallback
+      const iniciaisDe = (nome) => {
+        if (!nome) return "??";
+        const parts = nome.trim().split(/\s+/).filter(Boolean);
+        const first = parts[0]?.[0] || "";
+        const last  = parts.length > 1 ? parts[parts.length - 1][0] : (parts[0]?.[1] || "");
+        return (first + last).toUpperCase();
+      };
+
+      lista.innerHTML = "";
+      for (const doc of snapshot.docs) {
+        const p = doc.data();
+
+        // compatibilidade: pode vir motoristaUid OU motoristaId (legado)
+        const uidMotorista = p.motoristaUid || p.motoristaId || "";
+
+        // se a proposta já trouxe nome/foto, usamos; senão buscamos
+        let nomeMotorista = p.nomeMotorista || "";
+        let fotoMotorista = p.fotoMotorista || null;
+
+        if (!nomeMotorista || fotoMotorista === undefined) {
+          const info = await getMotorista(uidMotorista);
+          if (!nomeMotorista) nomeMotorista = info.nome;
+          if (fotoMotorista === undefined) fotoMotorista = info.foto;
+        }
+
+        const avatarHtml = fotoMotorista
+          ? `<img src="${fotoMotorista}" alt="${nomeMotorista}">`
+          : `<span class="motorista-iniciais">${iniciaisDe(nomeMotorista)}</span>`;
+
+        const card = document.createElement("div");
+        card.className = "proposta-card inline";
+        card.innerHTML = `
+          <div class="proposta-header">
+            <div class="motorista-avatar">${avatarHtml}</div>
+            <h4>${nomeMotorista}</h4>
+          </div>
+          <div class="proposta-body">
+            <p><strong>Preço:</strong> R$ ${Number(p.preco || 0).toFixed(2)}</p>
+            <p><strong>Tempo de chegada:</strong> ${p.tempoChegada || 0} min</p>
+            <p><strong>Ajudantes:</strong> ${p.ajudantes || 0}</p>
+            <p><strong>Tipo de veículo:</strong> ${p.veiculo || "-"}</p>
+            <p><em>Enviado em: ${fmtData(p.dataEnvio)}</em></p>
+          </div>
+          <div class="proposta-footer">
+            <button class="aceitar-btn"
+              onclick="aceitarProposta('${entregaId}', '${doc.id}', '${uidMotorista}')">
+              ✅ Aceitar Proposta
+            </button>
+          </div>
+        `;
+        lista.appendChild(card);
+      }
     });
 }
 
-// Função para mostrar modal com propostas
-function mostrarModalPropostas(entregaId, snapshot) {
-  // Criar modal se não existir
-  let modal = document.getElementById('propostasModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'propostasModal';
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="modal-content">
-        <span class="modal-close" onclick="fecharModalPropostas()">&times;</span>
-        <h2>Propostas Recebidas</h2>
-        <div id="propostas-list"></div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  }
 
-  const propostasList = document.getElementById('propostas-list');
-  propostasList.innerHTML = '';
-
-  snapshot.forEach(doc => {
-    const proposta = doc.data();
-    const propostaCard = document.createElement('div');
-    propostaCard.className = 'proposta-card';
-    propostaCard.innerHTML = `
-      <div class="proposta-header">
-        <h3>🚚 ${proposta.nomeMotorista || 'Motorista'}</h3>
-      </div>
-      <div class="proposta-body">
-        <p><strong>Preço:</strong> R$ ${proposta.preco.toFixed(2)}</p>
-        <p><strong>Tempo de chegada:</strong> ${proposta.tempoChegada} minutos</p>
-        <p><strong>Ajudantes:</strong> ${proposta.ajudantes}</p>
-        <p><strong>Tipo de veículo:</strong> ${proposta.veiculo}</p>
-        <p><em>Enviado em: ${new Date(proposta.dataEnvio).toLocaleString()}</em></p>
-      </div>
-      <div class="proposta-footer">
-        <button class="aceitar-btn" onclick="aceitarProposta('${entregaId}', '${doc.id}', '${proposta.motoristaId}')">
-          ✅ Aceitar Proposta
-        </button>
-      </div>
-    `;
-    propostasList.appendChild(propostaCard);
-  });
-
-  // Mostrar modal
-  modal.style.display = 'flex';
-  setTimeout(() => {
-    modal.style.opacity = '1';
-    modal.querySelector('.modal-content').style.transform = 'scale(1)';
-  }, 10);
-}
-
-// Função para fechar modal de propostas
+// ============= (Seu modal antigo mantido – não usado) =========
+function mostrarModalPropostas(entregaId, snapshot) { /* mantém se quiser usar */ }
 function fecharModalPropostas() {
-  const modal = document.getElementById('propostasModal');
+  const modal = document.getElementById("propostasModal");
   if (modal) {
-    modal.style.opacity = '0';
-    modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
-    setTimeout(() => { modal.style.display = 'none'; }, 300);
+    modal.style.opacity = "0";
+    modal.querySelector(".modal-content").style.transform = "scale(0.9)";
+    setTimeout(() => {
+      modal.style.display = "none";
+    }, 300);
   }
 }
 
-// Função para aceitar proposta
+// ================== Aceitar proposta / corrida =================
 async function aceitarProposta(entregaId, propostaId, motoristaId) {
   if (!db) return alert("Erro: Firebase não inicializado.");
 
   try {
-    // Buscar dados da proposta
-    const propostaDoc = await db.collection('entregas').doc(entregaId).collection('propostas').doc(propostaId).get();
-    if (!propostaDoc.exists) {
-      return alert("Proposta não encontrada.");
-    }
-
+    const propostaDoc = await db
+      .collection("entregas")
+      .doc(entregaId)
+      .collection("propostas")
+      .doc(propostaId)
+      .get();
+    if (!propostaDoc.exists) return alert("Proposta não encontrada.");
     const propostaData = propostaDoc.data();
 
-    // Atualizar status da entrega
-    await db.collection('entregas').doc(entregaId).update({
-      status: 'proposta_aceita',
+    await db.collection("entregas").doc(entregaId).update({
+      status: "proposta_aceita",
       propostaAceita: {
-        propostaId: propostaId,
-        motoristaId: motoristaId,
+        propostaId,
+        motoristaId,
         ...propostaData
       },
       aceitoEm: new Date().toISOString(),
@@ -431,19 +518,15 @@ async function aceitarProposta(entregaId, propostaId, motoristaId) {
 
     alert("Proposta aceita com sucesso!");
     fecharModalPropostas();
-
-    // Aguardar confirmação do motorista antes de mover para corridas
     mostrarAguardandoMotorista(entregaId);
-
   } catch (error) {
     console.error("Erro ao aceitar proposta:", error);
     alert("Erro ao aceitar proposta. Tente novamente.");
   }
 }
 
-// Função para mostrar que está aguardando confirmação do motorista
 function mostrarAguardandoMotorista(entregaId) {
-  // Criar modal de aguardo
+  // cria modal se não existir
   let modal = document.getElementById('aguardandoMotoristaModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -462,151 +545,129 @@ function mostrarAguardandoMotorista(entregaId) {
     document.body.appendChild(modal);
   }
 
-  // Mostrar modal
   modal.style.display = 'flex';
   setTimeout(() => {
     modal.style.opacity = '1';
     modal.querySelector('.modal-content').style.transform = 'scale(1)';
   }, 10);
 
-  // Ouvir quando a corrida for iniciada
-  const unsubscribe = db.collection('corridas').doc(entregaId)
+  // 1) fecha quando a corrida começar
+  const stopCorrida = db.collection('corridas').doc(entregaId)
     .onSnapshot(doc => {
-      if (doc.exists) {
-        const corridaData = doc.data();
-        if (corridaData.status === 'em_andamento') {
-          // Fechar modal de aguardo
-          modal.style.display = 'none';
-          
-          // Redirecionar para página da corrida
-          alert('Corrida iniciada! Redirecionando...');
-          setTimeout(() => {
-            window.location.href = `corrida.html?entregaId=${entregaId}&tipo=cliente`;
-          }, 1000);
-          
-          // Parar de ouvir
-          unsubscribe();
-        }
+      if (doc.exists && doc.data()?.status === 'em_andamento') {
+        modal.style.display = 'none';
+        alert('Corrida iniciada! Redirecionando...');
+        setTimeout(() => {
+          window.location.href = `statusC.html?entregaId=${entregaId}&tipo=cliente`;
+        }, 500);
+        stopCorrida(); stopEntrega();
+      }
+    });
+
+  // 2) fecha se o motorista recusar
+  const stopEntrega = db.collection('entregas').doc(entregaId)
+    .onSnapshot(doc => {
+      if (!doc.exists) return; // pode já ter virado corrida
+      const st = doc.data()?.status;
+      if (st === 'aguardando_propostas' || st === 'recusada_pelo_motorista') {
+        modal.style.display = 'none';
+        alert('O motorista recusou a corrida. Escolha outra proposta.');
+        stopEntrega(); stopCorrida();
       }
     });
 }
 
-// Função principal para salvar dados quando o botão for clicado
+
+// ================== Criar pedido / ver motoristas =============
 async function verMotoristas() {
-  // Validações básicas
-  if (!origemCoords || !destinoCoords) {
-    return alert("Defina origem e destino.");
-  }
- 
-  const tipoVeiculo = document.getElementById("tipoVeiculo").value;
-  if (!tipoVeiculo) {
-    return alert("Selecione um tipo de veículo.");
+  if (!origemCoords || !destinoCoords) return alert("Defina origem e destino.");
+
+  // reforço SP
+  if (
+    !isWithinSaoPaulo(origemCoords[0], origemCoords[1]) ||
+    !isWithinSaoPaulo(destinoCoords[0], destinoCoords[1])
+  ) {
+    return alert("Origem e destino devem estar dentro do estado de São Paulo.");
   }
 
-  // Capturar todos os dados do formulário
+  const tipoVeiculo = document.getElementById("tipoVeiculo").value;
+  if (!tipoVeiculo) return alert("Selecione um tipo de veículo.");
+
   const dadosFormulario = {
-    // Dados de origem
     origem: {
       endereco: document.getElementById("localRetirada").value,
       numero: document.getElementById("numeroRetirada").value || "",
       complemento: document.getElementById("complementoRetirada").value || "",
       cep: document.getElementById("cep").value,
-      coordenadas: {
-        lat: origemCoords[0],
-        lng: origemCoords[1]
-      }
+      coordenadas: { lat: origemCoords[0], lng: origemCoords[1] }
     },
-    
-    // Dados de destino
     destino: {
       endereco: document.getElementById("localEntrega").value,
       numero: document.getElementById("numeroEntrega").value || "",
       complemento: document.getElementById("complementoEntrega").value || "",
-      coordenadas: {
-        lat: destinoCoords[0],
-        lng: destinoCoords[1]
-      }
+      coordenadas: { lat: destinoCoords[0], lng: destinoCoords[1] }
     },
-    
-    // Dados da entrega
-    tipoVeiculo: tipoVeiculo,
+    tipoVeiculo,
     volumes: parseInt(document.getElementById("volumes").value) || 0,
-    
-    // Dados calculados
     distancia: 0,
     precoEstimado: 0,
-    
-    // Dados de controle
     status: "aguardando_propostas",
     criadoEm: new Date().toISOString(),
     propostas: {}
   };
+  // antes de salvar dadosFormulario:
+dadosFormulario.clienteNome = (window.userNome || localStorage.getItem('clienteNome') || 'Cliente');
 
-  // Calcular distância e preço
-  const dist = calcularDistancia(origemCoords[0], origemCoords[1], destinoCoords[0], destinoCoords[1]);
+
+  const dist = calcularDistancia(
+    origemCoords[0],
+    origemCoords[1],
+    destinoCoords[0],
+    destinoCoords[1]
+  );
   const precoEstimado = 50 + 2 * dist;
-  
+
   dadosFormulario.distancia = parseFloat(dist.toFixed(2));
   dadosFormulario.precoEstimado = parseFloat(precoEstimado.toFixed(2));
 
   try {
-    // Salvar no Firebase
     if (db) {
       const docRef = await db.collection("entregas").add(dadosFormulario);
       currentEntregaId = docRef.id;
-      
-      // Exibir confirmação com todos os dados salvos
-      const confirmacao = `
-Pedido criado com sucesso!
 
-ID do Pedido: ${docRef.id}
+      alert(
+        `Pedido criado com sucesso!\n\nID do Pedido: ${docRef.id}\n\nORIGEM:\n${dadosFormulario.origem.endereco}\n${
+          dadosFormulario.origem.numero ? "Número: " + dadosFormulario.origem.numero : ""
+        }\n${
+          dadosFormulario.origem.complemento
+            ? "Complemento: " + dadosFormulario.origem.complemento
+            : ""
+        }\nCEP: ${dadosFormulario.origem.cep}\n\nDESTINO:\n${
+          dadosFormulario.destino.endereco
+        }\n${
+          dadosFormulario.destino.numero ? "Número: " + dadosFormulario.destino.numero : ""
+        }\n${
+          dadosFormulario.destino.complemento
+            ? "Complemento: " + dadosFormulario.destino.complemento
+            : ""
+        }\n\nDETALHES:\nTipo de veículo: ${dadosFormulario.tipoVeiculo}\nVolumes: ${
+          dadosFormulario.volumes
+        }\nDistância: ${dadosFormulario.distancia} km\nPreço estimado: R$ ${dadosFormulario.precoEstimado.toFixed(
+          2
+        )}\n\nStatus: Aguardando propostas dos motoristas...`
+      );
 
-ORIGEM:
-${dadosFormulario.origem.endereco}
-${dadosFormulario.origem.numero ? 'Número: ' + dadosFormulario.origem.numero : ''}
-${dadosFormulario.origem.complemento ? 'Complemento: ' + dadosFormulario.origem.complemento : ''}
-CEP: ${dadosFormulario.origem.cep}
-
-DESTINO:
-${dadosFormulario.destino.endereco}
-${dadosFormulario.destino.numero ? 'Número: ' + dadosFormulario.destino.numero : ''}
-${dadosFormulario.destino.complemento ? 'Complemento: ' + dadosFormulario.destino.complemento : ''}
-
-DETALHES:
-Tipo de veículo: ${dadosFormulario.tipoVeiculo}
-Volumes: ${dadosFormulario.volumes}
-Distância: ${dadosFormulario.distancia} km
-Preço estimado: R$ ${dadosFormulario.precoEstimado.toFixed(2)}
-
-Status: Aguardando propostas dos motoristas...
-      `;
-      
-      alert(confirmacao);
-      
-      // Log dos dados salvos para debug
       console.log("Dados salvos no Firebase:", dadosFormulario);
-      
-      // Começar a ouvir propostas
+
       ouvirPropostas(docRef.id);
-      
-      // Mostrar container de propostas
       document.getElementById("propostasContainer").style.display = "block";
-      
     } else {
-      // Fallback se Firebase não estiver carregado
       console.log("Dados que seriam salvos:", dadosFormulario);
-      alert(`
-Dados capturados com sucesso!
-
-ORIGEM: ${dadosFormulario.origem.endereco}
-DESTINO: ${dadosFormulario.destino.endereco}
-TIPO: ${dadosFormulario.tipoVeiculo}
-VOLUMES: ${dadosFormulario.volumes}
-DISTÂNCIA: ${dadosFormulario.distancia} km
-PREÇO: R$ ${dadosFormulario.precoEstimado.toFixed(2)}
-
-Serviço temporariamente indisponível. Tente novamente.
-      `);
+      alert(
+        `Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nVOLUMES: ${dadosFormulario.volumes}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPREÇO: R$ ${dadosFormulario.precoEstimado.toFixed(
+          2
+        )}\n\nServiço temporariamente indisponível. Tente novamente.`
+      );
     }
   } catch (error) {
     console.error("Erro ao salvar pedido:", error);
@@ -614,55 +675,51 @@ Serviço temporariamente indisponível. Tente novamente.
   }
 }
 
-// Tipo de veículo com cancelamento
+// ================ Tipo de veículo (toggle) =====================
 function selecionarTipo(tipo) {
   const opcoes = document.querySelectorAll(".vehicle-option");
-  const atual = Array.from(opcoes).find(el => el.dataset.type === tipo);
+  const atual = Array.from(opcoes).find((el) => el.dataset.type === tipo);
 
   if (atual.classList.contains("selected")) {
     atual.classList.remove("selected");
     document.getElementById("tipoVeiculo").value = "";
-    opcoes.forEach(el => el.style.display = "block");
+    opcoes.forEach((el) => (el.style.display = "block"));
   } else {
-    opcoes.forEach(el => el.classList.remove("selected"));
+    opcoes.forEach((el) => el.classList.remove("selected"));
     atual.classList.add("selected");
     document.getElementById("tipoVeiculo").value = tipo;
-    opcoes.forEach(el => { if (!el.classList.contains("selected")) el.style.display = "none"; });
+    opcoes.forEach((el) => {
+      if (!el.classList.contains("selected")) el.style.display = "none";
+    });
   }
 }
 
-// Listeners
-document.addEventListener('DOMContentLoaded', function() {
-  // Event listeners para os campos
+// ==================== Listeners de página ======================
+document.addEventListener("DOMContentLoaded", function () {
   const cepField = document.getElementById("cep");
   const localRetiradaField = document.getElementById("localRetirada");
   const localEntregaField = document.getElementById("localEntrega");
   const verMotoristasBtn = document.getElementById("verMotoristas");
-  
-  if (cepField) {
-    cepField.addEventListener("input", checarCEP);
-  }
-  
+
+  if (cepField) cepField.addEventListener("input", checarCEP);
   if (localRetiradaField) {
     localRetiradaField.addEventListener("input", () => autocompleteEndereco("localRetirada"));
+    localRetiradaField.addEventListener("blur", () => validarEnderecoSPPorTexto("localRetirada"));
   }
-  
   if (localEntregaField) {
     localEntregaField.addEventListener("input", () => autocompleteEndereco("localEntrega"));
+    localEntregaField.addEventListener("blur", () => validarEnderecoSPPorTexto("localEntrega"));
   }
-  
-  // Event listeners para seleção de veículo
-  document.querySelectorAll(".vehicle-option").forEach(option => {
+
+  document.querySelectorAll(".vehicle-option").forEach((option) => {
     option.addEventListener("click", () => {
       selecionarTipo(option.dataset.type);
     });
   });
-  
-  if (verMotoristasBtn) {
-    verMotoristasBtn.addEventListener("click", verMotoristas);
-  }
-  
-  // Fechar autocomplete ao clicar fora
+
+  if (verMotoristasBtn) verMotoristasBtn.addEventListener("click", verMotoristas);
+
+  // fecha autocomplete ao clicar fora
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".input-box")) {
       closeAutocomplete("localRetirada");
@@ -671,12 +728,11 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// Inicializar Firebase quando a página carregar
-window.onload = function() {
+// ===================== Bootstrap da página =====================
+window.onload = function () {
   initMap();
- 
-  // Inicializar Firebase
-  if (typeof firebase !== 'undefined') {
+
+  if (typeof firebase !== "undefined") {
     firebase.initializeApp(firebaseConfig);
     db = firebase.app().firestore();
     console.log("Firebase inicializado com sucesso");

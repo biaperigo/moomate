@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Configuração do Firebase
+  // ================= Firebase =================
   const firebaseConfig = {
     apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
     authDomain: "moomate-39239.firebaseapp.com",
@@ -9,9 +9,22 @@ document.addEventListener('DOMContentLoaded', () => {
     appId: "1:637968714747:web:ad15dc3571c22f046b595e",
     measurementId: "G-62J7Q8CKP4"
   };
-
-  firebase.initializeApp(firebaseConfig);
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  let motoristaUid = null;
+  let nomeMotoristaReal = "Motorista";
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) return; // se quiser, redirecione pra loginM.html
+    motoristaUid = user.uid;
+    try {
+      const snap = await db.collection("motoristas").doc(user.uid).get();
+      const data = snap.exists ? snap.data() : null;
+      nomeMotoristaReal = data?.dadosPessoais?.nome || data?.nome || user.displayName || nomeMotoristaReal;
+    } catch {}
+  });
 
   const deliveryList = document.getElementById('delivery-list');
   const loadingMessage = document.getElementById('loading-message');
@@ -25,12 +38,49 @@ document.addEventListener('DOMContentLoaded', () => {
   const proposalVehicleInput = document.getElementById('proposalVehicle');
 
   let selectedEntregaId = null;
-  const motoristaId = `motorista_${Math.random().toString(36).substr(2, 9)}`;
+  const fallbackMotoristaId = `motorista_${Math.random().toString(36).substr(2, 9)}`;
+  const entregasCache = {}; // entregaId -> dados (para pegar distância)
+  let currentBounds = null; // {base, min, max}
 
-  // --- Carrega entregas em tempo real ---
+  // helpers 0..10
+  (function fillHelpers() {
+    proposalHelpersInput.innerHTML = "";
+    for (let i = 0; i <= 10; i++) {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `${i} Ajudante${i === 1 ? "" : "s"}`;
+      proposalHelpersInput.appendChild(opt);
+    }
+  })();
+
+  // ================== Utils de preço ==================
+  function calcPriceBoundsFromDistance(distKm) {
+    const base = 48 * (Number(distKm) || 0); // 8x6xkm
+    const min = Math.max(0, base - 150);
+    const max = base + 150;
+    return {
+      base: Math.round(base * 100) / 100,
+      min:  Math.round(min  * 100) / 100,
+      max:  Math.round(max  * 100) / 100,
+    };
+  }
+  function ensurePriceHintElement() {
+    let hint = document.getElementById("priceRangeHint");
+    if (!hint) {
+      hint = document.createElement("small");
+      hint.id = "priceRangeHint";
+      hint.style.display = "block";
+      hint.style.marginTop = "6px";
+      hint.style.color = "#666";
+      proposalPriceInput.parentElement.appendChild(hint);
+    }
+    return hint;
+  }
+
+  // ================== Listagem de entregas ==================
   function carregarEntregas() {
     db.collection('entregas')
-      .orderBy("criadoEm", "desc") // pega os mais novos primeiro
+      .orderBy("criadoEm", "desc")
       .onSnapshot(snapshot => {
         deliveryList.innerHTML = '';
         if (snapshot.empty) {
@@ -44,32 +94,44 @@ document.addEventListener('DOMContentLoaded', () => {
         snapshot.forEach(doc => {
           const entregaId = doc.id;
           const entregaData = doc.data();
+          entregasCache[entregaId] = entregaData; // cache para usar no modal
 
           const card = document.createElement('div');
           card.className = 'delivery-card';
           card.dataset.entregaId = entregaId;
-
-          card.innerHTML = `
-          
+          card.innerHTML = `            
             <strong>Entrega #${entregaId.substring(0, 6)}</strong>
-            <p><strong>Origem:</strong> ${entregaData.origem?.endereco|| entregaData.origem?.cep || ''}, ${entregaData.origem?.complemento || ''}</p>
-            <p><strong>Destino:</strong> ${entregaData.destino?.endereco || ''}, ${entregaData.destino?.numero || ''}</p>
+            <p><strong>Origem:</strong> ${entregaData.origem?.endereco || entregaData.origem?.cep || ''} ${entregaData.origem?.complemento ? '- ' + entregaData.origem.complemento : ''}</p>
+            <p><strong>Destino:</strong> ${entregaData.destino?.endereco || ''} ${entregaData.destino?.numero ? ', ' + entregaData.destino.numero : ''}</p>
             <p><strong>Distância:</strong> ${entregaData.distancia ? entregaData.distancia.toFixed(2) + ' km' : '---'}</p>
-             <p><strong>Volumes:</strong> ${entregaData.volumes}</p>
-             <p><strong>Tipo de veículo:</strong> ${entregaData.tipoVeiculo}</p>
+            <p><strong>Volumes:</strong> ${entregaData.volumes}</p>
+            <p><strong>Tipo de veículo:</strong> ${entregaData.tipoVeiculo}</p>
           `;
-
           deliveryList.appendChild(card);
         });
       });
   }
 
+  // ================== Modal abrir/fechar ==================
   function abrirModal() {
     if (!selectedEntregaId) return alert("Selecione um pedido!");
-    proposalPriceInput.value = '';
-    proposalTimeInput.value = '';
-    proposalHelpersInput.value = '0';
-    proposalVehicleInput.value = 'pequeno';
+
+    const distKm = entregasCache[selectedEntregaId]?.distancia || 0;
+    currentBounds = calcPriceBoundsFromDistance(distKm);
+
+    // input começa vazio, mas já com min/max
+    proposalPriceInput.value = "";
+    proposalPriceInput.min   = String(currentBounds.min.toFixed(2));
+    proposalPriceInput.max   = String(currentBounds.max.toFixed(2));
+    proposalPriceInput.step  = "0.01";
+
+    proposalTimeInput.value = "";
+    proposalHelpersInput.value = "0";
+    proposalVehicleInput.value = "pequeno";
+
+    const hint = ensurePriceHintElement();
+    hint.textContent = `Faixa permitida: R$ ${currentBounds.min.toFixed(2)} a R$ ${currentBounds.max.toFixed(2)} (base: R$ ${currentBounds.base.toFixed(2)})`;
+
     proposalModal.style.display = 'flex';
     setTimeout(() => {
       proposalModal.style.opacity = '1';
@@ -83,19 +145,28 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { proposalModal.style.display = 'none'; }, 300);
   }
 
+  // ================== Enviar proposta ==================
   function enviarProposta() {
-    const precoBase = parseFloat(proposalPriceInput.value);
+    const precoBase = parseFloat((proposalPriceInput.value || "").replace(",", "."));
     const tempoChegada = parseInt(proposalTimeInput.value, 10);
     const numAjudantes = parseInt(proposalHelpersInput.value, 10);
     const tipoVeiculo = proposalVehicleInput.value;
 
-    if (!precoBase || precoBase <= 0 || !tempoChegada || tempoChegada <= 0) 
-      return alert("Preencha valor e tempo corretamente.");
     if (!selectedEntregaId) return alert("Entrega não selecionada.");
+    if (!currentBounds)      return alert("Não foi possível calcular a faixa de preço desta entrega.");
+
+    if (!precoBase || isNaN(precoBase)) return alert("Informe um valor base válido.");
+    if (precoBase < currentBounds.min || precoBase > currentBounds.max) {
+      return alert(`O valor deve estar entre R$ ${currentBounds.min.toFixed(2)} e R$ ${currentBounds.max.toFixed(2)}.`);
+    }
+    if (!tempoChegada || tempoChegada <= 0) return alert("Informe o tempo até a retirada (minutos).");
+    if (numAjudantes < 0 || numAjudantes > 10) return alert("Número de ajudantes inválido.");
 
     const custoAjudantes = numAjudantes * 50;
     const precoTotalMotorista = precoBase + custoAjudantes;
-    const precoFinalCliente = precoTotalMotorista * 1.10;
+    const precoFinalCliente = precoTotalMotorista * 1.10; // +10% plataforma
+
+    const idParaUsar = motoristaUid || fallbackMotoristaId;
 
     const propostaData = {
       preco: precoFinalCliente,
@@ -103,29 +174,26 @@ document.addEventListener('DOMContentLoaded', () => {
       ajudantes: numAjudantes,
       veiculo: tipoVeiculo,
       precoOriginal: { base: precoBase, ajudantes: custoAjudantes, total: precoTotalMotorista },
-      dataEnvio: new Date().toISOString(),
-      motoristaId,
-      nomeMotorista: `Motorista ${motoristaId.substring(10, 15)}` // Nome fictício
+      dataEnvio: firebase.firestore.FieldValue.serverTimestamp(),
+      motoristaUid: idParaUsar,
+      nomeMotorista: nomeMotoristaReal || `Motorista ${fallbackMotoristaId.substring(10, 15)}`
     };
 
-    // Salvar proposta na subcoleção 'propostas' da entrega
     db.collection('entregas')
       .doc(selectedEntregaId)
       .collection('propostas')
-      .doc(motoristaId)
+      .doc(idParaUsar)
       .set(propostaData)
       .then(() => {
-        // Também atualizar o documento principal da entrega para indicar que há propostas
         return db.collection('entregas').doc(selectedEntregaId).update({
-          [`propostas.${motoristaId}`]: propostaData,
-          ultimaPropostaEm: new Date().toISOString()
+          [`propostas.${idParaUsar}`]: propostaData,
+          ultimaPropostaEm: firebase.firestore.FieldValue.serverTimestamp()
         });
       })
       .then(() => {
         alert("Proposta enviada com sucesso!");
         fecharModal();
         selectedEntregaId = null;
-        // Desmarcar card selecionado
         document.querySelectorAll('.delivery-card').forEach(c => c.classList.remove('selected'));
         submitBtn.disabled = true;
       })
@@ -135,108 +203,99 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  // Ouvir aceitação de propostas
-  function ouvirAceitacaoPropostas() {
-    db.collection('entregas')
-      .where('status', '==', 'proposta_aceita')
-      .where('propostaAceita.motoristaId', '==', motoristaId)
-      .onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-          if (change.type === 'modified') {
-            const entregaData = change.doc.data();
-            if (entregaData.propostaAceita && entregaData.propostaAceita.motoristaId === motoristaId) {
-              // Mostrar modal de confirmação personalizado
-              mostrarModalIniciarCorrida(change.doc.id, entregaData);
-            }
-          }
-        });
-      });
-  }
+  // ================== Escutar proposta aceita ==================
+// Escuta o status da proposta e exibe o modal para o motorista
+function ouvirAceitacaoPropostas() {
+  const idParaUsar = motoristaUid || fallbackMotoristaId;
 
-  // Função para mostrar modal de iniciar corrida
-  function mostrarModalIniciarCorrida(entregaId, entregaData) {
-    // Criar modal se não existir
-    let modal = document.getElementById('iniciarCorridaModal');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'iniciarCorridaModal';
-      modal.className = 'modal-overlay';
-      modal.innerHTML = `
-        <div class="modal-content">
-          <h2>🎉 Proposta Aceita!</h2>
-          <div class="proposta-aceita-info">
-            <p><strong>Sua proposta foi aceita pelo cliente!</strong></p>
-            <p><strong>Origem:</strong> ${entregaData.origem?.endereco || ''}</p>
-            <p><strong>Destino:</strong> ${entregaData.destino?.endereco || ''}</p>
-            <p><strong>Valor:</strong> R$ ${entregaData.propostaAceita?.preco?.toFixed(2) || '0.00'}</p>
-            <p><strong>Tempo estimado:</strong> ${entregaData.propostaAceita?.tempoChegada || '0'} minutos</p>
-          </div>
-          <div class="modal-buttons">
-            <button id="iniciarCorridaBtn" class="btn-iniciar">🚚 Iniciar Corrida</button>
-            <button id="cancelarCorridaBtn" class="btn-cancelar">❌ Cancelar</button>
-          </div>
+  db.collection('entregas')
+    .where('status', '==', 'proposta_aceita')
+    .where('propostaAceita.motoristaId', '==', idParaUsar)
+    .onSnapshot(snapshot => {
+      snapshot.forEach(docSnap => {
+        const entregaId = docSnap.id;
+        const entregaData = docSnap.data();
+        
+        // Mostra modal com os dados da proposta aceita
+        mostrarModalPropostaAceita(entregaId, entregaData);
+      });
+    });
+}
+
+function mostrarModalPropostaAceita(entregaId, entregaData) {
+  const nomeCliente = entregaData.clienteNome || "Cliente";
+  const valor = entregaData.propostaAceita?.preco?.toFixed(2) || "0.00";
+  const tempo = entregaData.propostaAceita?.tempoChegada || 0;
+
+  let modal = document.getElementById('propostaAceitaMotoristaModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'propostaAceitaMotoristaModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h2>✅ ${nomeCliente} aceitou sua proposta</h2>
+        <div class="proposta-aceita-info">
+          <p><strong>Origem:</strong> ${entregaData.origem?.endereco || ''}</p>
+          <p><strong>Destino:</strong> ${entregaData.destino?.endereco || ''}</p>
+          <p><strong>Valor para o cliente:</strong> R$ ${valor}</p>
+          <p><strong>Tempo até a retirada:</strong> ${tempo} min</p>
         </div>
-      `;
-      document.body.appendChild(modal);
-
-      // Event listeners para os botões
-      document.getElementById('iniciarCorridaBtn').addEventListener('click', () => {
-        iniciarCorrida(entregaId, entregaData);
-        modal.style.display = 'none';
-      });
-
-      document.getElementById('cancelarCorridaBtn').addEventListener('click', () => {
-        modal.style.display = 'none';
-      });
-    } else {
-      // Atualizar conteúdo do modal existente
-      modal.querySelector('.proposta-aceita-info').innerHTML = `
-        <p><strong>Sua proposta foi aceita pelo cliente!</strong></p>
-        <p><strong>Origem:</strong> ${entregaData.origem?.endereco || ''}</p>
-        <p><strong>Destino:</strong> ${entregaData.destino?.endereco || ''}</p>
-        <p><strong>Valor:</strong> R$ ${entregaData.propostaAceita?.preco?.toFixed(2) || '0.00'}</p>
-        <p><strong>Tempo estimado:</strong> ${entregaData.propostaAceita?.tempoChegada || '0'} minutos</p>
-      `;
-    }
-
-    // Mostrar modal
-    modal.style.display = 'flex';
-    setTimeout(() => {
-      modal.style.opacity = '1';
-      modal.querySelector('.modal-content').style.transform = 'scale(1)';
-    }, 10);
+        <div class="modal-buttons">
+          <button id="btnIniciarCorrida" class="btn-iniciar">🚚 Iniciar Corrida</button>
+          <button id="btnRecusarCorrida" class="btn-cancelar">❌ Recusar Corrida</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  } else {
+    modal.querySelector('.proposta-aceita-info').innerHTML = `
+      <p><strong>Origem:</strong> ${entregaData.origem?.endereco || ''}</p>
+      <p><strong>Destino:</strong> ${entregaData.destino?.endereco || ''}</p>
+      <p><strong>Valor para o cliente:</strong> R$ ${valor}</p>
+      <p><strong>Tempo até a retirada:</strong> ${tempo} min</p>
+    `;
+    modal.querySelector('h2').textContent = `${nomeCliente} aceitou sua proposta`;
   }
 
-  // Função para iniciar corrida
-  async function iniciarCorrida(entregaId, entregaData) {
-    try {
-      // Criar dados da corrida
-      const corridaData = {
-        ...entregaData,
-        status: 'em_andamento',
-        iniciadaEm: new Date().toISOString(),
-        motoristaConfirmou: true,
-        clienteConfirmou: true // Assumindo que o cliente já confirmou ao aceitar
-      };
+  // listeners dos botões
+  modal.querySelector('#btnIniciarCorrida').onclick = () => {
+    iniciarCorrida(entregaId, entregaData); // cria corrida e apaga entrega
+    modal.style.display = 'none';
+  };
 
-      // Salvar na coleção 'corridas'
-      await db.collection('corridas').doc(entregaId).set(corridaData);
+  modal.querySelector('#btnRecusarCorrida').onclick = () => {
+    recusarCorridaAposAceite(entregaId);
+    modal.style.display = 'none';
+  };
 
-      // Remover da coleção 'entregas'
-      await db.collection('entregas').doc(entregaId).delete();
-
-      alert('Corrida iniciada com sucesso!');
-      
-      // Redirecionar para página da corrida
-      window.location.href = `corrida.html?entregaId=${entregaId}&tipo=motorista`;
-
-    } catch (error) {
-      console.error('Erro ao iniciar corrida:', error);
-      alert('Erro ao iniciar corrida. Tente novamente.');
-    }
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    modal.style.opacity = '1';
+    modal.querySelector('.modal-content').style.transform = 'scale(1)';
+  }, 10);
+}
+async function iniciarCorrida(entregaId, entregaData) {
+  try {
+    const corridaData = {
+      ...entregaData,
+      status: 'em_andamento',
+      iniciadaEm: new Date().toISOString(),
+      motoristaConfirmou: true,
+      clienteConfirmou: true
+    };
+    await db.collection('corridas').doc(entregaId).set(corridaData);
+    await db.collection('entregas').doc(entregaId).delete();
+    alert('Corrida iniciada com sucesso!');
+    window.location.href = `statusM.html?entregaId=${entregaId}&tipo=motorista`;
+  } catch (error) {
+    console.error('Erro ao iniciar corrida:', error);
+    alert('Erro ao iniciar corrida. Tente novamente.');
   }
+}
 
-  // Selecionar card
+
+  // ================== Interações da lista ==================
   deliveryList.addEventListener('click', e => {
     const card = e.target.closest('.delivery-card');
     if (card) {
@@ -247,19 +306,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Eventos
+  // ================== Eventos do modal ==================
   submitBtn.addEventListener('click', abrirModal);
   modalClose.addEventListener('click', fecharModal);
   sendProposalBtn.addEventListener('click', enviarProposta);
+  proposalModal.addEventListener('click', (e) => { if (e.target === proposalModal) fecharModal(); });
 
-  // Fechar modal clicando fora
-  proposalModal.addEventListener('click', (e) => {
-    if (e.target === proposalModal) {
-      fecharModal();
-    }
-  });
-
-  // Inicia carregamento e ouvir aceitações
+  // ================== Boot ==================
   carregarEntregas();
   ouvirAceitacaoPropostas();
 });

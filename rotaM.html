@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rota do Motorista</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="src/styles/rotaM.css">
+  
+</head>
+<body>
+  <!-- Header -->
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/logo.png" alt="Logo">
+    </div>
+    <nav class="nav-links">
+      <a href="#">Início</a>
+      <a href="#">Propostas</a>
+      <a href="#">Sair</a>
+    </nav>
+  </header>
+
+  <!-- Banner -->
+  <div class="banner">
+    <img src="src/images/banner.jpg" alt="Banner">
+    <div class="banner-text">Rota do Motorista</div>
+  </div>
+
+  <!-- Rota -->
+  <section class="propostas-section">
+    <div class="form-section">
+      <div id="map" class="map-container"></div>
+      <div class="form-map-container">
+        <h3>Informações da Corrida</h3>
+        <p id="pickupInfo">Ponto de Retirada: <strong>Carregando...</strong></p>
+        <p id="destinationInfo">Destino Final: <strong>Carregando...</strong></p>
+        <button id="startButton" class="btn-cta">Iniciar Viagem</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div id="footer_content">
+      <div class="footer-left">
+        <img src="src/images/logo-footer.png" alt="Logo">
+      </div>
+      <div class="footer-social">
+        <span class="social-text">Siga-nos</span>
+        <div class="social-icons">
+          <a href="#" class="social-icon"><i class="fa fa-facebook"></i></a>
+          <a href="#" class="social-icon"><i class="fa fa-twitter"></i></a>
+        </div>
+      </div>
+    </div>
+    <div id="footer_items">
+      <span>&copy; 2025 Moomate</span>
+    </div>
+  </footer>
+
+  <script src="src/javascript/rotaM.js"></script>
+</body>
+</html>
