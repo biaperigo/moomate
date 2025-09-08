@@ -147,6 +147,7 @@ function isCEPSaoPaulo(cep) {
   // Faixa SP (01000-000 a 19999-999)
   return cepNum >= 1000000 && cepNum <= 19999999;
 }
+// Atualiza o marcador e o mapa após alterar o CEP
 async function buscarEnderecoPorCEP(cep) {
   try {
     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
@@ -162,7 +163,7 @@ async function buscarEnderecoPorCEP(cep) {
     const endereco = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
     document.getElementById("localRetirada").value = endereco;
 
-    // geocodifica para posicionar no mapa
+    // Geocodifica para obter a posição do marcador
     const q = encodeURIComponent(`${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`);
     const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
     const nominatimData = await nominatimRes.json();
@@ -171,20 +172,22 @@ async function buscarEnderecoPorCEP(cep) {
     const lat = parseFloat(nominatimData[0].lat);
     const lon = parseFloat(nominatimData[0].lon);
 
+    // Verifica se está dentro de SP
     if (!isWithinSaoPaulo(lat, lon)) {
       alert("Por favor, selecione um endereço dentro do estado de São Paulo.");
       return;
     }
 
     origemCoords = [lat, lon];
-    map.setView(origemCoords, 15);
-    markerOrigem.setLatLng(origemCoords);
-    reverseGeocode(lat, lon, "localRetirada", false);
-    updateRoute();
+    map.setView(origemCoords, 15); // Atualiza a visão do mapa
+    markerOrigem.setLatLng(origemCoords).setOpacity(1); // Atualiza a posição do marcador
+    reverseGeocode(lat, lon, "localRetirada", false); // Atualiza o campo do endereço
+    updateRoute(); // Atualiza a rota
   } catch {
     alert("Erro ao buscar o endereço pelo CEP.");
   }
 }
+
 
 // =================== Reverse geocode (só SP) ===================
 async function reverseGeocode(lat, lon, campo, setCep) {

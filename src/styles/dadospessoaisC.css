@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap');
 * {
   margin: 0;
   padding: 0;
@@ -119,6 +118,15 @@ body {
 .profile-item i {
   color: #ff6c0c;
   font-size: 1rem;
+}
+
+/* Botão de Edição */
+.edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #ff6c0c;
 }
 
 /* RESPONSIVO */

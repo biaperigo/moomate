@@ -14,11 +14,11 @@
 
   <!-- HEADER -->
   <header class="top-bar">
-      <div class="logo-area">
-        <img src="src/images/favicon.png" alt="Logo Moomate" />
-      </div>
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate" />
+    </div>
 
-      <nav class="nav-links" id="navMenu">
+    <nav class="nav-links" id="navMenu">
       <a href="homeM.html">Home</a>
       <a href="entregasM.html">Entregas</a>
       <a href="carteiraM.html">Carteira</a>
@@ -31,72 +31,71 @@
       <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
       <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
       <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
-      
-      <!-- Aqui dentro -->
       <button class="menu-toggle" id="menuToggle">
         <i class="fa-solid fa-bars"></i>
       </button>
     </div>
-
-</header>
+  </header>
 
   <!-- CONTEÚDO -->
   <div class="profile-container">
     <main class="profile-main">
-    <h2 class="section-title"> Informações Pessoais</h2>
+      <h2 class="section-title">Informações Pessoais</h2>
 
       <div class="profile-item">
         <span>Foto de perfil</span>
-        <i class="fa-solid fa-user"></i>
-        <i class="fa-solid fa-chevron-right"></i>
+        <img id="fotoPerfil" src="src/images/default-profile.png" alt="Foto de perfil" />
+        <button class="edit-btn" onclick="editField('fotoPerfil')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Primeiro nome</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="nome">João</span>
+        <button class="edit-btn" onclick="editField('nome')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Último nome</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="sobrenome">Silva</span>
+        <button class="edit-btn" onclick="editField('sobrenome')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Email</span>
-        <span>nome@gmail.com</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="email">nome@gmail.com</span>
+        <button class="edit-btn" onclick="editField('email')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Senha</span>
         <span>************</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <button class="edit-btn" onclick="editField('senha')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Celular</span>
-        <span>+55 *****3434343</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="telefone">+55 *****3434343</span>
+        <button class="edit-btn" onclick="editField('telefone')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <h2 class="section-title"><i class="fa-solid fa-truck"></i> Informações do Veículo</h2>
 
       <div class="profile-item">
         <span>Placa</span>
-        <span>ABC1234</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="placa">ABC1234</span>
+        <button class="edit-btn" onclick="editField('placa')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Renavam</span>
-        <span>00000000000</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="renavam">00000000000</span>
+        <button class="edit-btn" onclick="editField('renavam')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Ano</span>
-        <span>2023</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="ano">2023</span>
+        <button class="edit-btn" onclick="editField('ano')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item img-veiculo">
@@ -104,6 +103,7 @@
       </div>
     </main>
   </div>
+
   <script src="src/javascript/dadospessoaisM.js"></script>
 </body>
 </html>
