@@ -29,7 +29,7 @@ $(document).ready(function () {
       })
       .then(() => {
         alert("Login com Google realizado com sucesso!");
-        window.location.href = "login.html"; // Redireciona para a área do usuário
+        window.location.href = "homeC.html"; // Redireciona para a área do usuário
       })
       .catch((error) => {
         // Trata o erro específico de conta já existente com outro método de login
