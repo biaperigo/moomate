@@ -41,38 +41,42 @@
     <main class="profile-main">
       <div class="profile-item">
         <span>Foto de perfil</span>
-        <i class="fa-solid fa-user"></i>
-        <i class="fa-solid fa-chevron-right"></i>
+        <img src="src/images/default-profile.png" alt="Foto de Perfil" id="fotoPerfil" />
+        <button class="edit-btn" onclick="editField('fotoPerfil')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Primeiro nome</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="nome">João</span>
+        <button class="edit-btn" onclick="editField('nome')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Último nome</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="sobrenome">Silva</span>
+        <button class="edit-btn" onclick="editField('sobrenome')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Email</span>
-        <span>nome@gmail.com</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="email">nome@gmail.com</span>
+        <button class="edit-btn" onclick="editField('email')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Senha</span>
         <span>************</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <button class="edit-btn" onclick="editField('senha')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
       <div class="profile-item">
         <span>Celular</span>
-        <span>+55*****3434343</span>
-        <i class="fa-solid fa-chevron-right"></i>
+        <span id="telefone">+55 ***** 3434343</span>
+        <button class="edit-btn" onclick="editField('telefone')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
     </main>
   </div>
+  
+  <script src="src/js/dadospessoaisC.js"></script>
 </body>
 </html>

@@ -121,6 +121,21 @@ body {
   font-size: 1rem;
 }
 
+/* Edição de campos - ícones de edição */
+.edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #ff6c0c;
+  transition: color 0.3s ease;
+}
+
+.edit-btn:hover {
+  color: #333;
+}
+
+/* Títulos das seções */
 .section-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -171,5 +186,19 @@ body {
 
   .profile-container {
     padding: 0 1rem;
+  }
+
+  /* Ajuste para os itens do perfil em dispositivos menores */
+  .profile-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-item span {
+    margin-bottom: 0.5rem;
+  }
+
+  .profile-item .edit-btn {
+    align-self: flex-end;
   }
 }

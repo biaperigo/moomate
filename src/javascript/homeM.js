@@ -207,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // Escuta o status da proposta e exibe o modal para o motorista
 function ouvirAceitacaoPropostas() {
   const idParaUsar = motoristaUid || fallbackMotoristaId;
-
   db.collection('entregas')
     .where('status', '==', 'proposta_aceita')
     .where('propostaAceita.motoristaId', '==', idParaUsar)
@@ -215,66 +214,116 @@ function ouvirAceitacaoPropostas() {
       snapshot.forEach(docSnap => {
         const entregaId = docSnap.id;
         const entregaData = docSnap.data();
-        
-        // Mostra modal com os dados da proposta aceita
         mostrarModalPropostaAceita(entregaId, entregaData);
       });
     });
 }
 
+// Função para exibir o modal com as informações da proposta
 function mostrarModalPropostaAceita(entregaId, entregaData) {
   const nomeCliente = entregaData.clienteNome || "Cliente";
   const valor = entregaData.propostaAceita?.preco?.toFixed(2) || "0.00";
   const tempo = entregaData.propostaAceita?.tempoChegada || 0;
+  const origem = entregaData.origem?.endereco || '';
+  const destino = entregaData.destino?.endereco || '';
 
-  let modal = document.getElementById('propostaAceitaMotoristaModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'propostaAceitaMotoristaModal';
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="modal-content">
-        <h2>✅ ${nomeCliente} aceitou sua proposta</h2>
-        <div class="proposta-aceita-info">
-          <p><strong>Origem:</strong> ${entregaData.origem?.endereco || ''}</p>
-          <p><strong>Destino:</strong> ${entregaData.destino?.endereco || ''}</p>
-          <p><strong>Valor para o cliente:</strong> R$ ${valor}</p>
-          <p><strong>Tempo até a retirada:</strong> ${tempo} min</p>
-        </div>
-        <div class="modal-buttons">
-          <button id="btnIniciarCorrida" class="btn-iniciar">🚚 Iniciar Corrida</button>
-          <button id="btnRecusarCorrida" class="btn-cancelar">❌ Recusar Corrida</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  } else {
-    modal.querySelector('.proposta-aceita-info').innerHTML = `
-      <p><strong>Origem:</strong> ${entregaData.origem?.endereco || ''}</p>
-      <p><strong>Destino:</strong> ${entregaData.destino?.endereco || ''}</p>
-      <p><strong>Valor para o cliente:</strong> R$ ${valor}</p>
-      <p><strong>Tempo até a retirada:</strong> ${tempo} min</p>
-    `;
-    modal.querySelector('h2').textContent = `${nomeCliente} aceitou sua proposta`;
-  }
+  // Preenche o modal com as informações da proposta aceita
+  document.getElementById('origem-info').textContent = origem;
+  document.getElementById('destino-info').textContent = destino;
+  document.getElementById('valor-info').textContent = valor;
+  document.getElementById('tempo-info').textContent = tempo;
 
-  // listeners dos botões
-  modal.querySelector('#btnIniciarCorrida').onclick = () => {
-    iniciarCorrida(entregaId, entregaData); // cria corrida e apaga entrega
-    modal.style.display = 'none';
-  };
-
-  modal.querySelector('#btnRecusarCorrida').onclick = () => {
-    recusarCorridaAposAceite(entregaId);
-    modal.style.display = 'none';
-  };
-
+  // Exibe o modal
+  const modal = document.getElementById('propostaAceitaModal');
   modal.style.display = 'flex';
   setTimeout(() => {
     modal.style.opacity = '1';
     modal.querySelector('.modal-content').style.transform = 'scale(1)';
   }, 10);
+
+  // Função para iniciar a corrida
+  document.getElementById('btnIniciarCorrida').onclick = () => {
+    iniciarCorrida(entregaId, entregaData);
+    modal.style.display = 'none';
+  };
+
+  // Função para recusar a corrida
+  document.getElementById('btnRecusarCorrida').onclick = () => {
+    recusarCorridaAposAceite(entregaId);
+    modal.style.display = 'none';
+  };
 }
+
+
+// Função para fechar o modal
+function fecharModalPropostaAceita() {
+  const modal = document.getElementById('propostaAceitaModal');
+  
+  if (!modal) {
+    console.warn("Modal não encontrado!");
+    return; // Se o modal não existir, não faz nada e exibe um aviso no console
+  }
+
+  // Inicia a animação de fechamento
+  modal.style.opacity = '0';
+  modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
+
+  // Após 300ms (tempo da animação), oculta o modal completamente
+  setTimeout(() => {
+    modal.style.display = 'none';
+  }, 300);  // Tempo ajustado para a animação de fechamento
+}
+
+
+// Função para iniciar a corrida
+async function iniciarCorrida(entregaId, entregaData) {
+  try {
+    const corridaData = {
+      ...entregaData,
+      status: 'em_andamento',
+      iniciadaEm: new Date().toISOString(),
+      motoristaConfirmou: true,
+      clienteConfirmou: true
+    };
+    
+    // Cria a corrida no banco de dados
+    await db.collection('corridas').doc(entregaId).set(corridaData);
+    
+    // Deleta a entrega do banco após iniciar a corrida
+    await db.collection('entregas').doc(entregaId).delete();
+
+    alert('Corrida iniciada com sucesso!');
+
+    // Redireciona o motorista para a página 'rotaM.html'
+    if (entregaData.motoristaUid === motoristaUid) {
+      window.location.href = `rotaM.html?entregaId=${entregaId}`;
+    }
+
+    // Redireciona o cliente para a página 'rotaC.html'
+    if (entregaData.clienteUid === motoristaUid) {
+      window.location.href = `statusC.html?entregaId=${entregaId}`;
+    }
+
+  } catch (error) {
+    console.error('Erro ao iniciar corrida:', error);
+    alert('Erro ao iniciar corrida. Tente novamente.');
+  }
+}
+
+
+// Função para recusar a corrida após aceitação
+async function recusarCorridaAposAceite(entregaId) {
+  try {
+    await db.collection('entregas').doc(entregaId).update({ status: 'recusada_pelo_motorista' });
+    alert('Corrida recusada com sucesso!');
+  } catch (error) {
+    console.error('Erro ao recusar a corrida:', error);
+    alert('Erro ao recusar a corrida. Tente novamente.');
+  }
+}
+
+// Chama a função para ouvir as propostas aceitas
+ouvirAceitacaoPropostas();
 async function iniciarCorrida(entregaId, entregaData) {
   try {
     const corridaData = {
@@ -287,7 +336,7 @@ async function iniciarCorrida(entregaId, entregaData) {
     await db.collection('corridas').doc(entregaId).set(corridaData);
     await db.collection('entregas').doc(entregaId).delete();
     alert('Corrida iniciada com sucesso!');
-    window.location.href = `statusM.html?entregaId=${entregaId}&tipo=motorista`;
+    window.location.href = `rotaM.html?entregaId=${entregaId}&tipo=motorista`;
   } catch (error) {
     console.error('Erro ao iniciar corrida:', error);
     alert('Erro ao iniciar corrida. Tente novamente.');

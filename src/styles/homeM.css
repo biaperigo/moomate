@@ -37,7 +37,7 @@ body {
 
 .nav-links {
   display: flex;
-  gap: 2rem;
+  gap: 2rem; 
 }
 
 .nav-links a {
