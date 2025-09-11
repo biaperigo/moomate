@@ -138,23 +138,18 @@ async function buscarCEP(cep) {
 }
 
 // =================== SALVAR DADOS (Auth + Firestore) ===================
-// Substitui a sua função antiga. Agora cria usuário no Auth, remove senha e salva o doc com o UID.
 async function salvarDados(dados) {
   try {
     const email = dados.dadosPessoais.email.trim();
     const senha = dados.dadosPessoais.senha;
 
-    // 0) Cria o usuário no Firebase Auth
     const userCred = await auth.createUserWithEmailAndPassword(email, senha);
 
-    // 1) Não guardar senha no Firestore
     delete dados.dadosPessoais.senha;
 
-    // 2) UID do Auth
     const uid = userCred.user.uid;
     dados.uid = uid;
 
-    // 3) Salva no Firestore usando o UID como ID do documento
     await db.collection("motoristas").doc(uid).set(dados);
 
     console.log("Documento salvo com ID:", uid);
@@ -273,6 +268,25 @@ document.addEventListener("DOMContentLoaded", function () {
     input.addEventListener("input", verificarCampos);
     input.addEventListener("change", verificarCampos);
   });
+
+  // ---- Opções do tipo de veículo (somente isso) ----
+  const tipoSelect = document.getElementById("tipo-veiculo");
+  if (tipoSelect) {
+    const anterior = tipoSelect.value; // tenta preservar escolha anterior
+    const opts = [
+      { value: "pequeno", label: "Caminhão 3/4 (pequeno)" },
+      { value: "medio",   label: "Caminhão toco (médio)" },
+      { value: "grande",  label: "Caminhão truck (grande)" }
+    ];
+    tipoSelect.innerHTML = "";
+    opts.forEach(o => {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.label;
+      tipoSelect.appendChild(opt);
+    });
+    tipoSelect.value = ["pequeno","medio","grande"].includes(anterior) ? anterior : "pequeno";
+  }
 
   // Submit do formulário
   document.getElementById("cadastro-form").addEventListener("submit", async function (e) {

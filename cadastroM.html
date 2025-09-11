@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cadastro Motorista - Moomate</title>
   <link rel="stylesheet" href="src/styles/cadastroM.css" />
- 
 </head>
 <body>
   <div class="form-wrapper">
@@ -14,52 +13,40 @@
         <img src="src/images/favicon.png" alt="Logo Moomate" />
       </div>
 
-
       <h2>Informações Necessárias</h2>
 
-
       <form id="cadastro-form">
-    <h3>Dados Pessoais</h3>
-<div class="dupla">
-  <input type="text" id="nome" placeholder="Nome Completo" required />
-  <input type="date" id="data-nascimento" placeholder="Data de Nascimento" required />
-</div>
-<div class="dupla">
-  <input type="text" id="cpf" placeholder="CPF" required />
-  <input type="email" id="email" placeholder="Email" required />
-</div>
-<div class="senha-container">
-            <input type="password" id="senha" placeholder="Senha (min 6 caracteres)" required>
+        <h3>Dados Pessoais</h3>
+        <div class="dupla">
+          <input type="text" id="nome" placeholder="Nome Completo" required />
+          <input type="date" id="data-nascimento" placeholder="Data de Nascimento" required />
+        </div>
+        <div class="dupla">
+          <input type="text" id="cpf" placeholder="CPF" required />
+          <input type="email" id="email" placeholder="Email" required />
+        </div>
+        <div class="senha-container">
+          <input type="password" id="senha" placeholder="Senha (min 6 caracteres)" required>
+          <i class="fas fa-eye-slash toggle-password"></i>
+        </div>
 
-
-            <i class="fas fa-eye-slash toggle-password"></i>
-          </div>
-
-
-<div class="dupla">
-  <input type="tel" id="telefone" placeholder="Telefone" required />
-  <input type="text" id="cep" placeholder="CEP" required />
-</div>
-<div class="dupla">
-  <input type="text" id="rua" placeholder="Rua" readonly />
-  <input type="text" id="bairro" placeholder="Bairro" readonly />
-</div>
-<div class="dupla">
-  <input type="text" id="cidade" placeholder="Cidade" readonly />
-  <input type="text" id="estado" placeholder="Estado" readonly />
-
-
-</div>
-
-
-
+        <div class="dupla">
+          <input type="tel" id="telefone" placeholder="Telefone" required />
+          <input type="text" id="cep" placeholder="CEP" required />
+        </div>
+        <div class="dupla">
+          <input type="text" id="rua" placeholder="Rua" readonly />
+          <input type="text" id="bairro" placeholder="Bairro" readonly />
+        </div>
+        <div class="dupla">
+          <input type="text" id="cidade" placeholder="Cidade" readonly />
+          <input type="text" id="estado" placeholder="Estado" readonly />
+        </div>
 
         <label>Foto de perfil:</label>
         <input type="file" id="foto-perfil" accept="image/*" />
 
-
         <hr />
-
 
         <h3>Documentação</h3>
         <div class="dupla">
@@ -68,13 +55,13 @@
         </div>
         <input type="text" id="antecedentes" placeholder="Antecedentes criminais" required />
 
-
         <hr />
-
 
         <h3>Informações do Veículo</h3>
         <div class="dupla">
-          <input type="text" id="tipo-veiculo" placeholder="Tipo de veículo" required />
+          <select id="tipo-veiculo" required>
+            <option value="" disabled selected>Tipo de veículo</option>
+          </select>
           <input type="text" id="placa" placeholder="Placa" required />
         </div>
         <div class="dupla">
@@ -82,13 +69,10 @@
           <input type="text" id="ano" placeholder="Ano" required />
         </div>
 
-
         <label>Foto do veículo:</label>
         <input type="file" id="foto-veiculo" accept="image/*" />
 
-
         <hr />
-
 
         <h3>Informações Bancárias</h3>
         <select id="banco" required>
@@ -99,12 +83,10 @@
           <option>Outros</option>
         </select>
 
-
         <div class="radio-group">
           <label><input type="radio" name="tipo-conta" value="corrente" checked> Conta corrente</label>
           <label><input type="radio" name="tipo-conta" value="poupanca"> Conta poupança</label>
         </div>
-
 
         <div class="dupla">
           <input type="text" id="agencia" placeholder="Nº da agência" required />
@@ -112,22 +94,18 @@
         </div>
         <input type="text" id="pix" placeholder="Chave PIX (opcional)" />
 
-
         <button type="submit" id="salvar-dados" class="btn-laranja" disabled>SALVAR DADOS</button>
         <div class="loader" id="loader">⏳ Salvando...</div>
       </form>
     </div>
   </div>
 
+  <!-- Firebase compat v10 (ordem importa!) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- E adicione o script do Firebase Auth no HTML -->
-<!-- Firebase compat v10 (ordem importa!) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-<!-- Seu script de cadastro - sem type="module" -->
-<script src="src/javascript/cadastroM.js"></script>
-
+  <!-- Script de cadastro -->
+  <script src="src/javascript/cadastroM.js"></script>
 </body>
 </html>

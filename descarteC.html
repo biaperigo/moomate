@@ -14,133 +14,9 @@
   <!-- Leaflet CSS para o mapa -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-
   <!-- CSS -->
-  <link rel="stylesheet" href="src/styles/ecopontoC.css"/>
+  <link rel="stylesheet" href="src/styles/descarteC.css"/>
  
-  <style>
-    /* Estilos adicionais para os novos campos e mapa */
-    .form-section {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 40px 20px;
-    }
-   
-    .form-map-container {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      background: white;
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-   
-    .map-container {
-      height: 250px;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-bottom: 20px;
-    }
-   
-    #map {
-      height: 100%;
-      width: 100%;
-    }
-   
-    .form-fields {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-   
-    .input-group {
-      display: flex;
-      gap: 10px;
-    }
-   
-    .input-group input {
-      flex: 1;
-    }
-   
-    .input-box input, .input-group input, .volumes-input {
-      width: 100%;
-      padding: 12px 15px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 14px;
-      transition: border-color 0.3s;
-    }
-   
-    .input-box input:focus, .input-group input:focus, .volumes-input:focus {
-      outline: none;
-      border-color: #ff6b35;
-    }
-   
-    .vehicle-types {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin: 10px 0;
-    }
-   
-    .vehicle-option {
-      padding: 12px 15px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s;
-      background: white;
-    }
-   
-    .vehicle-option:hover {
-      border-color: #ff6b35;
-      background: #fff5f2;
-    }
-   
-    .vehicle-option.selected {
-      border-color: #ff6b35;
-      background: #ff6b35;
-      color: white;
-    }
-   
-    .btn-cta {
-      background: #ff6b35;
-      color: white;
-      padding: 15px 30px;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.3s;
-      margin-top: 20px;
-    }
-   
-    .btn-cta:hover {
-      background: #e55a2b;
-    }
-   
-    .btn-cta:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-   
-    @media (max-width: 768px) {
-      .form-map-container {
-        grid-template-columns: 1fr;
-        gap: 20px;
-        padding: 20px;
-      }
-     
-      .input-group {
-        flex-direction: column;
-      }
-    }
-  </style>
 </head>
 <body>
 
@@ -174,63 +50,60 @@
 
   </header>
 
-
   <!-- BANNER -->
   <section class="banner">
-    <img src="src/images/bannerecopontos.png" alt="Banner mudança" />
+    <img src="src/images/descarteC2.png" alt="Banner mudança" />
     <div class="banner-text">
-      <h2>Para mudanças comerciais e pessoais.</h2>
+      <h2>Descarte sem preocupação</h2>
     </div>
   </section>
 
+ <!-- FORMULÁRIO DE DESCARTE (duas colunas) -->
+<section class="form-descarte">
+  <h2>Solicitar Descarte</h2>
 
-  <section id="ecoponto">
-    <div class="content">
-      <div class="box">
-        <div id="map"></div>
-        <div id="info">
-          <strong>Selecione um ecoponto no mapa para ver os detalhes aqui.</strong>
-        </div>
-     
-      <!-- Campos do formulário -->
-      <div class="form-fields">
-        <div class="input-box">
-          <label for="cep"><i class="fa-solid fa-map-pin"></i> CEP</label>
-          <input type="text" id="cep" placeholder="Digite o CEP" maxlength="9">
-        </div>
-       
-        <div class="input-box">
-          <label for="localRetirada"><i class="fa-solid fa-location-dot"></i> Local de retirada</label>
-          <input type="text" id="localRetirada" placeholder="Digite o endereço completo">
-        </div>
-       
-        <div class="input-group">
-          <input type="text" id="numeroRetirada" placeholder="Número">
-          <input type="text" id="complementoRetirada" placeholder="Complemento (opcional)">
-        </div>
-       
-       
-       
-        <div class="input-box">
-          <label for="volumes"><i class="fa-solid fa-boxes-stacked"></i> Número de volumes</label>
-          <input type="number" id="volumes" class="volumes-input" placeholder="Quantos itens serão transportados?" min="1">
-        </div>
-       
-       
-       
-        <button id="verMotoristas">Ver Motoristas Disponíveis</button>
+  <form id="descarteForm" class="grid-2">
+    <!-- ESQUERDA -->
+    <div class="col">
+      <div class="form-group">
+        <label for="localRetirada">Local de Retirada</label>
+        <input type="text" id="localRetirada" name="localRetirada" placeholder="Digite o endereço de retirada" required>
+      </div>
 
-<div id="propostasContainer">
-<h3>Propostas dos Motoristas:</h3>
-<div id="propostas-container"></div>
-
-</div>
-
-   
+      <div class="input-box">
+        <label for="cep"><i class="fa-solid fa-map-pin"></i> CEP</label>
+        <div class="cep-row">
+          <input type="text" id="cep" placeholder="CEP" maxlength="9">
+          <input type="text" id="numeroEntrega" placeholder="Número">
+          <input type="text" id="complementoEntrega" placeholder="Complemento (opcional)">
+        </div>
       </div>
     </div>
-  </section>
 
+    <!-- DIREITA -->
+    <div class="col">
+      <div class="form-group">
+        <label for="tipoCaminhao">Tipo de Caminhão</label>
+        <select id="tipoCaminhao" name="tipoCaminhao" required>
+          <option value="" disabled selected>Selecione</option>
+          <option value="pequeno">Pequeno</option>
+          <option value="medio">Médio</option>
+          <option value="grande">Grande</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="descricao">Descrição dos Objetos</label>
+        <textarea id="descricao" name="descricao" rows="4" placeholder="Ex: sofá, guarda-roupa, caixas..." required></textarea>
+      </div>
+    </div>
+
+    <!-- BOTÃO ocupando as 2 colunas -->
+    <div class="full-row">
+      <button type="submit" class="btn-enviarsolicitação">Enviar Solicitação</button>
+    </div>
+  </form>
+</section>
 
   <!-- RODAPÉ -->
   <footer>
@@ -251,27 +124,7 @@
     </div>
   </footer>
 
-
-<!-- RODAPÉ (existente) -->
-
-
-<!-- Scripts -->
-<!-- 1. jQuery (opcional, mas bom ter se usar) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-
-<!-- 2. Leaflet (para o mapa ) -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- 3. Firebase SDKs (essencial para o banco de dados ) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<!-- Seu script homeC.js deve vir depois destes -->
 <script src="src/javascript/ecopontoC.js"></script>
 
-
-
- 
-</body>
-</html>
 </body>
 </html>

@@ -103,11 +103,20 @@ input:read-only {
 
 .dupla {
   display: flex;
-  gap: 10px;
+  gap: 10px; /* espaço entre os campos */
 }
 
-.dupla input {
-  flex: 1;
+.dupla input,
+.dupla select {
+  flex: 1; /* padrão: ocupa espaço igual */
+}
+
+#tipo-veiculo {
+  flex: 0.6;   /* ocupa ~60% da largura do par */
+}
+
+#placa {
+  flex: 0.4;   /* ocupa ~40% da largura do par */
 }
 
 .foto-label {

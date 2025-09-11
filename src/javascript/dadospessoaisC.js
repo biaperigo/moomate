@@ -12,88 +12,19 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
 
+// Referência aos campos
 const nomeInput = document.getElementById("nome");
 const emailInput = document.getElementById("email");
 const telefoneInput = document.getElementById("telefone");
 const cidadeInput = document.getElementById("cidade");
 const dataInput = document.getElementById("dataNascimento");
-const fotoPerfil = document.getElementById("fotoPerfil");
-const inputFoto = document.getElementById("inputFoto");
+const senhaInput = document.getElementById("senha"); // Campo para senha
+const novaSenhaInput = document.getElementById("novaSenha"); // Campo para nova senha
 
 let userId = null;
 
-// Função para editar campos
-function editField(field) {
-  const element = document.getElementById(field);
-  
-  if (field === 'fotoPerfil') {
-    const inputFile = document.createElement('input');
-    inputFile.type = 'file';
-    inputFile.accept = 'image/*';
-    
-    inputFile.onchange = async function (event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function () {
-          element.src = reader.result;
-        };
-        reader.readAsDataURL(file);
-        await uploadProfilePicture(file);
-      }
-    };
-    
-    inputFile.click();
-    return;
-  }
-  
-  const currentValue = element.textContent || element.value;
-  element.innerHTML = `<input type="text" value="${currentValue}" />`;
-  const input = element.querySelector('input');
-  input.focus();
-  
-  input.addEventListener('blur', function () {
-    element.innerHTML = input.value;
-    updateUserProfile();
-  });
-}
-
-// Atualizar dados no Firebase
-async function updateUserProfile() {
-  if (!userId) return;
-
-  await db.collection("usuarios").doc(userId).update({
-    nome: nomeInput.value,
-    telefone: telefoneInput.value,
-    cidade: cidadeInput.value,
-    dataNascimento: dataInput.value
-  });
-
-  alert("Dados atualizados com sucesso!");
-}
-
-// Upload da foto de perfil no Firebase
-async function uploadProfilePicture(file) {
-  const ref = storage.ref().child(`fotosPerfil/${userId}`);
-  await ref.put(file);
-  const url = await ref.getDownloadURL();
-
-  fotoPerfil.src = url;
-  await db.collection("usuarios").doc(userId).update({
-    fotoURL: url
-  });
-}
-
-// Função de logout
-function logout() {
-  auth.signOut().then(() => {
-    window.location.href = "entrar.html";
-  });
-}
-
-// Verificação de autenticação e carregamento dos dados do usuário
+// Carregar os dados do usuário ao se autenticar
 auth.onAuthStateChanged(async (user) => {
   if (user) {
     userId = user.uid;
@@ -106,20 +37,63 @@ auth.onAuthStateChanged(async (user) => {
       telefoneInput.value = dados.telefone || "";
       cidadeInput.value = dados.cidade || "";
       dataInput.value = dados.dataNascimento || "";
-      if (dados.fotoURL) {
-        fotoPerfil.src = dados.fotoURL;
-      }
     }
   } else {
-    window.location.href = "entrar.html";
+    window.location.href = "entrar.html";  // Redireciona se não houver usuário autenticado
   }
 });
 
-// Atualiza dados ao alterar a foto
-inputFoto.addEventListener("change", async () => {
-  const file = inputFoto.files[0];
-  if (!file || !userId) return;
+// Função para salvar dados no Firestore
+async function salvar() {
+  if (!userId) return;
 
-  await uploadProfilePicture(file);
-});
+  // Coletando os dados dos inputs
+  const nome = nomeInput.value;
+  const telefone = telefoneInput.value;
+  const cidade = cidadeInput.value;
+  const dataNascimento = dataInput.value;
 
+  try {
+    // Atualizando os dados no Firestore
+    await db.collection("usuarios").doc(userId).update({
+      nome: nome,
+      telefone: telefone,
+      cidade: cidade,
+      dataNascimento: dataNascimento
+    });
+
+    // Exibindo mensagem de sucesso
+    alert("Dados atualizados com sucesso!");
+  } catch (error) {
+    console.error("Erro ao atualizar os dados: ", error);
+    alert("Erro ao salvar os dados. Tente novamente.");
+  }
+}
+
+// Função para alterar a senha do usuário
+async function alterarSenha() {
+  const novaSenha = novaSenhaInput.value;
+
+  if (!novaSenha) {
+    alert("Por favor, insira uma nova senha.");
+    return;
+  }
+
+  const user = auth.currentUser;
+
+  try {
+    // Alterando a senha do usuário
+    await user.updatePassword(novaSenha);
+    alert("Senha alterada com sucesso!");
+  } catch (error) {
+    console.error("Erro ao alterar a senha:", error);
+    alert("Erro ao alterar a senha. Tente novamente.");
+  }
+}
+
+// Função para logout
+function logout() {
+  auth.signOut().then(() => {
+    window.location.href = "entrar.html";
+  });
+}

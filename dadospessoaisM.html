@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dados Pessoais - Motorista</title>
 
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
   <link rel="stylesheet" href="src/styles/dadospessoaisM.css" />
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
@@ -40,70 +39,59 @@
   <!-- CONTEÚDO -->
   <div class="profile-container">
     <main class="profile-main">
+
       <h2 class="section-title">Informações Pessoais</h2>
 
       <div class="profile-item">
         <span>Foto de perfil</span>
         <img id="fotoPerfil" src="src/images/default-profile.png" alt="Foto de perfil" />
+        <input type="file" id="inputFoto" style="display: none;" />
         <button class="edit-btn" onclick="editField('fotoPerfil')"><i class="fa-solid fa-paintbrush"></i></button>
       </div>
 
-      <div class="profile-item">
-        <span>Primeiro nome</span>
-        <span id="nome">João</span>
-        <button class="edit-btn" onclick="editField('nome')"><i class="fa-solid fa-paintbrush"></i></button>
+      <div class="left-side">
+        <div class="profile-item"><span>Nome completo</span><span id="nome"></span><button class="edit-btn" onclick="editField('nome')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Data de nascimento</span><span id="dataNascimento"></span><button class="edit-btn" onclick="editField('dataNascimento')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>CPF</span><span id="cpf"></span><button class="edit-btn" onclick="editField('cpf')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Email</span><span id="email"></span><button class="edit-btn" onclick="editField('email')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Telefone</span><span id="telefone"></span><button class="edit-btn" onclick="editField('telefone')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>CEP</span><span id="cep"></span><button class="edit-btn" onclick="editField('cep')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Rua</span><span id="rua"></span><button class="edit-btn" onclick="editField('rua')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Bairro</span><span id="bairro"></span><button class="edit-btn" onclick="editField('bairro')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Cidade</span><span id="cidade"></span><button class="edit-btn" onclick="editField('cidade')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Estado</span><span id="estado"></span><button class="edit-btn" onclick="editField('estado')"><i class="fa-solid fa-paintbrush"></i></button></div>
       </div>
 
-      <div class="profile-item">
-        <span>Último nome</span>
-        <span id="sobrenome">Silva</span>
-        <button class="edit-btn" onclick="editField('sobrenome')"><i class="fa-solid fa-paintbrush"></i></button>
+      <div class="right-side">
+        <h2 class="section-title"><i class="fa-solid fa-id-card"></i> Documentação</h2>
+        <div class="profile-item"><span>RG</span><span id="rg"></span><button class="edit-btn" onclick="editField('rg')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>CNH</span><span id="cnh"></span><button class="edit-btn" onclick="editField('cnh')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Antecedentes criminais</span><span id="antecedentes"></span><button class="edit-btn" onclick="editField('antecedentes')"><i class="fa-solid fa-paintbrush"></i></button></div>
+
+        <h2 class="section-title"><i class="fa-solid fa-truck"></i> Informações do Veículo</h2>
+        <div class="profile-item"><span>Tipo de veículo</span><span id="tipoVeiculo"></span><button class="edit-btn" onclick="editField('tipoVeiculo')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Placa</span><span id="placa"></span><button class="edit-btn" onclick="editField('placa')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>CRLV</span><span id="crlv"></span><button class="edit-btn" onclick="editField('crlv')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item"><span>Ano</span><span id="ano"></span><button class="edit-btn" onclick="editField('ano')"><i class="fa-solid fa-paintbrush"></i></button></div>
+
+        <div class="profile-item">
+          <span>Foto do veículo</span>
+          <img id="fotoVeiculo" src="src/images/caminhao.png" alt="Veículo" />
+          <button class="edit-btn" onclick="editField('fotoVeiculo')"><i class="fa-solid fa-paintbrush"></i></button>
+        </div>
       </div>
 
-      <div class="profile-item">
-        <span>Email</span>
-        <span id="email">nome@gmail.com</span>
-        <button class="edit-btn" onclick="editField('email')"><i class="fa-solid fa-paintbrush"></i></button>
-      </div>
-
-      <div class="profile-item">
-        <span>Senha</span>
-        <span>************</span>
-        <button class="edit-btn" onclick="editField('senha')"><i class="fa-solid fa-paintbrush"></i></button>
-      </div>
-
-      <div class="profile-item">
-        <span>Celular</span>
-        <span id="telefone">+55 *****3434343</span>
-        <button class="edit-btn" onclick="editField('telefone')"><i class="fa-solid fa-paintbrush"></i></button>
-      </div>
-
-      <h2 class="section-title"><i class="fa-solid fa-truck"></i> Informações do Veículo</h2>
-
-      <div class="profile-item">
-        <span>Placa</span>
-        <span id="placa">ABC1234</span>
-        <button class="edit-btn" onclick="editField('placa')"><i class="fa-solid fa-paintbrush"></i></button>
-      </div>
-
-      <div class="profile-item">
-        <span>Renavam</span>
-        <span id="renavam">00000000000</span>
-        <button class="edit-btn" onclick="editField('renavam')"><i class="fa-solid fa-paintbrush"></i></button>
-      </div>
-
-      <div class="profile-item">
-        <span>Ano</span>
-        <span id="ano">2023</span>
-        <button class="edit-btn" onclick="editField('ano')"><i class="fa-solid fa-paintbrush"></i></button>
-      </div>
-
-      <div class="profile-item img-veiculo">
-        <img src="src/images/caminhao.png" alt="Veículo" />
-      </div>
     </main>
   </div>
 
-  <script src="src/javascript/dadospessoaisM.js"></script>
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script  src="src/javascript/dadospessoaisM.js"></script>
+  
+
 </body>
 </html>
+

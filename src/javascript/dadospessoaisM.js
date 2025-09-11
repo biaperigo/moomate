@@ -1,64 +1,44 @@
-menuToggle.addEventListener('click', () => {
+    // Menu toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const navMenu = document.getElementById('navMenu');
+
+    menuToggle.addEventListener('click', () => {
       navMenu.classList.toggle('show');
     });
 
-    // Configuração do Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
-  authDomain: "moomate-39239.firebaseapp.com",
-  projectId: "moomate-39239",
-  storageBucket: "moomate-39239.appspot.com",
-  messagingSenderId: "637968714747",
-  appId: "1:637968714747:web:ad15dc3571c22f046b595e",
-  measurementId: "G-62J7Q8CKP4"
-};
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
+      authDomain: "moomate-39239.firebaseapp.com",
+      projectId: "moomate-39239",
+      storageBucket: "moomate-39239.appspot.com",
+      messagingSenderId: "637968714747",
+      appId: "1:637968714747:web:ad15dc3571c22f046b595e",
+      measurementId: "G-62J7Q8CKP4"
+    };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const storage = firebase.storage();
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
 
-const nomeInput = document.getElementById("nome");
-const emailInput = document.getElementById("email");
-const telefoneInput = document.getElementById("telefone");
-const placaInput = document.getElementById("placa");
-const renavamInput = document.getElementById("renavam");
-const anoInput = document.getElementById("ano");
-const fotoPerfil = document.getElementById("fotoPerfil");
-const inputFoto = document.getElementById("inputFoto");
-
-let userId = null;
+    let userId = null;
 
 // Função para editar campos
 function editField(field) {
   const element = document.getElementById(field);
-  
+
   if (field === 'fotoPerfil') {
-    const inputFile = document.createElement('input');
-    inputFile.type = 'file';
-    inputFile.accept = 'image/*';
-    
-    inputFile.onchange = async function (event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function () {
-          element.src = reader.result;
-        };
-        reader.readAsDataURL(file);
-        await uploadProfilePicture(file);
-      }
-    };
-    
+    const inputFile = document.getElementById("inputFoto");
     inputFile.click();
     return;
   }
-  
-  const currentValue = element.textContent || element.value;
+
+  const currentValue = element.textContent || element.value || "";
   element.innerHTML = `<input type="text" value="${currentValue}" />`;
   const input = element.querySelector('input');
   input.focus();
-  
+
   input.addEventListener('blur', function () {
     element.innerHTML = input.value;
     updateUserProfile();
@@ -69,63 +49,97 @@ function editField(field) {
 async function updateUserProfile() {
   if (!userId) return;
 
-  await db.collection("motoristas").doc(userId).update({
-    nome: nomeInput.value,
-    telefone: telefoneInput.value,
-    placa: placaInput.value,
-    renavam: renavamInput.value,
-    ano: anoInput.value
-  });
+  const updatedData = {
+    nome: document.getElementById("nome").textContent,
+    telefone: document.getElementById("telefone").textContent,
+    placa: document.getElementById("placa").textContent,
+    ano: document.getElementById("ano").textContent,
+    rg: document.getElementById("rg").textContent,
+    cnh: document.getElementById("cnh").textContent,
+    antecedentes: document.getElementById("antecedentes").textContent,
+    tipoVeiculo: document.getElementById("tipoVeiculo").textContent,
+    crlv: document.getElementById("crlv").textContent,
+    cep: document.getElementById("cep").textContent,
+    rua: document.getElementById("rua").textContent,
+    bairro: document.getElementById("bairro").textContent,
+    cidade: document.getElementById("cidade").textContent,
+    estado: document.getElementById("estado").textContent,
+    dataNascimento: document.getElementById("dataNascimento").textContent,
+    cpf: document.getElementById("cpf").textContent,
+    email: document.getElementById("email").textContent
+  };
 
-  alert("Dados atualizados com sucesso!");
+  try {
+    await db.collection("motoristas").doc(userId).update(updatedData);
+    console.log("Dados atualizados com sucesso");
+  } catch (error) {
+    console.error("Erro ao atualizar dados:", error);
+  }
 }
 
 // Upload da foto de perfil no Firebase
 async function uploadProfilePicture(file) {
-  const ref = storage.ref().child(`fotosPerfil/${userId}`);
-  await ref.put(file);
-  const url = await ref.getDownloadURL();
+  try {
+    const ref = storage.ref().child(`fotosPerfil/${userId}`);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
 
-  fotoPerfil.src = url;
-  await db.collection("motoristas").doc(userId).update({
-    fotoURL: url
-  });
+    document.getElementById("fotoPerfil").src = url;
+
+    await db.collection("motoristas").doc(userId).update({
+      fotoURL: url
+    });
+  } catch (error) {
+    console.error("Erro ao fazer upload da foto:", error);
+  }
 }
 
-// Função de logout
-function logout() {
-  auth.signOut().then(() => {
-    window.location.href = "entrar.html";
-  });
-}
-
-// Verificação de autenticação e carregamento dos dados do motorista
+// Carregar dados do usuário logado
 auth.onAuthStateChanged(async (user) => {
   if (user) {
     userId = user.uid;
-    emailInput.value = user.email;
 
-    const doc = await db.collection("motoristas").doc(userId).get();
-    if (doc.exists) {
-      const dados = doc.data();
-      nomeInput.value = dados.nome || "";
-      telefoneInput.value = dados.telefone || "";
-      placaInput.value = dados.placa || "";
-      renavamInput.value = dados.renavam || "";
-      anoInput.value = dados.ano || "";
-      if (dados.fotoURL) {
-        fotoPerfil.src = dados.fotoURL;
+    try {
+      const doc = await db.collection("motoristas").doc(userId).get();
+      if (doc.exists) {
+        const dados = doc.data();
+
+        document.getElementById("nome").textContent = dados.nome || "";
+        document.getElementById("telefone").textContent = dados.telefone || "";
+        document.getElementById("placa").textContent = dados.placa || "";
+        document.getElementById("ano").textContent = dados.ano || "";
+        document.getElementById("rg").textContent = dados.rg || "";
+        document.getElementById("cnh").textContent = dados.cnh || "";
+        document.getElementById("antecedentes").textContent = dados.antecedentes || "";
+        document.getElementById("tipoVeiculo").textContent = dados.tipoVeiculo || "";
+        document.getElementById("crlv").textContent = dados.crlv || "";
+        document.getElementById("cep").textContent = dados.cep || "";
+        document.getElementById("rua").textContent = dados.rua || "";
+        document.getElementById("bairro").textContent = dados.bairro || "";
+        document.getElementById("cidade").textContent = dados.cidade || "";
+        document.getElementById("estado").textContent = dados.estado || "";
+        document.getElementById("dataNascimento").textContent = dados.dataNascimento || "";
+        document.getElementById("cpf").textContent = dados.cpf || "";
+        document.getElementById("email").textContent = user.email || "";
+
+        if (dados.fotoURL) {
+          document.getElementById("fotoPerfil").src = dados.fotoURL;
+        }
       }
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
     }
+
   } else {
     window.location.href = "entrar.html";
   }
 });
 
-// Atualiza dados ao alterar a foto
+// Foto de perfil
+const inputFoto = document.getElementById("inputFoto");
 inputFoto.addEventListener("change", async () => {
   const file = inputFoto.files[0];
-  if (!file || !userId) return;
-
-  await uploadProfilePicture(file);
+  if (file && userId) {
+    await uploadProfilePicture(file);
+  }
 });

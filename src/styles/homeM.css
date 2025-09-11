@@ -30,6 +30,16 @@ body {
   top: 0;
   z-index: 100;
 }
+.modal-overlay {
+  display: none; /* Inicialmente oculto */
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.modal-content {
+  transform: scale(0.9);
+  transition: transform 0.3s;
+}
 
 .logo-area img {
   height: 45px;
@@ -196,6 +206,7 @@ body {
   cursor: not-allowed;
   box-shadow: none;
   opacity: 0.7;
+  
 }
 
 /* ===========================
@@ -583,4 +594,144 @@ footer {
   color: #888;
   font-size: 12px;
   font-style: italic;
+}
+/* Ícone maior, sem reservar espaço, fixo no canto inferior direito */
+.info-container{
+  display:grid;
+  grid-template-columns:1fr 1fr auto;
+  gap:.4rem 1rem;
+  align-items:start;
+  position:relative;     /* âncora para o ícone */
+}
+
+.info-esquerda p,.info-meio p{margin:.1rem 0}
+
+/* o último .info-meio (o do ícone) vai para o canto inferior direito */
+.info-container .info-meio:last-child{
+  position:absolute;
+  right:12px;
+  bottom:12px;
+}
+
+/* estilo do badge */
+.icon-area{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:56px;
+  height:56px;
+  border:3px solid #ff6c0c;
+  border-radius:12px;
+  background:#fff;
+}
+.icon-area i{font-size:1.4rem;color:#ff6c0c}
+
+/* laranja (caixa) */
+.icon-area.box{border-color:#ff6c0c}
+.icon-area.box i{color:#ff6c0c}
+
+/* verde (reciclagem) */
+.icon-area.recycle{border-color:#1d5719}
+.icon-area.recycle i{color:#21631c}
+
+/* mobile */
+@media(max-width:640px){
+  .info-container{grid-template-columns:1fr}
+  .info-container .info-meio:last-child{right:10px;bottom:10px}
+  .icon-area{width:48px;height:48px}
+  .icon-area i{font-size:1.2rem}
+}
+
+/* ===== Modal Proposta Aceita ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(30,30,30,0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: #e0e0e0;
+  border-radius: 14px;
+  padding: 2rem;
+  width: 95%;
+  max-width: 500px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  animation: slideUp .3s ease;
+  border: 2px solid #ff6c0c;
+}
+
+.modal-content h2 {
+  text-align: center;
+  color: #1e1e1e;
+  margin-bottom: 1.5rem;
+  font-size: 1.6rem;
+}
+
+.modal-close {
+  position: absolute;
+  top: 20px;
+  right: 25px;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: #ff6c0c;
+  transition: transform .2s ease;
+}
+.modal-close:hover {
+  transform: scale(1.2);
+}
+
+.proposta-aceita-info p {
+  margin: .6rem 0;
+  font-size: 1.05rem;
+  color: #1e1e1e;
+}
+.proposta-aceita-info strong {
+  color: #ff6c0c;
+}
+
+/* Botões */
+.modal-buttons {
+  margin-top: 1.8rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-iniciar, .btn-cancelar {
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .3s ease;
+  font-size: 1rem;
+}
+
+.btn-iniciar {
+  background: #ff6c0c;
+  color: #fff;
+}
+.btn-iniciar:hover {
+  background: #e55a00;
+}
+
+.btn-cancelar {
+  background: #1e1e1e;
+  color: #fff;
+}
+.btn-cancelar:hover {
+  background: #333;
+}
+
+/* Animação */
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

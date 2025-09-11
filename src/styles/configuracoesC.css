@@ -89,6 +89,8 @@ body {
 .config-section {
   margin-bottom: 2rem;
 }
+.config-section a{
+text-decoration: none;}
 
 .section-title {
   font-size: 1.1rem;
