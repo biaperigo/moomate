@@ -1,155 +1,151 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rota do Motorista</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <!-- Leaflet Routing Machine -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-    <link rel="stylesheet" href="src/styles/rotaM.css">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rota do Motorista</title>
+
+  <!-- Leaflet 1.9.4 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet Routing Machine (ok manter, mesmo sem uso direto no JS) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
+
+  <!-- Seu CSS -->
+  <link rel="stylesheet" href="src/styles/rotaM.css">
 </head>
 <body>
-    <header class="top-bar">
-        <div class="logo-area">
-            <img src="src/images/favicon.png" alt="Logo Moomate" />
-        </div>
-        <nav class="nav-links" id="navMenu">
-            <a href="homeM.html">Home</a>
-            <a href="entregasM.html">Entregas</a>
-            <a href="carteiraM.html">Carteira</a>
-            <a href="suporteM.html">Suporte</a>
-            <a href="chatM.html">CHAT</a>
-            <a href="ecopontosM.html">Pontos de coleta</a>
-        </nav>
-        <div class="header-icons">
-            <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
-            <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
-            <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
-            <button class="menu-toggle" id="menuToggle">
-                <i class="fa-solid fa-bars"></i>
-            </button>
-        </div>
-    </header>
-
-    <!-- Mapa do motorista (visão tipo Waze) -->
-    <div id="map"></div>
-    
-    <!-- Instruções de Navegação estilo Waze -->
-    <div id="route-instructions" class="waze-instructions" style="display: none;">
-        <h4>📍 Próximas Instruções</h4>
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate"/>
     </div>
-
-    <!-- Informações da Corrida -->
-    <div class="ride-info">
-        <div class="ride-details">
-            <h3>Informações da Corrida</h3>
-            <div id="ride-data">
-                <p><strong>Cliente:</strong> <span id="client-name">Carregando...</span></p>
-                <p><strong>Origem:</strong> <span id="pickup-address">Carregando...</span></p>
-                <p><strong>Destino:</strong> <span id="destination-address">Carregando...</span></p>
-                <p><strong>Distância:</strong> <span id="route-distance">Calculando...</span></p>
-                <p><strong>Tempo estimado:</strong> <span id="route-time">Calculando...</span></p>
-            </div>
-            <div class="action-buttons">
-                <button id="ready-button" class="action-btn primary">
-                    <i class="fas fa-check"></i>
-                    Tudo pronto, seguir até o destino
-                </button>
-            </div>
-        </div>
+    <nav class="nav-links" id="navMenu">
+      <a href="homeM.html">Home</a>
+      <a href="entregasM.html">Entregas</a>
+      <a href="carteiraM.html">Carteira</a>
+      <a href="suporteM.html">Suporte</a>
+      <a href="chatM.html">CHAT</a>
+      <a href="ecopontosM.html">Pontos de coleta</a>
+    </nav>
+    <div class="header-icons">
+      <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+      <button class="menu-toggle" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
     </div>
+  </header>
 
-    <!-- Modal de Avaliação do Usuário -->
-    <div id="user-rating-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⭐ Avalie o Usuário</h3>
-                <button class="modal-close" id="close-user-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="user-info">
-                    <div class="user-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <div class="user-details">
-                        <p><strong>Nome:</strong> <span id="modal-client-name">João Silva</span></p>
-                        <p><strong>Corrida:</strong> Finalizada com sucesso</p>
-                    </div>
-                </div>
-                <div class="rating-section">
-                    <p class="rating-label">Como foi sua experiência com este usuário?</p>
-                    <div class="rating-stars">
-                        <span class="star" data-rating="1">⭐</span>
-                        <span class="star" data-rating="2">⭐</span>
-                        <span class="star" data-rating="3">⭐</span>
-                        <span class="star" data-rating="4">⭐</span>
-                        <span class="star" data-rating="5">⭐</span>
-                    </div>
-                </div>
-                <div class="comment-section">
-                    <label for="user-rating-comment">Comentário (opcional):</label>
-                    <textarea id="user-rating-comment" placeholder="Conte como foi sua experiência..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="submit-user-rating" class="btn-primary">
-                    <i class="fas fa-paper-plane"></i>
-                    Enviar Avaliação
-                </button>
-                <button id="cancel-user-rating" class="btn-secondary">
-                    Pular
-                </button>
-            </div>
-        </div>
+  <!-- Mapa -->
+  <div id="map"></div>
+
+  <!-- Instruções de navegação -->
+  <div id="route-instructions" class="waze-instructions">
+    <h4>📍 Próximas instruções</h4>
+    <ol id="directionsList"><li>Carregando instruções…</li></ol>
+  </div>
+
+  <!-- Informações da Corrida -->
+  <div class="ride-info">
+    <div class="ride-details">
+      <h3>🚗 Informações da Corrida</h3>
+      <div id="ride-data">
+        <p><strong>Cliente:</strong> <span id="clienteInfo">Carregando…</span></p>
+        <p><strong>Origem:</strong> <span id="origemInfo">Carregando…</span></p>
+        <p><strong>Destino:</strong> <span id="destinoInfo">Carregando…</span></p>
+        <p><strong>Distância:</strong> <span id="distanciaInfo">Calculando…</span></p>
+        <p><strong>Tempo estimado:</strong> <span id="tempoInfo">Calculando…</span></p>
+      </div>
+      <div class="action-buttons">
+        <button id="btnSeguirDestino" class="action-btn primary">
+          <i class="fas fa-check"></i> Tudo pronto, seguir até o destino
+        </button>
+        <button id="btnFinalizar" class="action-btn success" style="display:none;">
+          <i class="fas fa-flag-checkered"></i> Corrida concluída
+        </button>
+      </div>
     </div>
+  </div>
 
-    <footer>
-        <div id="footer_content">
-            <div class="footer-left">
-                <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
-            </div>
-            <div class="footer-social">
-                <span class="social-text">Acompanhe nós</span>
-                <div class="social-icons">
-                    <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
-                        <i class="fa-brands fa-instagram"></i>
-                    </a>
-                    <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank">
-                        <i class="fa-brands fa-linkedin-in"></i>
-                    </a>
-                </div>
-            </div>
+  <!-- Modal de Avaliação do Usuário -->
+  <div id="user-rating-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⭐ Avalie o Usuário</h3>
+        <button class="modal-close" id="close-user-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="user-info">
+          <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
+          <div class="user-details">
+            <p><strong>Nome:</strong> <span id="modal-client-name">—</span></p>
+            <p><strong>Corrida:</strong> Finalizada com sucesso</p>
+          </div>
         </div>
-        <div id="footer_items">
-            <span id="copyright"> © 2025 Moomate. Todos os direitos reservados. </span>
+        <div class="rating-section">
+          <p class="rating-label">Como foi sua experiência com este usuário?</p>
+          <div class="rating-stars">
+            <span class="star" data-rating="1">⭐</span>
+            <span class="star" data-rating="2">⭐</span>
+            <span class="star" data-rating="3">⭐</span>
+            <span class="star" data-rating="4">⭐</span>
+            <span class="star" data-rating="5">⭐</span>
+          </div>
         </div>
-    </footer>
+        <div class="comment-section">
+          <label for="user-rating-comment">Comentário (opcional):</label>
+          <textarea id="user-rating-comment" placeholder="Conte como foi sua experiência..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="submit-user-rating" class="btn-primary">
+          <i class="fas fa-paper-plane"></i> Enviar Avaliação
+        </button>
+        <button id="cancel-user-rating" class="btn-secondary">Pular</button>
+      </div>
+    </div>
+  </div>
 
-    <!-- Firebase SDK -->
-<!-- Firebase compat (combina com o rotaM.js) -->
-<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
-    authDomain: "moomate-39239.firebaseapp.com",
-    projectId: "moomate-39239",
-    storageBucket: "moomate-39239.appspot.com",
-    messagingSenderId: "637968714747",
-    appId: "1:637968714747:web:ad15dc3571c22f046b595e",
-    measurementId: "G-62J7Q8CKP4"
-  };
-  firebase.initializeApp(firebaseConfig); // <-- resolve app/no-app
-</script>
+  <footer>
+    <div id="footer_content">
+      <div class="footer-left">
+        <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
+      </div>
+      <div class="footer-social">
+        <span class="social-text">Acompanhe nós</span>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a>
+        </div>
+      </div>
+    </div>
+    <div id="footer_items">
+      <span id="copyright">© 2025 Moomate. Todos os direitos reservados.</span>
+    </div>
+  </footer>
 
-<!-- depois disso, carregue seu JS da página -->
-<script src="src/javascript/rotaM.js"></script>
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
+      authDomain: "moomate-39239.firebaseapp.com",
+      projectId: "moomate-39239",
+      storageBucket: "moomate-39239.appspot.com",
+      messagingSenderId: "637968714747",
+      appId: "1:637968714747:web:ad15dc3571c22f046b595e",
+      measurementId: "G-62J7Q8CKP4"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
 
+  <!-- JS da página (usa ids acima) -->
+  <script src="src/javascript/rotaM.js"></script>
 </body>
 </html>
