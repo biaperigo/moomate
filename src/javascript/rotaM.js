@@ -1,124 +1,71 @@
-/* rotaM.js
-   - Busca automaticamente a corrida ativa do motorista logado (sem ?corrida=ID)
-   - Traça rota em tempo real do motorista até a retirada e depois até o destino
-   - Preenche nomes reais (cliente e motorista) do Firestore
-   - Ao finalizar, abre modal de avaliação e salva em corridas/{id}/avaliacoes
-*/
-
-(function () {
-  // ===== Helpers DOM (suporta múltiplos ids usados nas suas páginas) =====
+(function() {
   const pick = (...ids) => ids.map(id => document.getElementById(id)).find(el => !!el) || null;
-  const origemInfoEl     = pick("origem-info","origemInfo","pickup-address");
-  const destinoInfoEl    = pick("destino-info","destinoInfo","destination-address");
-  const nomeClienteEl    = pick("nome-cliente","clienteInfo","client-name","modal-client-name");
-  const nomeMotoristaEl  = pick("nome-motorista","motoristaInfo");
-  const distEl           = pick("distanciaInfo","route-distance");
-  const tempoEl          = pick("tempoInfo","route-time");
-  const btnTudoPronto    = pick("btnTudoPronto","btnSeguirDestino","ready-button");
-  const btnFinalizar     = pick("btnFinalizarCorrida","btnFinalizar");
-  const modal            = pick("modalAvaliacao","user-rating-modal");
-  const estrelasWrap     = pick("estrelas");
-  const salvarAvaliacaoBtn   = pick("salvarAvaliacao","submit-user-rating");
-  const cancelarAvaliacaoBtn = pick("cancelarAvaliacao","cancel-user-rating","close-user-modal");
-  const fecharModalBtn       = pick("fecharModal","close-user-modal");
-  const comentarioEl     = pick("comentario","user-rating-comment");
-  const instrWrap        = pick("route-instructions");
-  const instrList        = pick("directionsList");
 
-  const $openModal = () => { if (modal){ modal.style.display="flex"; modal.setAttribute("aria-hidden","false"); } };
-  const $closeModal= () => { if (modal){ modal.style.display="none"; modal.setAttribute("aria-hidden","true"); } };
+  // ===== Seletores =====
+  const origemInfoEl = pick("origemInfo");
+  const destinoInfoEl = pick("destinoInfo");
+  const nomeClienteEl = pick("clienteInfo","modal-client-name");
+  const nomeMotoristaEl = pick("motoristaInfo");
+  const distEl = pick("distanciaInfo");
+  const tempoEl = pick("tempoInfo");
+  const btnTudoPronto = pick("btnSeguirDestino");
+  const btnFinalizar = pick("btnFinalizar");
+
+  const instrWrap = pick("route-instructions");
+  const instrList = pick("directionsList");
+
+  const modal = pick("user-rating-modal");
+  const salvarAvaliacaoBtn = pick("submit-user-rating");
+  const cancelarAvaliacaoBtn = pick("cancel-user-rating");
+  const fecharModalBtn = pick("close-user-modal");
+  const comentarioEl = pick("user-rating-comment");
+
+  const $openModal = () => modal && (modal.style.display="flex");
+  const $closeModal = () => modal && (modal.style.display="none");
   [cancelarAvaliacaoBtn, fecharModalBtn].forEach(b => b?.addEventListener("click",$closeModal));
 
-  let ratingAtual = 0;
-  estrelasWrap?.addEventListener("click",(e)=>{
-    const v = Number(e.target?.dataset?.v || 0);
-    if(!v) return; ratingAtual = v;
-    [...estrelasWrap.querySelectorAll("i")].forEach((i,idx)=>{
-      if(idx < v){ i.classList.add("active"); i.classList.replace("fa-regular","fa-solid"); }
-      else{ i.classList.remove("active"); i.classList.replace("fa-solid","fa-regular"); }
-    });
-  });
-
-  // ===== Firestore =====
+  // ===== Firebase =====
   const db = firebase.firestore();
-  let unsubCorrida = null;
-  let dadosCorrida = null;
   let corridaId = null;
+  let dadosCorrida = null;
 
-  const STATUS_ABERTOS = ["aguardando_motorista","indo_retirar","a_caminho_destino"];
-  const salvarUltima = id => { try{ localStorage.setItem("ultimaCorridaMotorista", id||""); }catch{} };
-  const lerUltima    = () => { try{ return localStorage.getItem("ultimaCorridaMotorista")||null; }catch{ return null; } };
-
-  async function obterNomePorUid(uid){
-    if(!uid) return null;
-    for(const col of ["usuarios","users"]){
-      try{
-        const s = await db.collection(col).doc(uid).get();
-        if(s.exists){ const d=s.data()||{}; return d.nome||d.displayName||d.nomeCompleto||null; }
-      }catch{}
-    }
-    return null;
+  async function obterNome(uid){
+    if(!uid) return "—";
+    try{
+      const doc = await db.collection("usuarios").doc(uid).get();
+      if(doc.exists) return doc.data().nome || "—";
+    }catch{}
+    return "—";
   }
 
-  async function resolverCorridaAtiva(uid){
-    const ultima = lerUltima();
+  async function obterCorridaAtiva(uid){
+    const ultima = localStorage.getItem("ultimaCorridaMotorista");
     if(ultima){
       const d = await db.collection("corridas").doc(ultima).get();
-      if(d.exists && STATUS_ABERTOS.includes((d.data().status)||"")) return d.id;
+      if(d.exists && d.data().status!=="finalizada") return d.id;
     }
-    const q = await db.collection("corridas")
-      .where("motoristaId","==",uid).orderBy("criadoEm","desc").limit(5).get();
-    const aberta   = q.docs.find(d=>STATUS_ABERTOS.includes((d.data().status)||""));
-    if(aberta) return aberta.id;
-    const nFinal   = q.docs.find(d=>(d.data().status||"")!=="finalizada");
-    if(nFinal) return nFinal.id;
+    const q = await db.collection("corridas").where("motoristaId","==",uid).orderBy("criadoEm","desc").limit(1).get();
+    if(!q.empty) return q.docs[0].id;
     return null;
   }
 
-  // ===== Mapa =====
+  // ===== Map =====
   const MAPTILER_KEY = "lRS4UV8yOp62RauVV5D7";
-  const map = L.map("map",{ zoomControl:true }).setView([-15.78,-47.93],4);
+  const map = L.map("map").setView([-15.78,-47.93],14);
   L.tileLayer(`https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,{
     attribution:"&copy; OpenStreetMap & MapTiler", maxZoom:20
   }).addTo(map);
 
-  let motoristaMarker=null, origemMarker=null, destinoMarker=null, routeLayer=null;
-  let fase = "indo_retirar"; // ou "a_caminho_destino"
-  const DISTANCIA_CHEGOU_M = 60;
+  let motoristaMarker = null, origemMarker = null, destinoMarker = null, routeLayer = null;
+  let posMotorista = null;
+  let fase = "indo_retirar";
 
-  // ===== Geolocalização =====
-  let watchId=null, posMotorista=null;
-  function setMotoristaPos(lat,lng){
-    posMotorista = {lat,lng};
-    if(!motoristaMarker){
-      motoristaMarker = L.marker([lat,lng],{
-        icon: L.divIcon({ className:"marker-motorista",
-          html:`<div style="width:16px;height:16px;background:#3DBE34;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,.2)"></div>` })
-      }).addTo(map);
-      map.setView([lat,lng],14);
-    }else motoristaMarker.setLatLng([lat,lng]);
-    atualizarRota(); // real-time
-  }
-  function startGeolocation(){
-    if(!navigator.geolocation){ console.error("Geolocalização indisponível."); return; }
-    watchId = navigator.geolocation.watchPosition(
-      p=>setMotoristaPos(p.coords.latitude,p.coords.longitude),
-      e=>console.error("Erro geolocalização:",e),
-      { enableHighAccuracy:true, maximumAge:2000, timeout:10000 }
-    );
-  }
+  // ===== Utils =====
+  const km = m => (m/1000).toFixed(2)+" km";
+  const min = s => Math.max(1, Math.round(s/60))+" min";
 
-  // ===== Util =====
-  const km   = m => (m/1000).toFixed(2)+" km";
-  const min  = s => Math.max(1, Math.round(s/60))+" min";
-  function distanciaM(lat1,lon1,lat2,lon2){
-    const R=6371e3,toRad=v=>v*Math.PI/180;
-    const φ1=toRad(lat1), φ2=toRad(lat2), dφ=toRad(lat2-lat1), dλ=toRad(lon2-lon1);
-    const a=Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
-    return 2*R*Math.asin(Math.sqrt(a));
-  }
   function ptTurn(type,modifier){
-    const m=(modifier||"").toLowerCase();
+    const m = (modifier||"").toLowerCase();
     const dir = m==="left"?"à esquerda":
                 m==="right"?"à direita":
                 m==="slight left"?"levemente à esquerda":
@@ -133,208 +80,245 @@
     if(type==="continue") return `Continue ${dir}`;
     return "Siga a via indicada";
   }
+
   function renderInstrucoes(steps){
     if(!instrWrap||!instrList) return;
     instrWrap.style.display="block";
-    instrList.innerHTML="";
+    instrList.innerHTML = "";
     steps.forEach(s=>{
-      const li=document.createElement("li");
-      const via = s.name?` pela ${s.name}`:"";
+      const li = document.createElement("li");
+      const via = s.name ? ` pela ${s.name}` : "";
       li.textContent = `${ptTurn(s.maneuver.type,s.maneuver.modifier)}${via}`;
-      const badge=document.createElement("span");
-      badge.className="badge";
+      const badge = document.createElement("span");
+      badge.className = "badge";
       badge.textContent = `${km(s.distance)} · ${min(s.duration)}`;
       li.appendChild(badge);
       instrList.appendChild(li);
     });
   }
 
-  // ===== Rota OSRM com instruções e cor laranja =====
   async function desenharRota(from,to){
-    const url=`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true&annotations=distance,duration`;
-    const resp=await fetch(url);
-    if(!resp.ok) throw new Error("OSRM indisponível");
-    const data=await resp.json();
-    const route=data?.routes?.[0];
-    if(!route) throw new Error("Rota não encontrada");
+    if(!from || !to) return;
+    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`;
+    const resp = await fetch(url);
+    if(!resp.ok) return console.error("OSRM indisponível");
+    const data = await resp.json();
+    const route = data?.routes?.[0];
+    if(!route) return console.error("Rota não encontrada");
 
-    const latlngs=route.geometry.coordinates.map(([lng,lat])=>[lat,lng]);
-    if(routeLayer) routeLayer.setLatLngs(latlngs);
-    else routeLayer=L.polyline(latlngs,{weight:6,opacity:.95,color:"#ff6c0c"}).addTo(map);
+    const latlngs = route.geometry.coordinates.map(([lng,lat])=>[lat,lng]);
+    if(routeLayer) map.removeLayer(routeLayer);
+    routeLayer = L.polyline(latlngs,{weight:6,opacity:.95,color:"#ff6c0c"}).addTo(map);
+    map.fitBounds(L.latLngBounds(latlngs),{padding:[40,40]});
 
-    // Ajuste de viewport
-    const b=L.latLngBounds(latlngs);
-    map.fitBounds(b,{padding:[40,40]});
-
-    // Campos distância/tempo
     distEl && (distEl.textContent = km(route.distance));
     tempoEl && (tempoEl.textContent = min(route.duration));
-
-    // Instruções
-    const steps = route.legs?.[0]?.steps || [];
-    renderInstrucoes(steps);
-  }
-function atualizarRota(){
-  if(!dadosCorrida?.origem || !dadosCorrida?.destino) return;
-
-  if(fase === "indo_retirar"){
-    if(!posMotorista) return;
-    const alvo = dadosCorrida.origem;
-
-    // habilita o botão quando chegar na origem
-    const d = distanciaM(posMotorista.lat,posMotorista.lng,alvo.lat,alvo.lng);
-    if(d <= DISTANCIA_CHEGOU_M){ btnTudoPronto?.removeAttribute("disabled"); return; }
-
-    // rota dinâmica: motorista -> origem
-    desenharRota(
-      { lat: posMotorista.lat, lng: posMotorista.lng },
-      { lat: alvo.lat,        lng: alvo.lng }
-    ).catch(e=>console.error("Falha rota motorista->origem:", e));
-    return;
+    renderInstrucoes(route.legs[0].steps || []);
   }
 
-  if(fase === "a_caminho_destino"){
-    // rota fixa: origem -> destino
-    desenharRota(
-      { lat: dadosCorrida.origem.lat,  lng: dadosCorrida.origem.lng  },
-      { lat: dadosCorrida.destino.lat, lng: dadosCorrida.destino.lng }
-    ).catch(e=>console.error("Falha rota origem->destino:", e));
-  }
-}
-
-  function atualizarRota(){
-    if(!posMotorista || !dadosCorrida?.origem || !dadosCorrida?.destino) return;
-    const alvo = (fase==="indo_retirar") ? dadosCorrida.origem : dadosCorrida.destino;
-    if(!alvo?.lat || !alvo?.lng) return;
-
-    const d = distanciaM(posMotorista.lat,posMotorista.lng,alvo.lat,alvo.lng);
-    if(d <= DISTANCIA_CHEGOU_M){
-      if(fase==="indo_retirar") btnTudoPronto?.removeAttribute("disabled");
-      return;
-    }
-
-    desenharRota({lat:posMotorista.lat,lng:posMotorista.lng},{lat:alvo.lat,lng:alvo.lng})
-      .catch(e=>console.error("Falha rota:",e));
-  }
-
-  // ===== Marcadores origem/destino =====
+  // ===== Marcadores =====
   function desenharMarcadores(){
-    if(dadosCorrida?.origem?.lat && dadosCorrida?.origem?.lng){
+    // Motorista – verde com pulse
+    if(posMotorista){
+      if(!motoristaMarker){
+        motoristaMarker = L.marker([posMotorista.lat,posMotorista.lng],{
+          icon:L.divIcon({
+            className:"marker-motorista",
+            html:`<div style="
+              width:20px;
+              height:20px;
+              background:#3DBE34;
+              border:3px solid #fff;
+              border-radius:50%;
+              box-shadow:0 0 10px rgba(0,0,0,0.5);
+              animation: pulse 1.2s infinite;
+            "></div>`
+          })
+        }).addTo(map);
+      } else motoristaMarker.setLatLng([posMotorista.lat,posMotorista.lng]);
+    }
+
+    // Origem – azul simples
+    if(dadosCorrida?.origem){
       if(!origemMarker){
-        origemMarker=L.marker([dadosCorrida.origem.lat,dadosCorrida.origem.lng],{
-          icon:L.divIcon({className:"marker-origem",
-            html:`<div style="width:18px;height:18px;background:#1c1c1c;border:2px solid #fff;border-radius:50%;"></div>`})
+        origemMarker = L.marker([dadosCorrida.origem.lat,dadosCorrida.origem.lng],{
+          icon:L.divIcon({
+            className:"marker-origem",
+            html:`<div style="
+              width:22px;
+              height:22px;
+              background:#1E3A8A;
+              border:3px solid #fff;
+              border-radius:50%;
+            "></div>`
+          })
         }).addTo(map);
-      }else origemMarker.setLatLng([dadosCorrida.origem.lat,dadosCorrida.origem.lng]);
+      } else origemMarker.setLatLng([dadosCorrida.origem.lat,dadosCorrida.origem.lng]);
     }
-    if(dadosCorrida?.destino?.lat && dadosCorrida?.destino?.lng){
+
+    // Destino – laranja simples
+    if(fase==="a_caminho_destino" && dadosCorrida?.destino){
       if(!destinoMarker){
-        destinoMarker=L.marker([dadosCorrida.destino.lat,dadosCorrida.destino.lng],{
-          icon:L.divIcon({className:"marker-destino",
-            html:`<div style="width:18px;height:18px;background:#ff6c0c;border:2px solid #fff;border-radius:50%;"></div>`})
+        destinoMarker = L.marker([dadosCorrida.destino.lat,dadosCorrida.destino.lng],{
+          icon:L.divIcon({
+            className:"marker-destino",
+            html:`<div style="
+              width:22px;
+              height:22px;
+              background:#FF6C0C;
+              border:3px solid #fff;
+              border-radius:50%;
+            "></div>`
+          })
         }).addTo(map);
-      }else destinoMarker.setLatLng([dadosCorrida.destino.lat,dadosCorrida.destino.lng]);
+      }
     }
   }
 
-  // ===== UI =====
- btnTudoPronto?.addEventListener("click", async ()=>{
-  if(!dadosCorrida || !corridaId) return;
-  fase = "a_caminho_destino";                 // muda de fase
-  btnTudoPronto.style.display = "none";
-  btnFinalizar && (btnFinalizar.style.display = "inline-block");
-
-  try {
-    await db.collection("corridas").doc(corridaId)
-      .set({ status: "a_caminho_destino" }, { merge: true });
-  } catch(e){ console.error(e); }
-
-  // limpa a rota anterior (motorista -> origem)
-  if(routeLayer){ map.removeLayer(routeLayer); routeLayer = null; }
-
-  // desenha NOVA rota: origem -> destino (fixa)
-  if(dadosCorrida?.origem && dadosCorrida?.destino){
-    desenharRota(
-      { lat: dadosCorrida.origem.lat,  lng: dadosCorrida.origem.lng  },
-      { lat: dadosCorrida.destino.lat, lng: dadosCorrida.destino.lng }
-    ).catch(e=>console.error("Falha rota origem->destino:", e));
+  function setMotoristaPos(lat,lng){
+    posMotorista = {lat,lng};
+    desenharMarcadores();
+    if(fase==="indo_retirar" && dadosCorrida?.origem){
+      desenharRota(posMotorista,dadosCorrida.origem);
+    }
   }
-});
 
+  function startGeolocation(){
+    if(!navigator.geolocation) return console.error("Geolocalização indisponível");
+    navigator.geolocation.watchPosition(p => setMotoristaPos(p.coords.latitude,p.coords.longitude));
+  }
+
+  // ===== Botões =====
+  btnTudoPronto?.addEventListener("click", ()=>{
+    if(!dadosCorrida) return;
+    fase="a_caminho_destino";
+    if(routeLayer) map.removeLayer(routeLayer);
+    desenharMarcadores();
+    desenharRota(dadosCorrida.origem,dadosCorrida.destino);
+    btnTudoPronto.style.display="none";
+    btnFinalizar.style.display="inline-block";
+  });
 
   btnFinalizar?.addEventListener("click", ()=> $openModal());
 
   salvarAvaliacaoBtn?.addEventListener("click", async ()=>{
     if(!corridaId) return;
-    const nota = ratingAtual||0;
-    const comentario = comentarioEl?.value?.trim() || "";
     try{
+      const nota = 5;
+      const comentario = comentarioEl.value || "";
+      const batch = db.batch();
       const corridaRef = db.collection("corridas").doc(corridaId);
       const avalRef = corridaRef.collection("avaliacoes").doc();
-      const batch = db.batch();
-      batch.set(avalRef,{
-        nota, comentario,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        motoristaId: dadosCorrida?.motoristaId||null,
-        clienteId: dadosCorrida?.clienteId||null
-      });
-      batch.set(corridaRef,{
-        status:"finalizada",
-        finalizadaEm: firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true});
+      batch.set(avalRef,{nota,comentario,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      batch.set(corridaRef,{status:"finalizada",finalizadaEm:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
       await batch.commit();
       $closeModal();
-      alert("Avaliação salva.");
-    }catch(e){
-      console.error(e); alert("Erro ao salvar avaliação.");
-    }
+      alert("Avaliação salva!");
+    }catch(e){console.error(e); alert("Erro ao salvar avaliação.");}
   });
 
-  // ===== Assinar corrida =====
-  async function assinarCorrida(){
-    firebase.auth().onAuthStateChanged(async (user)=>{
-      if(!user){ console.warn("Sem usuário logado."); return; }
-      corridaId = await resolverCorridaAtiva(user.uid);
-      if(!corridaId){ alert("Nenhuma corrida ativa encontrada para este motorista."); return; }
-      salvarUltima(corridaId);
+  // ===== Init =====
+  firebase.auth().onAuthStateChanged(async user=>{
+    if(!user) return alert("Usuário não logado.");
+    corridaId = await obterCorridaAtiva(user.uid);
+    if(!corridaId) return alert("Nenhuma corrida ativa encontrada.");
 
-      unsubCorrida && unsubCorrida();
-      unsubCorrida = db.collection("corridas").doc(corridaId).onSnapshot(async (doc)=>{
-        if(!doc.exists) return;
-        dadosCorrida = doc.data()||{};
-
-        origemInfoEl && (origemInfoEl.textContent  = dadosCorrida?.origem?.endereco  || "—");
-        destinoInfoEl && (destinoInfoEl.textContent = dadosCorrida?.destino?.endereco || "—");
-
-        // nomes
-        (async ()=>{
-          const nC = dadosCorrida?.clienteNome   || await obterNomePorUid(dadosCorrida?.clienteId);
-          const nM = dadosCorrida?.motoristaNome || await obterNomePorUid(dadosCorrida?.motoristaId);
-          nomeClienteEl && (nomeClienteEl.textContent = nC || "—");
-          nomeMotoristaEl && (nomeMotoristaEl.textContent = nM || "—");
-        })();
-
-        // fase
-        if(dadosCorrida.status==="a_caminho_destino") fase="a_caminho_destino";
-        else if(dadosCorrida.status==="finalizada"){} else fase="indo_retirar";
-
-        desenharMarcadores();
-        atualizarRota();
-
-        if(!dadosCorrida.status){
-          try{ await db.collection("corridas").doc(corridaId).set({status:"indo_retirar"},{merge:true}); }
-          catch(e){ console.error(e); }
-        }
-      });
+    db.collection("corridas").doc(corridaId).onSnapshot(async doc=>{
+      if(!doc.exists) return;
+      dadosCorrida = doc.data();
+      origemInfoEl.textContent = dadosCorrida.origem?.endereco || "—";
+      destinoInfoEl.textContent = dadosCorrida.destino?.endereco || "—";
+      nomeClienteEl.textContent = await obterNome(dadosCorrida.clienteId);
+      nomeMotoristaEl.textContent = await obterNome(dadosCorrida.motoristaId);
+      desenharMarcadores();
+      if(posMotorista) desenharRota(posMotorista,dadosCorrida.origem);
     });
-  }
 
-  // ===== Init/Cleanup =====
-  function init(){ assinarCorrida(); startGeolocation(); }
-  init();
-
-  window.addEventListener("beforeunload",()=>{
-    unsubCorrida && unsubCorrida();
-    if(watchId) navigator.geolocation.clearWatch(watchId);
+    startGeolocation();
   });
+
+  // ===== Pulse CSS =====
+  const style = document.createElement('style');
+  style.innerHTML = `
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+  `;
+  document.head.appendChild(style);
+
 })();
+// ===== Avaliação - Estrelas =====
+let ratingAtual = 0; // nota atual
+const ratingStars = document.querySelectorAll(".rating-stars .star");
+
+ratingStars.forEach((star,index)=>{
+  star.addEventListener("click", ()=>{
+    ratingAtual = parseInt(star.dataset.rating);
+    // Atualiza visualmente todas as estrelas
+    ratingStars.forEach((s,i)=>{
+      if(i < ratingAtual){
+        s.classList.add("active");  // estrela cheia
+      } else {
+        s.classList.remove("active"); // estrela vazia
+      }
+    });
+  });
+});
+
+// ===== Salvar avaliação =====
+salvarAvaliacaoBtn?.addEventListener("click", async ()=>{
+  if(!corridaId || !dadosCorrida?.clienteId) return;
+
+  const nota = ratingAtual || 0;
+  const comentario = comentarioEl.value?.trim() || "";
+  const clienteId = dadosCorrida.clienteId;
+
+  try {
+    const corridaRef = db.collection("corridas").doc(corridaId);
+    const avalRef = corridaRef.collection("avaliacoes").doc();
+    const usuarioRef = db.collection("usuarios").doc(clienteId);
+
+    const batch = db.batch();
+
+    // 1️⃣ Avaliação na corrida
+    batch.set(avalRef,{
+      nota,
+      comentario,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      motoristaId: dadosCorrida?.motoristaId || null,
+      clienteId: clienteId
+    });
+
+    // 2️⃣ Atualizar avaliação do usuário
+    batch.set(usuarioRef,{
+      avaliacoesRecebidas: firebase.firestore.FieldValue.arrayUnion({
+        corridaId: corridaId,
+        nota,
+        comentario,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        motoristaId: dadosCorrida?.motoristaId || null
+      })
+    }, { merge: true });
+
+    // 3️⃣ Atualizar status da corrida para finalizada
+    batch.set(corridaRef,{
+      status:"finalizada",
+      finalizadaEm: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await batch.commit();
+
+    // Fechar modal e resetar estrelas
+    $closeModal();
+    ratingAtual = 0;
+    ratingStars.forEach(s=>s.classList.remove("active"));
+    comentarioEl.value = "";
+
+    alert("Avaliação salva com sucesso!");
+  } catch(e){
+    console.error(e);
+    alert("Erro ao salvar avaliação. Tente novamente.");
+  }
+});

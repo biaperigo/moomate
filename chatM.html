@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat - Motorista</title>
+
+  <!-- Seu CSS -->
+  <link rel="stylesheet" href="src/styles/rotaM.css" />
+</head>
+<body>
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate"/>
+    </div>
+    <nav class="nav-links" id="navMenu">
+      <a href="homeM.html">Home</a>
+      <a href="entregasM.html">Entregas</a>
+      <a href="carteiraM.html">Carteira</a>
+      <a href="suporteM.html">Suporte</a>
+      <a href="chatM.html">CHAT</a>
+      <a href="ecopontosM.html">Pontos de coleta</a>
+    </nav>
+    <div class="header-icons">
+      <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+      <button class="menu-toggle" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
+    </div>
+  </header>
+
+  <div id="chat-container">
+    <div id="chat-box" class="chat-box">
+      <!-- Mensagens serão carregadas aqui -->
+    </div>
+
+    <div class="chat-input">
+      <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
+      <button id="send-btn">Enviar</button>
+    </div>
+  </div>
+
+  <footer>
+    <div id="footer_content">
+      <div class="footer-left">
+        <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
+      </div>
+      <div class="footer-social">
+        <span class="social-text">Acompanhe nós</span>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a>
+        </div>
+      </div>
+    </div>
+    <div id="footer_items">
+      <span id="copyright">© 2025 Moomate. Todos os direitos reservados.</span>
+    </div>
+  </footer>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+  
+  <script src="src/javascript/chatM.js"></script>
+</body>
+</html>

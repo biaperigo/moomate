@@ -189,7 +189,7 @@ body {
 }
 
 .ride-details h3::before {
-    content: "🚗";
+
     font-size: 1.2rem;
 }
 
@@ -691,4 +691,127 @@ footer {
     .social-text {
         display: none;
     }
+}
+/* ===== Painel Próximas Instruções Bonito ===== */
+#route-instructions {
+  background: #f5f5f5; /* cinza claro */
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 1rem 2rem;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid rgba(0,0,0,0.05);
+  font-family: 'Quicksand', sans-serif;
+}
+
+#route-instructions h4 {
+  color: #ff6c0c; /* laranja principal */
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+/* Lista de instruções */
+#directionsList {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Cada instrução como cartão */
+#directionsList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  background: #ffffff; /* branco suave */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+#directionsList li:hover {
+  background: #fff2e0; /* laranja claro ao passar o mouse */
+  transform: translateX(3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+}
+
+/* Badge de distância/tempo */
+#directionsList li .badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ff6c0c;
+  background-color: rgba(255,108,12,0.15);
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 60px;
+}
+
+/* Scrollbar personalizada */
+#route-instructions::-webkit-scrollbar {
+  width: 8px;
+}
+
+#route-instructions::-webkit-scrollbar-track {
+  background: #e0e0e0; /* cinza claro */
+  border-radius: 8px;
+}
+
+#route-instructions::-webkit-scrollbar-thumb {
+  background: #ff6c0c;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+
+/* Responsivo */
+@media screen and (max-width:768px){
+  #route-instructions {
+    margin: 1rem;
+    padding: 1rem;
+    max-height: 200px;
+  }
+
+  #directionsList li {
+    padding: 0.6rem 0.8rem;
+  }
+
+  #directionsList li .badge {
+    font-size: 0.75rem;
+    min-width: 50px;
+  }
+}
+
+/* ===== Sistema de Avaliação - Estrelas ===== */
+.rating-stars {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.rating-stars .star {
+  font-size: 2.5rem;
+  color: #ccc; /* cor das estrelas vazias */
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.rating-stars .star.active {
+  color: #FFB800; /* cor da estrela selecionada */
+}
+
+.rating-stars .star:hover {
+  transform: scale(1.2);
+}
+
+/* Para dispositivos móveis */
+@media screen and (max-width:768px){
+  .rating-stars .star {
+    font-size: 2rem;
+  }
 }

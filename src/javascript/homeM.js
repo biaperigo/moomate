@@ -317,6 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function iniciarCorrida(entregaId, entregaData, nomeCliente) {
+    
     try {
       const corridaData = {
         entregaId,
