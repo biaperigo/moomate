@@ -545,3 +545,115 @@ footer {
         justify-content: center;
     }
 }
+/* Marcador do motorista - verde com pulso */
+.marker-motorista div {
+  width: 20px;
+  height: 20px;
+  background: #3DBE34;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  animation: pulse 1.2s infinite;
+}
+
+/* Marcador da origem - azul */
+.marker-origem div {
+  width: 22px;
+  height: 22px;
+  background: #1E3A8A;
+  border: 3px solid #fff;
+  border-radius: 50%;
+}
+
+/* Marcador do destino - laranja */
+.marker-destino div {
+  width: 22px;
+  height: 22px;
+  background: #FF6C0C;
+  border: 3px solid #fff;
+  border-radius: 50%;
+}
+
+/* Animação de pulso (para o motorista) */
+@keyframes pulse {
+  0%   { transform: scale(0.9); opacity: 0.7; }
+  50%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+/* Passo ativo na timeline */
+.active-step {
+  color: #ff6c0c;
+  font-weight: bold;
+  transform: scale(1.05);
+}
+
+.timeline-item .timeline-icon {
+  transition: all 0.3s ease;
+}
+
+.active-step .timeline-icon {
+  background-color: #ff6c0c;
+  color: white;
+  border-radius: 50%;
+  padding: 5px;
+}
+/* já deve existir algo similar; mantenha seu design */
+.active { color:#ff6c0c; transform: scale(1.02); font-weight:600; }
+#user-rating-modal{ display:none; }
+#user-rating-modal.open{ display:block; }
+#user-stars [data-star].on{ color:#ff6c0c; }
+.destaque-chegada{
+  display:block;
+  margin:28px auto;
+  padding:18px 38px;
+  width:clamp(260px, 55%, 560px);
+  font-size:20px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+  color:#fff;
+  background:#ff6c0c;
+  border:0;
+  border-radius:16px;
+  box-shadow:0 10px 24px rgba(255,108,12,.35), 0 0 0 10px rgba(255,108,12,.18);
+  cursor:pointer;
+  animation:pulse-chegou 1.6s ease-in-out infinite;
+}
+.destaque-chegada:hover{
+  transform:translateY(-1px);
+  box-shadow:0 14px 28px rgba(255,108,12,.4), 0 0 0 12px rgba(255,108,12,.22);
+}
+@keyframes pulse-chegou{
+  0%{ box-shadow:0 10px 24px rgba(255,108,12,.35), 0 0 0 8px rgba(255,108,12,.18) }
+  70%{ box-shadow:0 10px 24px rgba(255,108,12,.35), 0 0 0 16px rgba(255,108,12,0) }
+  100%{ box-shadow:0 10px 24px rgba(255,108,12,.35), 0 0 0 8px rgba(255,108,12,.18) }
+}
+/* Modal bonito */
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:9999}
+.modal .modal-content{
+  width:min(540px,92%); background:#fff; border-radius:16px; box-shadow:0 16px 40px rgba(0,0,0,.25);
+  overflow:hidden; padding:0; position:relative;
+}
+.modal .modal-content::before{
+  content:""; display:block; height:64px; background:linear-gradient(90deg,#ff7a1a,#ff6c0c);
+}
+.modal .modal-content h3{
+  position:absolute; top:18px; left:28px; margin:0; color:#fff; font-size:18px; font-weight:800;
+}
+.modal .modal-content #close-driver-modal{
+  position:absolute; top:14px; right:16px; border:0; background:transparent; font-size:20px; cursor:pointer; color:#fff;
+}
+.modal .driver-info{display:flex;gap:18px;align-items:center;margin:18px 22px 6px}
+.modal .driver-info p{margin:0; font-size:14px}
+.modal .rating-section{padding:6px 22px 0}
+.modal .rating-stars{display:flex;gap:10px;justify-content:center;margin:10px 0 8px}
+.modal textarea#driver-rating-comment{
+  width:calc(100% - 44px); margin:10px 22px 0; resize:vertical; min-height:90px;
+  border:1px solid #eee; border-radius:12px; padding:12px; font-size:14px; outline:none;
+}
+.modal .modal-buttons{display:flex;gap:12px;justify-content:flex-end;padding:16px 22px 22px}
+.modal .action-btn{padding:12px 18px;border-radius:12px;border:0;font-weight:700;cursor:pointer}
+.modal .action-btn.primary{background:#ff6c0c;color:#fff}
+.modal .action-btn.secondary{background:#f3f3f3;color:#333}
+.modal .star{font-size:28px;color:#d0d0d0;cursor:pointer;transition:transform .12s}
+.modal .star.active,.modal .star:hover{color:#ffb400;transform:scale(1.08)}

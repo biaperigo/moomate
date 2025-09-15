@@ -497,27 +497,22 @@ function fecharModalPropostas() {
 // ================== Aceitar proposta / corrida =================
 async function aceitarProposta(entregaId, propostaId, motoristaId) {
   if (!db) return alert("Erro: Firebase não inicializado.");
-
   try {
     const propostaDoc = await db
-      .collection("entregas")
-      .doc(entregaId)
-      .collection("propostas")
-      .doc(propostaId)
-      .get();
+      .collection("entregas").doc(entregaId)
+      .collection("propostas").doc(propostaId).get();
     if (!propostaDoc.exists) return alert("Proposta não encontrada.");
     const propostaData = propostaDoc.data();
 
     await db.collection("entregas").doc(entregaId).update({
       status: "proposta_aceita",
-      propostaAceita: {
-        propostaId,
-        motoristaId,
-        ...propostaData
-      },
+      propostaAceita: { propostaId, motoristaId, ...propostaData },
       aceitoEm: new Date().toISOString(),
       clienteConfirmou: true
     });
+
+    // para o statusC pegar automaticamente
+    localStorage.setItem("ultimaCorridaCliente", entregaId);
 
     alert("Proposta aceita com sucesso!");
     fecharModalPropostas();
@@ -554,23 +549,21 @@ function mostrarAguardandoMotorista(entregaId) {
     modal.querySelector('.modal-content').style.transform = 'scale(1)';
   }, 10);
 
-  // 1) fecha quando a corrida começar
+  // fecha quando a corrida começar
   const stopCorrida = db.collection('corridas').doc(entregaId)
     .onSnapshot(doc => {
-      if (doc.exists && doc.data()?.status === 'em_andamento') {
+      const st = doc.exists ? doc.data()?.status : null;
+      if (st === 'em_andamento' || st === 'a_caminho_destino') {
         modal.style.display = 'none';
-        alert('Corrida iniciada! Redirecionando...');
-        setTimeout(() => {
-          window.location.href = `statusC.html?entregaId=${entregaId}&tipo=cliente`;
-        }, 500);
+        window.location.href = `statusC.html?corrida=${encodeURIComponent(entregaId)}&tipo=cliente`;
         stopCorrida(); stopEntrega();
       }
     });
 
-  // 2) fecha se o motorista recusar
+  // fecha se o motorista recusar
   const stopEntrega = db.collection('entregas').doc(entregaId)
     .onSnapshot(doc => {
-      if (!doc.exists) return; // pode já ter virado corrida
+      if (!doc.exists) return;
       const st = doc.data()?.status;
       if (st === 'aguardando_propostas' || st === 'recusada_pelo_motorista') {
         modal.style.display = 'none';
@@ -579,6 +572,7 @@ function mostrarAguardandoMotorista(entregaId) {
       }
     });
 }
+
 
 
 // ================== Criar pedido / ver motoristas =============

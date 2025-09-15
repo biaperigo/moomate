@@ -4,213 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Status da Corrida</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <!-- Leaflet Routing Machine -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    
+    <!-- Seu CSS -->
     <link rel="stylesheet" href="src/styles/statusC.css">
+    
     <!-- Font Awesome -->
     <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
     
     <style>
-        /* Estilos adicionais para melhorar a experiência */
-        .timeline-item {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            margin: 10px 0;
-            background: #f9f9f9;
-            border-radius: 8px;
-            border-left: 4px solid #ddd;
-            transition: all 0.3s ease;
-        }
-        
-        .timeline-item.active {
-            background: #e3f2fd;
-            border-left-color: #2196F3;
-        }
-        
-        .timeline-item.completed {
-            background: #e8f5e8;
-            border-left-color: #4CAF50;
-        }
-        
-        .timeline-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #ddd;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            color: white;
-        }
-        
-        .timeline-item.active .timeline-icon {
-            background: #2196F3;
-            animation: pulse 2s infinite;
-        }
-        
-        .timeline-item.completed .timeline-icon {
-            background: #4CAF50;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-        
-        .timeline-content h4 {
-            margin: 0 0 5px 0;
-            font-size: 16px;
-        }
-        
-        .timeline-content p {
-            margin: 0;
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .truck-marker {
-            background: none !important;
-            border: none !important;
-        }
-        
-        .custom-marker {
-            background: none !important;
-            border: none !important;
-        }
-        
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
+        /* Garante que o mapa tenha uma altura para ser exibido */
+        #map {
+            height: 450px; /* Altura principal */
+            min-height: 350px; /* Altura mínima em telas menores */
             width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        
-        .modal-content h3 {
-            margin-top: 0;
-            color: #2196F3;
-            text-align: center;
-        }
-        
-        .driver-info {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .rating-stars {
-            display: flex;
-            gap: 5px;
-            margin: 15px 0;
-            justify-content: center;
-        }
-        
-        .star {
-            font-size: 32px;
-            cursor: pointer;
-            color: #ddd;
-            transition: color 0.2s;
-        }
-        
-        .star:hover,
-        .star.active {
-            color: #FFD700;
-        }
-        
-        .modal-content textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            resize: vertical;
-            min-height: 80px;
-            margin: 10px 0;
-        }
-        
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 20px;
-        }
-        
-        .action-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .action-btn.primary {
-            background: #2196F3;
-            color: white;
-        }
-        
-        .action-btn.secondary {
-            background: #666;
-            color: white;
-        }
-        
-        .action-btn:hover {
-            opacity: 0.9;
-        }
-        
-        .status-details {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin: 20px;
-        }
-        
-        .status-details h3 {
-            color: #2196F3;
-            margin-top: 0;
-        }
-        
-        #status-info p {
-            margin: 8px 0;
-            padding: 8px;
-            background: #f9f9f9;
-            border-radius: 5px;
-        }
-        
-        #status-info strong {
-            color: #333;
-        }
-        
-        #current-status {
-            color: #2196F3;
-            font-weight: bold;
-        }
-        
-        #estimated-time {
-            color: #FF9800;
-            font-weight: bold;
+            background-color: #e0e0e0; /* Cor de fundo enquanto o mapa carrega */
         }
     </style>
 </head>
@@ -220,12 +31,12 @@
             <img src="src/images/favicon.png" alt="Logo Moomate" />
         </div>
         <nav class="nav-links" id="navMenu">
-            <a href="homeM.html">Home</a>
-            <a href="entregasM.html">Entregas</a>
-            <a href="carteiraM.html">Carteira</a>
-            <a href="suporteM.html">Suporte</a>
-            <a href="chatM.html">CHAT</a>
-            <a href="ecopontosM.html">Pontos de coleta</a>
+            <a href="homeC.html">Home</a>
+            <a href="entregasC.html">Minhas Entregas</a>
+            <a href="carteiraC.html">Carteira</a>
+            <a href="suporteC.html">Suporte</a>
+            <a href="chatC.html">CHAT</a>
+            <a href="ecopontosC.html">Pontos de coleta</a>
         </nav>
         <div class="header-icons">
             <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
@@ -237,53 +48,50 @@
         </div>
     </header>
 
+    <!-- O MAPA VAI AQUI -->
     <div id="map"></div>
 
     <!-- Seção de status da corrida -->
     <div class="ride-status">
         <div class="status-details">
             <h3>Status da Corrida</h3>
-            <div id="status-info">
-                <p><strong>Motorista:</strong> <span id="driver-name">Carregando...</span></p>
-                <p><strong>Veículo:</strong> <span id="vehicle-info">Carregando...</span></p>
-                <p><strong>Status atual:</strong> <span id="current-status">Aguardando motorista...</span></p>
-                <p><strong>Tempo estimado:</strong> <span id="estimated-time">Calculando...</span></p>
-            </div>
+            
+<div id="status-info">
+    <p><strong>Motorista:</strong> <span id="driver-name">Carregando...</span></p>
+    <p><strong>Veículo:</strong> <span id="vehicle-info">Carregando...</span></p>
+    <p><strong>Origem:</strong> <span id="origem-address">Carregando...</span></p>
+    <p><strong>Destino:</strong> <span id="destino-address">Carregando...</span></p>
+    <p><strong>Tempo estimado:</strong> <span id="estimated-time">Calculando...</span></p>
+</div>
+
+            
             <div class="status-timeline">
                 <div class="timeline-item" id="timeline-accepted">
-                    <div class="timeline-icon">
-                        <i class="fas fa-check"></i>
-                    </div>
+                    <div class="timeline-icon"><i class="fas fa-check"></i></div>
                     <div class="timeline-content">
                         <h4>Corrida Aceita</h4>
-                        <p id="accepted-time">--:--</p>
+                        
                     </div>
                 </div>
                 <div class="timeline-item" id="timeline-pickup">
-                    <div class="timeline-icon">
-                        <i class="fas fa-car"></i>
-                    </div>
+                    <div class="timeline-icon"><i class="fas fa-truck"></i></div>
                     <div class="timeline-content">
-                        <h4>A caminho do ponto de retirada</h4>
-                        <p id="pickup-time">--:--</p>
+                        <h4>A caminho da coleta</h4>
+                        
                     </div>
                 </div>
                 <div class="timeline-item" id="timeline-destination">
-                    <div class="timeline-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
+                    <div class="timeline-icon"><i class="fas fa-map-marker-alt"></i></div>
                     <div class="timeline-content">
                         <h4>A caminho do destino</h4>
-                        <p id="destination-time">--:--</p>
+                      
                     </div>
                 </div>
                 <div class="timeline-item" id="timeline-completed">
-                    <div class="timeline-icon">
-                        <i class="fas fa-flag-checkered"></i>
-                    </div>
+                    <div class="timeline-icon"><i class="fas fa-flag-checkered"></i></div>
                     <div class="timeline-content">
                         <h4>Corrida Finalizada</h4>
-                        <p id="completed-time">--:--</p>
+                        
                     </div>
                 </div>
             </div>
@@ -308,42 +116,43 @@
                     <span class="star" data-rating="5">★</span>
                 </div>
             </div>
-            <textarea id="driver-rating-comment" placeholder="Comentário (opcional)"></textarea>
+            <textarea id="driver-rating-comment" placeholder="Comentário (opcional )"></textarea>
             <div class="modal-buttons">
                 <button id="submit-driver-rating" class="action-btn primary">Enviar Avaliação</button>
                 <button id="close-driver-modal" class="action-btn secondary">Fechar</button>
             </div>
         </div>
     </div>
+<button id="openChat" class="track-btn">Chat</button>
 
     <footer>
-        <div id="footer_content">
-            <div class="footer-left">
-                <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
-            </div>
-            <div class="footer-social">
-                <span class="social-text">Acompanhe nós</span>
-                <div class="social-icons">
-                    <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
-                        <i class="fa-brands fa-instagram"></i>
-                    </a>
-                    <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank">
-                        <i class="fa-brands fa-linkedin-in"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div id="footer_items">
-            <span id="copyright"> © 2025 Moomate. Todos os direitos reservados. </span>
-        </div>
+        <!-- Seu conteúdo do footer aqui -->
     </footer>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
-    
-    <script src="src/javascript/statusC_melhorado.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Firebase SDK (versão compat, igual à da rotaM ) -->
+    <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+
+    <!-- SCRIPT DE INICIALIZAÇÃO DO FIREBASE (ESTAVA FALTANDO ) -->
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
+        authDomain: "moomate-39239.firebaseapp.com",
+        projectId: "moomate-39239",
+        storageBucket: "moomate-39239.appspot.com",
+        messagingSenderId: "637968714747",
+        appId: "1:637968714747:web:ad15dc3571c22f046b595e",
+        measurementId: "G-62J7Q8CKP4"
+      };
+      // Inicializa o Firebase
+      firebase.initializeApp(firebaseConfig);
+    </script>
+
+    <!-- SEU SCRIPT DA PÁGINA (AGORA VAI FUNCIONAR) -->
+    <script src="src/javascript/statusC.js"></script>
 </body>
 </html>

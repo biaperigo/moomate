@@ -316,55 +316,61 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnRecusarCorrida').onclick = () => recusarCorridaAposAceite(entregaId);
   }
 
-  async function iniciarCorrida(entregaId, entregaData, nomeCliente) {
-    
-    try {
-      const corridaData = {
-        entregaId,
-        status: 'em_andamento',
-        iniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
-        clienteId: entregaData.clienteId || null,
-        clienteNome: nomeCliente || entregaData.clienteNome || 'Cliente',
-        motoristaId: motoristaUid || fallbackMotoristaId,
-        nomeMotorista: nomeMotoristaReal || 'Motorista',
-        origem: {
-          endereco: entregaData.origem?.endereco || '',
-          numero: entregaData.origem?.numero || '',
-          complemento: entregaData.origem?.complemento || '',
-          cep: entregaData.origem?.cep || '',
-          lat: entregaData.origem?.coordenadas?.lat || null,
-          lng: entregaData.origem?.coordenadas?.lng || null,
-        },
-        destino: {
-          endereco: entregaData.destino?.endereco || '',
-          numero: entregaData.destino?.numero || '',
-          complemento: entregaData.destino?.complemento || '',
-          lat: entregaData.destino?.coordenadas?.lat || null,
-          lng: entregaData.destino?.coordenadas?.lng || null,
-        },
-        preco: Number(entregaData.propostaAceita?.preco || 0),
-        tempoChegada: entregaData.propostaAceita?.tempoChegada || 0,
-        ajudantes: entregaData.propostaAceita?.ajudantes || 0,
-        veiculo: entregaData.propostaAceita?.veiculo || entregaData.tipoVeiculo || '',
-        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-      };
+async function iniciarCorrida(entregaId, entregaData, nomeCliente) {
+  try {
+    const corridaData = {
+      entregaId,
+      status: 'em_andamento',
+      iniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
+      clienteId: entregaData.clienteId || null,
+      clienteNome: nomeCliente || entregaData.clienteNome || 'Cliente',
+      motoristaId: motoristaUid || fallbackMotoristaId,
+      nomeMotorista: nomeMotoristaReal || 'Motorista',
+      origem: {
+        endereco: entregaData.origem?.endereco || '',
+        numero: entregaData.origem?.numero || '',
+        complemento: entregaData.origem?.complemento || '',
+        cep: entregaData.origem?.cep || '',
+        lat: entregaData.origem?.coordenadas?.lat || null,
+        lng: entregaData.origem?.coordenadas?.lng || null,
+      },
+      destino: {
+        endereco: entregaData.destino?.endereco || '',
+        numero: entregaData.destino?.numero || '',
+        complemento: entregaData.destino?.complemento || '',
+        lat: entregaData.destino?.coordenadas?.lat || null,
+        lng: entregaData.destino?.coordenadas?.lng || null,
+      },
+      preco: Number(entregaData.propostaAceita?.preco || 0),
+      tempoChegada: entregaData.propostaAceita?.tempoChegada || 0,
+      ajudantes: entregaData.propostaAceita?.ajudantes || 0,
+      veiculo: entregaData.propostaAceita?.veiculo || entregaData.tipoVeiculo || '',
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    };
 
-      // 1) cria/atualiza corridas/{entregaId}
-      await db.collection('corridas').doc(entregaId).set(corridaData, { merge: true });
+    const corridaRef = db.collection('corridas').doc(entregaId);
 
-      // 2) remove a solicitação da listagem dos outros motoristas
-      await db.collection('entregas').doc(entregaId).delete();
+    // 1) cria/atualiza corrida
+    await corridaRef.set(corridaData, { merge: true });
 
-      // 3) fecha modal motorista; cliente já ouve corridas/{entregaId} e redireciona
-      fecharModalPropostaAceita();
+    // 2) estado inicial para o statusC/rotaM seguirem a fase
+    await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
 
-      // 4) redireciona motorista para rotaM.html
-      window.location.href = `rotaM.html?corridaId=${encodeURIComponent(entregaId)}`;
-    } catch (error) {
-      console.error('Erro ao iniciar corrida:', error);
-      alert('Erro ao iniciar corrida. Tente novamente.');
-    }
+    // 3) remove a solicitação pública
+    await db.collection('entregas').doc(entregaId).delete();
+
+    // 4) passa o id para as telas do motorista
+    localStorage.setItem('corridaSelecionada', entregaId);
+    localStorage.setItem('ultimaCorridaMotorista', entregaId);
+
+    // 5) rota do motorista com ?corrida=
+    window.location.href = `rotaM.html?corrida=${encodeURIComponent(entregaId)}`;
+  } catch (error) {
+    console.error('Erro ao iniciar corrida:', error);
+    alert('Erro ao iniciar corrida. Tente novamente.');
   }
+}
+
 
   async function recusarCorridaAposAceite(entregaId) {
     try {
