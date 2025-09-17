@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dados Pessoais - Motorista</title>
+  <title>Dados Pessoais - Usuário</title>
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
   <link rel="stylesheet" href="src/styles/dadospessoaisC.css" />
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
 </head>
-<body>
+<body data-role="usuario">
 
   <!-- HEADER -->
   <header class="top-bar">
@@ -19,18 +19,17 @@
     </div>
 
     <nav class="nav-links" id="navMenu">
-      <a href="homeM.html">Home</a>
-      <a href="entregasM.html">Entregas</a>
-      <a href="carteiraM.html">Carteira</a>
-      <a href="suporteM.html">Suporte</a>
-      <a href="chatM.html">CHAT</a>
-      <a href="ecopontosM.html">Pontos de coleta</a>
+      <a href="homeC.html">Home</a>
+      <a href="entregasC.html">Entregas</a>
+      <a href="carteiraC.html">Carteira</a>
+      <a href="suporteC.html">Suporte</a>
+      <a href="ecopontosC.html">Pontos de coleta</a>
     </nav>
 
     <div class="header-icons">
-      <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
-      <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
-      <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+      <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisC.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesC.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
       <button class="menu-toggle" id="menuToggle">
         <i class="fa-solid fa-bars"></i>
       </button>
@@ -41,7 +40,7 @@
   <div class="perfil-container">
     <!-- Foto de perfil -->
     <div class="foto-wrapper">
-      <img id="fotoPerfil" class="foto-perfil" src="default-avatar.png" />
+      <img id="fotoPerfil" class="foto-perfil" src="default-avatar.png" alt="Foto do perfil" />
     </div>
     <!-- Botão de alterar foto abaixo da foto -->
     <label for="inputFoto" class="btn-foto">Alterar Foto</label>
@@ -50,41 +49,35 @@
     <!-- Campos de input com ícone de edição -->
     <div class="input-wrapper">
       <input type="text" id="nome" class="input-nome" placeholder="Nome completo" disabled />
-      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('nome')"></i>
+      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('nome')" title="Editar nome"></i>
     </div>
 
     <div class="input-wrapper">
-      <input type="email" id="email" class="input-email" placeholder="Email" disabled />
-      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('email')"></i>
+      <input type="email" id="email" class="input-email" placeholder="Email" disabled readonly />
+      <i class="fa-solid fa-lock edit-icon" style="color: #ccc; cursor: not-allowed;" title="Email não pode ser alterado"></i>
     </div>
 
     <div class="input-wrapper">
-      <input type="tel" id="telefone" class="input-telefone" placeholder="Telefone" disabled />
-      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('telefone')"></i>
+      <input type="tel" id="telefone" class="input-telefone" placeholder="Telefone" disabled maxlength="15" />
+      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('telefone')" title="Editar telefone"></i>
     </div>
 
     <div class="input-wrapper">
       <input type="text" id="cidade" class="input-cidade" placeholder="Cidade" disabled />
-      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('cidade')"></i>
+      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('cidade')" title="Editar cidade"></i>
     </div>
 
     <div class="input-wrapper">
       <input type="date" id="dataNascimento" class="input-data" placeholder="Data de nascimento" disabled />
-      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('dataNascimento')"></i>
+      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('dataNascimento')" title="Editar data de nascimento"></i>
     </div>
 
-    <div class="input-wrapper">
-      <input type="password" id="senha" class="input-senha" placeholder="Senha" disabled />
-      <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('senha')"></i>
-      <!-- Campo para nova senha -->
-<<!-- Campo para nova senha -->
-<input type="password" id="novaSenha" class="input-nova-senha" placeholder="Nova Senha" />
-
-<!-- Botão para alterar senha -->
-<button onclick="alterarSenha()" class="btn-alterar-senha">Alterar Senha</button>
-
-
-    <button onclick="salvar()" class="btn-salvar">Salvar Alterações</button>
+    <!-- Botão de logout (opcional)
+    <button onclick="logout()" class="btn-logout">
+      <i class="fa-solid fa-sign-out-alt"></i>
+      Sair
+    </button>
+    -->
   </div>
 
   <!-- Firebase SDKs -->
@@ -93,36 +86,5 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
   <script src="src/javascript/dadospessoaisC.js"></script>
-
-  <!-- JavaScript -->
-  <script>
-    // Função para atualizar a foto do perfil
-    function atualizarFoto() {
-      var fotoInput = document.getElementById('inputFoto');
-      var fotoPerfil = document.getElementById('fotoPerfil');
-      var arquivo = fotoInput.files[0];
-      var leitor = new FileReader();
-
-      leitor.onloadend = function() {
-        fotoPerfil.src = leitor.result;
-      }
-
-      if (arquivo) {
-        leitor.readAsDataURL(arquivo);
-      }
-    }
-
-    // Função para habilitar edição de campos
-    function habilitarEdicao(campoId) {
-      var campo = document.getElementById(campoId);
-      campo.disabled = false; // Habilita o campo
-    }
-
-    // Função para salvar alterações (simulação)
-    function salvar() {
-      alert('Alterações salvas!');
-    }
-  </script>
-  
 </body>
 </html>
