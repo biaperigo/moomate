@@ -12,7 +12,6 @@ body {
   color: #1c1c1c;
 }
 
-/* HEADER */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -88,7 +87,6 @@ body {
   cursor: pointer;
 }
 
-/* CONTEÚDO CARTEIRA */
 .carteira-container {
   max-width: 400px;
   margin: 2rem auto;
@@ -135,7 +133,6 @@ body {
   background-color: #e05a00;
 }
 
-/* OPÇÕES */
 .opcoes {
   display: flex;
   flex-direction: column;
@@ -174,8 +171,6 @@ body {
   font-weight: 500;
   color: #333;
 }
-
-/* RESPONSIVO */
 @media (max-width: 768px) {
   .nav-links {
     display: none;

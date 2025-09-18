@@ -110,7 +110,7 @@ footer {
   font-size: 0.8rem;
   opacity: 0.8;
 }
-/* Responsividade do Footer */
+
 @media screen and (max-width: 768px) {
   #footer_content {
     flex-direction: column;
@@ -148,6 +148,6 @@ footer {
   }
 
   .social-text {
-    display: none; /* Esconde o texto "Siga-nos" para economizar espaço */
+    display: none; 
   }
 }

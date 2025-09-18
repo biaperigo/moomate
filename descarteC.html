@@ -6,31 +6,22 @@
   <title>Home - Moomate</title>
 
 
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
-
-
-  <!-- Leaflet CSS para o mapa -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-  <!-- Firebase SDK -->
+
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <!-- CSS -->
   <link rel="stylesheet" href="src/styles/descarteC.css"/>
  
 </head>
 <body>
-
-
-  <!-- HEADER -->
   <header class="top-bar">
     <div class="logo-area">
       <img src="src/images/favicon.png" alt="Logo Moomate" />
     </div>
-
 
     <nav class="nav-links" id="navMenu">
       <a href="homeC.html">Home</a>
@@ -41,7 +32,6 @@
       <a href="ecopontosC.html">Pontos de coleta</a>
     </nav>
 
-
     <div class="header-icons">
       <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
       <a href="dadospessoaisC.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
@@ -51,10 +41,8 @@
       </button>
     </div>
 
-
   </header>
 
-  <!-- BANNER -->
   <section class="banner">
     <img src="src/images/descarteC2.png" alt="Banner mudança" />
     <div class="banner-text">
@@ -62,12 +50,10 @@
     </div>
   </section>
 
- <!-- FORMULÁRIO DE DESCARTE (duas colunas) -->
 <section class="form-descarte">
   <h2>Solicitar Descarte</h2>
 
   <form id="descarteForm" class="grid-2">
-    <!-- ESQUERDA -->
     <div class="col">
       <div class="form-group">
         <label for="localRetirada">Local de Retirada</label>
@@ -90,7 +76,6 @@
       </div>
     </div>
 
-    <!-- DIREITA -->
     <div class="col">
       <div class="form-group">
         <label for="tipoCaminhao">Tipo de Caminhão</label>
@@ -108,13 +93,11 @@
       </div>
     </div>
 
-    <!-- BOTÃO ocupando as 2 colunas -->
     <div class="full-row">
       <button type="submit" class="btn-enviarsolicitação">Enviar Solicitação</button>
     </div>
   </form>
 
-  <!-- CONTAINER PARA PROPOSTAS -->
   <div id="propostasContainer" class="propostas-container" style="display: none;">
     <h3>Propostas Recebidas</h3>
     <div id="lista-propostas" class="lista-propostas">
@@ -122,8 +105,6 @@
     </div>
   </div>
 </section>
-
-  <!-- RODAPÉ -->
   <footer>
     <div id="footer_content">
       <div class="footer-left">
@@ -139,7 +120,7 @@
     </div>
     <div id="footer_items">
       <span>© 2025 Moomate. Todos os direitos reservados.</span>
-    <!-- Scripts -->
+
   <script src="src/javascript/ecopontos_sp.js"></script>
   <script src="src/javascript/descarteC.js"></script>
 </body>

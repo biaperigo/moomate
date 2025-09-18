@@ -173,10 +173,8 @@ h2 {
 }
 
 
-/* MODAL */
 .hidden { display: none !important; }
 
-/* Seu overlay */
 .modal {
   position: fixed;
   inset: 0;

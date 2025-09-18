@@ -12,7 +12,6 @@ body {
   color: #1c1c1c;
 }
 
-/* HEADER */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -70,7 +69,7 @@ body {
   cursor: pointer;
 }
 
-/* ECOPONTO SECTION */
+
 #ecoponto {
   padding: 2rem;
 }
@@ -91,15 +90,13 @@ body {
   overflow: hidden;
 }
 
-/* MAPA */
 #map {
   height: 420px;
   width: 100%;
   border-radius: 10px;
   border: 1px solid #ccc;
 }
-l
-/* INFORMAÇÃO DO ECOPONTO */
+
 #info {
   background-color: #f2f2f2;
   padding: 1rem;
@@ -111,7 +108,6 @@ l
   transition: all 0.3s ease;
 }
 
-/* BOTÃO */
 .button-wrapper {
   text-align: center;
   margin-top: 0.5rem;
@@ -135,14 +131,12 @@ l
   transform: translateY(-2px);
 }
 
-/* TEXTO EM DESTAQUE */
 #info strong {
   color: #1c1c1c;
   font-weight: 700;
   font-size: 1rem;
 }
 
-/* RESPONSIVO */
 @media (max-width: 768px) {
   .nav-links {
     display: none;
@@ -169,7 +163,7 @@ l
     height: 300px;
   }
 }
-/* BANNER */
+
 .banner {
   position: relative;
   width: 100%;
@@ -182,7 +176,7 @@ l
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(0.8); /* escurece a imagem para realçar o texto */
+  filter: brightness(0.8); 
 }
 
 .banner-text {
@@ -204,7 +198,6 @@ l
   border-radius: 8px;
 }
 
-/* RESPONSIVO */
 @media (max-width: 768px) {
   .banner {
     height: 200px;
@@ -214,7 +207,7 @@ l
     font-size: 1.3rem;
   }
 }
-/* PONTOS DE COLETA - NOVA SECTION */
+
 #pontosdecoleta {
   background-color: #e8e8e8;
   padding: 3rem 2rem;
@@ -300,7 +293,6 @@ l
   background-color: #c74612;
 }
 
-/* REQUISITOS */
 .requisitos-container {
   max-width: 1000px;
   margin: 0 auto;
@@ -349,7 +341,6 @@ l
   text-align: justify;
 }
 
-/* RESPONSIVO */
 @media (max-width: 768px) {
   .pontosdecoleta-container {
     flex-direction: column;
@@ -365,6 +356,26 @@ l
     flex-direction: column;
     align-items: center;
   }
+  #footer_content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer-left {
+    justify-content: center;
+  }
+
+  .footer-social {
+    align-items: center;
+    margin-top: 1rem;
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .social-text {
+    display: none;
+  }
 }
 footer {
   width: 100%;
@@ -373,7 +384,6 @@ footer {
   font-family: 'Quicksand', sans-serif;
 }
 
-/* Container principal do footer */
 #footer_content {
   display: flex;
   justify-content: space-between;
@@ -385,7 +395,6 @@ footer {
   position: relative;
 }
 
-/* Área da logo */
 .footer-left {
   flex: 1 1 200px;
   display: flex;
@@ -399,7 +408,6 @@ footer {
   object-fit: contain;
 }
 
-/* Área das redes sociais */
 .footer-social {
   display: flex;
   flex-direction: column;
@@ -435,7 +443,6 @@ footer {
   transform: scale(1.1);
 }
 
-/* Área inferior com direitos autorais */
 #footer_items {
   background-color: #141414;
   text-align: center;
@@ -444,29 +451,6 @@ footer {
   opacity: 0.8;
 }
 
-/* Responsivo */
-@media screen and (max-width: 768px) {
-  #footer_content {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .footer-left {
-    justify-content: center;
-  }
-
-  .footer-social {
-    align-items: center;
-    margin-top: 1rem;
-    flex-direction: row;
-    gap: 1rem;
-  }
-
-  .social-text {
-    display: none;
-  }
-}
 #map {
   position: relative;
   z-index: 1;

@@ -1,8 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
 
-/* ===========================
-   RESET E BASE
-=========================== */
 * {
   margin: 0;
   padding: 0;
@@ -15,9 +12,6 @@ body {
   color: #1c1c1c;
 }
 
-/* ===========================
-   HEADER
-=========================== */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -31,7 +25,7 @@ body {
   z-index: 100;
 }
 .modal-overlay {
-  display: none; /* Inicialmente oculto */
+  display: none;
   opacity: 0;
   transition: opacity 0.3s, transform 0.3s;
 }
@@ -105,9 +99,6 @@ body {
   margin-left: auto;
 }
 
-/* ===========================
-   BANNER
-=========================== */
 .banner {
   position: relative;
   width: 100%;
@@ -132,9 +123,6 @@ body {
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-/* ===========================
-   FORMULÁRIO
-=========================== */
 .form-section {
   background-color: #ffffff;
   max-width: 600px;
@@ -176,9 +164,6 @@ body {
   outline: none;
 }
 
-/* ===========================
-   BOTÃO CTA
-=========================== */
 .btn-cta,
 .full-width {
   background-color: #ff6c0c;
@@ -209,9 +194,6 @@ body {
   
 }
 
-/* ===========================
-   DELIVERY CARDS
-=========================== */
 .delivery-section {
   background-color: #fff;
   padding: 1.5rem 1rem;
@@ -310,9 +292,6 @@ body {
   margin-top: 0.4rem;
 }
 
-/* ===========================
-   FOOTER
-=========================== */
 footer {
   width: 100%;
   background-color: #1e1e1e;
@@ -386,9 +365,6 @@ footer {
   opacity: 0.8;
 }
 
-/* ===========================
-   RESPONSIVO
-=========================== */
 @media screen and (max-width: 768px) {
   .nav-links {
     display: none;
@@ -467,7 +443,7 @@ footer {
     font-size: 0.75rem;
   }
 }
-/* --- ESTILOS PARA O MODAL DE PROPOSTA --- */
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -550,7 +526,7 @@ footer {
   font-size: 12px;
 }
 
-/* --- MELHORIAS NOS CARDS --- */
+
 .delivery-card .card-details {
   margin-top: 10px;
   padding-top: 10px;
@@ -569,7 +545,7 @@ footer {
   padding: 40px;
   font-style: italic;
 }
-/* Estilos para os campos 'select' no modal */
+
 .modal-input-group select {
   width: 100%;
   padding: 12px 15px;
@@ -595,25 +571,24 @@ footer {
   font-size: 12px;
   font-style: italic;
 }
-/* Ícone maior, sem reservar espaço, fixo no canto inferior direito */
+
 .info-container{
   display:grid;
   grid-template-columns:1fr 1fr auto;
   gap:.4rem 1rem;
   align-items:start;
-  position:relative;     /* âncora para o ícone */
+  position:relative;     
 }
 
 .info-esquerda p,.info-meio p{margin:.1rem 0}
 
-/* o último .info-meio (o do ícone) vai para o canto inferior direito */
+
 .info-container .info-meio:last-child{
   position:absolute;
   right:12px;
   bottom:12px;
 }
 
-/* estilo do badge */
 .icon-area{
   display:inline-flex;
   align-items:center;
@@ -624,25 +599,43 @@ footer {
   border-radius:12px;
   background:#fff;
 }
-.icon-area i{font-size:1.4rem;color:#ff6c0c}
-
-/* laranja (caixa) */
-.icon-area.box{border-color:#ff6c0c}
-.icon-area.box i{color:#ff6c0c}
-
-/* verde (reciclagem) */
-.icon-area.recycle{border-color:#1d5719}
-.icon-area.recycle i{color:#21631c}
-
-/* mobile */
-@media(max-width:640px){
-  .info-container{grid-template-columns:1fr}
-  .info-container .info-meio:last-child{right:10px;bottom:10px}
-  .icon-area{width:48px;height:48px}
-  .icon-area i{font-size:1.2rem}
+.icon-area i{
+  font-size:1.4rem;
+  color:#ff6c0c
 }
 
-/* ===== Modal Proposta Aceita ===== */
+.icon-area.box{
+  border-color:#ff6c0c
+}
+.icon-area.box i{
+  color:#ff6c0c
+}
+
+.icon-area.recycle{
+  border-color:#1d5719
+}
+.icon-area.recycle i{
+  color:#21631c
+}
+
+@media(max-width:640px){
+  .info-container{
+    grid-template-columns:1fr
+  }
+  .info-container .info-meio:last-child{
+    right:10px;
+    bottom:10px
+  }
+  .icon-area{
+    width:48px;
+    height:48px
+  }
+  .icon-area i{
+    font-size:1.2rem
+  }
+}
+
+
 .modal-overlay {
   position: fixed;
   top: 0; left: 0;
@@ -695,7 +688,6 @@ footer {
   color: #ff6c0c;
 }
 
-/* Botões */
 .modal-buttons {
   margin-top: 1.8rem;
   display: flex;
@@ -730,7 +722,6 @@ footer {
   background: #333;
 }
 
-/* Animação */
 @keyframes slideUp {
   from { transform: translateY(40px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }

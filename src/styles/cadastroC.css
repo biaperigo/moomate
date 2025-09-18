@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap');
 
-/* Reset */
 * {
 font-family: 'Quicksand', sans-serif;
   margin: 0;
@@ -13,13 +12,11 @@ body {
   min-height: 100vh;
 }
 
-/* Layout principal */
 .container {
   display: flex;
   min-height: 100vh;
 }
 
-/* Lado esquerdo (ilustração) */
 .left-side {
   flex: 1;
   background-color: #ffe8dc;
@@ -34,7 +31,6 @@ body {
   height: auto;
 }
 
-/* Lado direito (formulário) */
 .right-side {
   flex: 1;
   background-color: #f5f5f5;
@@ -44,7 +40,6 @@ body {
   padding: 2rem;
 }
 
-/* Caixa do formulário */
 .cadastro-container {
   background: white;
   padding: 2rem;
@@ -55,20 +50,19 @@ body {
   text-align: center;
 }
 
-/* Logo */
+
 .logo-box img {
   width: 80px;
   margin-bottom: 0.5rem;
 }
 
-/* Título */
+
 h2 {
   font-size: 1.3rem;
   margin-bottom: 1.5rem;
   color: #333;
 }
 
-/* Inputs */
 .cadastro-form input {
   width: 100%;
   padding: 12px 16px;
@@ -80,7 +74,7 @@ h2 {
   outline: none;
 }
 
-/* Campo senha com ícone */
+
 .senha-container {
   position: relative;
 }
@@ -94,7 +88,6 @@ h2 {
   cursor: pointer;
 }
 
-/* Checkbox */
 .checkbox-container {
   display: flex;
   align-items: flex-start;
@@ -114,7 +107,7 @@ h2 {
   text-decoration: none;
 }
 
-/* Botão principal */
+
 .btn-laranja {
   width: 100%;
   background-color: #ff6c0c;
@@ -132,21 +125,20 @@ h2 {
   background-color: #e55b00;
 }
 
-/* Informativo */
 .sms-info {
   font-size: 0.75rem;
   color: #777;
   margin-top: -0.5rem;
 }
 
-/* Separador */
+
 .ou {
   font-size: 0.85rem;
   color: #999;
   margin: 1.5rem 0 0.5rem;
 }
 
-/* Botão Google */
+
 .btn-google {
   display: flex;
   align-items: center;
@@ -167,7 +159,6 @@ h2 {
   color: #ff6c0c;
 }
 
-/* Login link */
 .login {
   font-size: 0.9rem;
   margin-top: 1rem;
@@ -178,7 +169,6 @@ h2 {
   text-decoration: none;
 }
 
-/* Responsivo para celular */
 @media (max-width: 768px) {
   .container {
     flex-direction: column;

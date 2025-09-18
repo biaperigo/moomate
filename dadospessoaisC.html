@@ -5,14 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dados Pessoais - Usuário</title>
 
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
   <link rel="stylesheet" href="src/styles/dadospessoaisC.css" />
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
 </head>
 <body data-role="usuario">
 
-  <!-- HEADER -->
   <header class="top-bar">
     <div class="logo-area">
       <img src="src/images/favicon.png" alt="Logo Moomate" />
@@ -36,17 +34,13 @@
     </div>
   </header>
 
-  <!-- CONTEÚDO PERFIL -->
   <div class="perfil-container">
-    <!-- Foto de perfil -->
     <div class="foto-wrapper">
       <img id="fotoPerfil" class="foto-perfil" src="default-avatar.png" alt="Foto do perfil" />
     </div>
-    <!-- Botão de alterar foto abaixo da foto -->
     <label for="inputFoto" class="btn-foto">Alterar Foto</label>
     <input type="file" id="inputFoto" class="input-foto" accept="image/*" style="display:none" onchange="atualizarFoto()" />
 
-    <!-- Campos de input com ícone de edição -->
     <div class="input-wrapper">
       <input type="text" id="nome" class="input-nome" placeholder="Nome completo" disabled />
       <i class="fa-solid fa-pencil edit-icon" onclick="habilitarEdicao('nome')" title="Editar nome"></i>
@@ -79,8 +73,6 @@
     </button>
     -->
   </div>
-
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>

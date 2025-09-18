@@ -72,14 +72,12 @@ body {
   cursor: pointer;
 }
 
-/* TÍTULO */
 .title-pedidos {
   font-size: 1.5rem;
   text-align: center;
   margin: 2rem 0 1.5rem;
 }
 
-/* ABAS */
 .tabs {
   display: flex;
   justify-content: center;
@@ -106,7 +104,6 @@ body {
   border-color: #ff6c0c;
 }
 
-/* CONTEÚDO */
 .tab-content {
   display: none;
   padding: 0 1rem 2rem;
@@ -116,7 +113,6 @@ body {
   display: block;
 }
 
-/* CARD */
 .delivery-card {
   background-color: #fff;
   border-radius: 10px;
@@ -166,7 +162,6 @@ body {
   margin-top: 0.2rem;
 }
 
-/* STATUS */
 .delivery-right {
   display: flex;
   align-items: flex-start;
@@ -192,7 +187,6 @@ body {
   background-color: #e74c3c;
 }
 
-/* RESPONSIVO */
 @media (max-width: 768px) {
   .nav-links {
     display: none;

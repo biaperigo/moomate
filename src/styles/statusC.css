@@ -13,7 +13,6 @@ body {
     line-height: 1.6;
 }
 
-/* HEADER */
 .top-bar {
     display: flex;
     justify-content: space-between;
@@ -74,7 +73,6 @@ body {
     cursor: pointer;
 }
 
-/* MAPA */
 #map {
     height: 450px;
     width: calc(100% - 4rem);
@@ -87,8 +85,6 @@ body {
     background-color: #e0e0e0; 
 }
 
-
-/* SEÇÃO DE STATUS DA CORRIDA */
 .ride-status {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     margin: 2rem;
@@ -132,7 +128,6 @@ body {
     font-weight: 700;
 }
 
-/* SEÇÃO DE ACOMPANHAMENTO */
 .tracking-section {
     margin: 2rem 0;
     padding: 1.5rem;
@@ -180,7 +175,6 @@ body {
     font-size: 1.2rem;
 }
 
-/* TIMELINE DE STATUS */
 .status-timeline {
     margin-top: 2rem;
     position: relative;
@@ -273,7 +267,6 @@ body {
     display: inline-block;
 }
 
-/* MODAL DE AVALIAÇÃO */
 .modal {
     position: fixed;
     top: 0;
@@ -421,7 +414,6 @@ body {
     box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
 }
 
-/* FOOTER */
 footer {
     width: 100%;
     background-color: #1e1e1e;
@@ -476,14 +468,12 @@ footer {
     background-color: #111;
 }
 
-/* ANIMAÇÕES */
 @keyframes pulse {
     0% { transform: scale(1); }
     50% { transform: scale(1.05); }
     100% { transform: scale(1); }
 }
 
-/* RESPONSIVIDADE */
 @media (max-width: 768px) {
     .nav-links {
         display: none;
@@ -548,7 +538,6 @@ footer {
         justify-content: center;
     }
 }
-/* Marcador do motorista - verde com pulso */
 .marker-motorista div {
   width: 20px;
   height: 20px;
@@ -559,7 +548,6 @@ footer {
   animation: pulse 1.2s infinite;
 }
 
-/* Marcador da origem - azul */
 .marker-origem div {
   width: 22px;
   height: 22px;
@@ -568,7 +556,6 @@ footer {
   border-radius: 50%;
 }
 
-/* Marcador do destino - laranja */
 .marker-destino div {
   width: 22px;
   height: 22px;
@@ -577,13 +564,12 @@ footer {
   border-radius: 50%;
 }
 
-/* Animação de pulso (para o motorista) */
 @keyframes pulse {
   0%   { transform: scale(0.9); opacity: 0.7; }
   50%  { transform: scale(1.2); opacity: 1; }
   100% { transform: scale(0.9); opacity: 0.7; }
 }
-/* Passo ativo na timeline */
+
 .active-step {
   color: #ff6c0c;
   font-weight: bold;
@@ -600,10 +586,18 @@ footer {
   border-radius: 50%;
   padding: 5px;
 }
-/* já deve existir algo similar; mantenha seu design */
-.active { color:#ff6c0c; transform: scale(1.02); font-weight:600; }
-#user-rating-modal{ display:none; }
-#user-rating-modal.open{ display:block; }
+
+.active { 
+    color:#ff6c0c;
+     transform: scale(1.02);
+      font-weight:600; 
+    }
+#user-rating-modal{ 
+    display:none;
+ }
+#user-rating-modal.open{ 
+    display:block; 
+}
 #user-stars [data-star].on{ color:#ff6c0c; }
 .destaque-chegada{
   display:block;
@@ -632,31 +626,104 @@ footer {
   100%{ box-shadow:0 10px 24px rgba(255,108,12,.35), 0 0 0 8px rgba(255,108,12,.18) }
 }
 /* Modal bonito */
-.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:9999}
+.modal{position:fixed;inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,.5);
+    z-index:9999
+}
 .modal .modal-content{
-  width:min(540px,92%); background:#fff; border-radius:16px; box-shadow:0 16px 40px rgba(0,0,0,.25);
-  overflow:hidden; padding:0; position:relative;
+  width:min(540px,92%);
+   background:#fff; 
+   border-radius:16px; 
+   box-shadow:0 16px 40px rgba(0,0,0,.25);
+  overflow:hidden; 
+  padding:0; 
+  position:relative;
 }
 .modal .modal-content::before{
-  content:""; display:block; height:64px; background:linear-gradient(90deg,#ff7a1a,#ff6c0c);
+  content:""; 
+  display:block; 
+  height:64px; 
+  background:linear-gradient(90deg,#ff7a1a,#ff6c0c);
 }
 .modal .modal-content h3{
-  position:absolute; top:18px; left:28px; margin:0; color:#fff; font-size:18px; font-weight:800;
+  position:absolute; 
+  top:18px;
+   left:28px; 
+  margin:0; 
+  color:#fff;
+   font-size:18px; 
+   font-weight:800;
 }
 .modal .modal-content #close-driver-modal{
-  position:absolute; top:14px; right:16px; border:0; background:transparent; font-size:20px; cursor:pointer; color:#fff;
+  position:absolute; 
+  top:14px; 
+  right:16px; 
+  border:0; 
+  background:transparent; 
+  font-size:20px; 
+  cursor:pointer; 
+  color:#fff;
 }
-.modal .driver-info{display:flex;gap:18px;align-items:center;margin:18px 22px 6px}
-.modal .driver-info p{margin:0; font-size:14px}
-.modal .rating-section{padding:6px 22px 0}
-.modal .rating-stars{display:flex;gap:10px;justify-content:center;margin:10px 0 8px}
+.modal .driver-info{display:flex;
+    gap:18px;
+    align-items:center;
+    margin:18px 22px 6px
+}
+.modal .driver-info p{
+    margin:0; 
+    font-size:14px
+}
+.modal .rating-section{
+    padding:6px 22px 0
+}
+.modal .rating-stars{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin:10px 0 8px
+}
 .modal textarea#driver-rating-comment{
-  width:calc(100% - 44px); margin:10px 22px 0; resize:vertical; min-height:90px;
-  border:1px solid #eee; border-radius:12px; padding:12px; font-size:14px; outline:none;
+  width:calc(100% - 44px); 
+  margin:10px 22px 0;
+   resize:vertical;
+    min-height:90px;
+  border:1px solid #eee; 
+  border-radius:12px; 
+  padding:12px; 
+  font-size:14px; 
+  outline:none;
 }
-.modal .modal-buttons{display:flex;gap:12px;justify-content:flex-end;padding:16px 22px 22px}
-.modal .action-btn{padding:12px 18px;border-radius:12px;border:0;font-weight:700;cursor:pointer}
-.modal .action-btn.primary{background:#ff6c0c;color:#fff}
-.modal .action-btn.secondary{background:#f3f3f3;color:#333}
-.modal .star{font-size:28px;color:#d0d0d0;cursor:pointer;transition:transform .12s}
-.modal .star.active,.modal .star:hover{color:#ffb400;transform:scale(1.08)}
+.modal .modal-buttons{
+    display:flex;
+    gap:12px;
+    justify-content:flex-end;
+    padding:16px 22px 22px
+}
+.modal .action-btn{
+    padding:12px 18px;
+    border-radius:12px;
+    border:0;
+    font-weight:700;
+    cursor:pointer
+}
+.modal .action-btn.primary{
+    background:#ff6c0c;
+    color:#fff
+}
+.modal .action-btn.secondary{
+    background:#f3f3f3;
+    color:#333
+}
+.modal .star{
+    font-size:28px;
+    color:#d0d0d0;
+    cursor:pointer;
+    transition:transform .12s
+}
+.modal .star.active,.modal .star:hover{
+    color:#ffb400;
+    transform:scale(1.08)
+}

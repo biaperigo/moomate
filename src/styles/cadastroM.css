@@ -95,7 +95,7 @@ input:focus, select:focus {
     border-color: #de5114;
 }
 
-/* Estilo para campos readonly (preenchidos pela API) */
+
 input:read-only {
     background-color: #e9e9e9;
     color: #555;
@@ -103,20 +103,20 @@ input:read-only {
 
 .dupla {
   display: flex;
-  gap: 10px; /* espaço entre os campos */
+  gap: 10px; 
 }
 
 .dupla input,
 .dupla select {
-  flex: 1; /* padrão: ocupa espaço igual */
+  flex: 1; 
 }
 
 #tipo-veiculo {
-  flex: 0.6;   /* ocupa ~60% da largura do par */
+  flex: 0.6; 
 }
 
 #placa {
-  flex: 0.4;   /* ocupa ~40% da largura do par */
+  flex: 0.4;   
 }
 
 .foto-label {
@@ -126,7 +126,7 @@ input:read-only {
   display: block;
 }
 
-/* Esconde o input de arquivo padrão */
+
 .file-input {
     display: none;
 }
@@ -144,13 +144,13 @@ input:read-only {
   cursor: pointer;
   transition: 0.3s ease;
   position: relative;
-  overflow: hidden; /* Para a imagem não vazar */
+  overflow: hidden; 
 }
 
 .foto-upload img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Garante que a imagem cubra o círculo */
+    object-fit: cover; 
 }
 
 .foto-upload:hover {
@@ -186,7 +186,6 @@ input:read-only {
   background-color: #e55b00;
 }
 
-/* Estilo para o botão desabilitado */
 .btn-laranja:disabled {
     background-color: #ccc;
     color: #666;

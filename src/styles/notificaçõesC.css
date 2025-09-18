@@ -12,7 +12,6 @@ body {
   color: #1c1c1c;
 }
 
-/* HEADER */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -72,7 +71,6 @@ body {
   cursor: pointer;
 }
 
-/* CONTEÚDO */
 .notificacoes-container {
   max-width: 600px;
   margin: 2rem auto;
@@ -111,7 +109,6 @@ body {
   gap: 1rem;
 }
 
-/* NOTIFICAÇÃO */
 .notificacao {
   background: #fff;
   border-radius: 16px;
@@ -154,7 +151,6 @@ body {
   align-self: flex-end;
 }
 
-/* MENSAGEM VAZIA */
 .vazia {
   text-align: center;
   padding: 3rem 1rem;
@@ -169,7 +165,6 @@ body {
   color: #666;
 }
 
-/* MODAL */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -232,7 +227,7 @@ body {
   background-color: #bbb;
 }
 
-/* RESPONSIVO */
+
 @media (max-width: 768px) {
   .nav-links {
     display: none;

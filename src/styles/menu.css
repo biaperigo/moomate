@@ -1,40 +1,37 @@
-/* Responsividade para pratos (dish) */
 @media screen and (max-width: 900px) {
   .dish {
-    width: 45%; /* dois por linha */
+    width: 45%; 
   }
 }
 
 @media screen and (max-width: 500px) {
   .dish {
-    width: 90%; /* um por linha */
+    width: 90%; 
   }
   #dishes {
     gap: 16px;
   }
 }
 
-/* Container da equipe */
 .team-container {
   width: 100%;
   display: flex;
   justify-content: center;
   gap: 24px;
   margin-top: 32px;
-  flex-wrap: wrap; /* permite quebra de linha */
+  flex-wrap: wrap; 
 }
 
-/* Membros da equipe */
 .team-member {
   display: flex;
   flex-direction: column;
   align-items: center;
   border-radius: 20px;
   gap: 12px;
-  width: 350px; /* largura fixa para tamanho igual */
+  width: 350px; 
   padding: 20px;
   background-color: #ffffff;
-  box-shadow: 0px 0px 12px 4px rgba(0, 0, 0, 0.1); /* sombra suave cinza */
+  box-shadow: 0px 0px 12px 4px rgba(0, 0, 0, 0.1); 
   color: #1e1e1e;
   transition: box-shadow 0.3s ease, background-color 0.3s ease;
 }
@@ -44,7 +41,7 @@
   background-color: #ff7b42;
 }
 
-/* Fotos da equipe */
+
 .team-photo {
   width: 150px;
   height: 150px;
@@ -53,9 +50,8 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Responsividade para membros da equipe em telas pequenas */
 @media screen and (max-width: 720px) {
   .team-member {
-    width: 90%; /* um por linha em telas pequenas */
+    width: 90%; 
   }
 }

@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pagamento - Moomate</title>
 
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
   <link rel="stylesheet" href="src/styles/metododepagamentoC.css">
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
@@ -21,7 +20,6 @@
     <a href="pedidosC.html">Pedidos</a>
     <a href="carteiraC.html">Carteira</a>
     <a href="suporteC.html">Suporte</a>
-    <a href="chatC.html">CHAT</a>
     <a href="ecopontosC.html">Pontos de coleta</a>
   </nav>
   <div class="header-icons">
@@ -48,7 +46,6 @@
       <option value="debito">Cartão de Débito</option>
     </select>
 
-    <!-- Campos do cartão (aparecem só se for crédito ou débito) -->
     <div id="cartao-fields" style="display:none;">
       <input type="text" id="nome-cartao" placeholder="Nome do titular" required>
       <input type="text" id="numero-cartao" placeholder="Número do cartão" maxlength="16" required>
@@ -62,13 +59,12 @@
   <div id="resultado" class="resultado"></div>
 </main>
 
-<!-- Firebase -->
+
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-<!-- Mercado Pago -->
-<script src="https://sdk.mercadopago.com/js/v2"></script>
 
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 <script src="src/javascript/metodopagamentoC.js"></script>
 </body>
 </html>

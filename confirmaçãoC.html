@@ -33,12 +33,6 @@
         <span>R$000,00</span>
         <div class="avaliacao">⭐️⭐️⭐️⭐️☆</div>
       </div>
-    </div>
-
-    <div id="map" class="mapa">
-      <!-- Rota Leaflet/OpenRouteService será inserida aqui -->
-    </div>
-
     <div class="pagamento">
       <i class="fa-brands fa-pix"></i>
       <span>PIX</span>
@@ -47,7 +41,6 @@
 
     <button class="botao-pagar">PAGAR</button>
   </main>
-<!-- MODAL DE PAGAMENTO PIX -->
 <div id="modalPix" class="modal hidden">
   <div class="modal-conteudo">
     <h3>Pagamento via PIX</h3>
@@ -68,8 +61,6 @@
     <button class="fechar-modal" onclick="fecharModalPix()">Fechar</button>
   </div>
 </div>
-
-<!-- MODAL DE PAGAMENTO CONFIRMADO deve aparecer quando for recebido o pix ou a transição do pagamento via cartao for feita-->
 <div id="modalConfirmado" class="modal-sucesso hidden">
   <div class="modal-conteudo-sucesso">
     <img src="src/images/pagamentoefetuado.png" alt="Pagamento Efetuado com Sucesso" class="imagem-sucesso" />

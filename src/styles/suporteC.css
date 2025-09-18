@@ -12,7 +12,6 @@ body {
   color: #1c1c1c;
 }
 
-/* HEADER */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -47,7 +46,6 @@ body {
   color: #ff6c0c;
 }
 
-/* ÍCONES */
 .header-icons {
   display: flex;
   align-items: center;
@@ -72,8 +70,6 @@ body {
   color: #333;
   cursor: pointer;
 }
-
-/* CONTEÚDO SUPORTE */
 .suporte-container {
   padding: 2rem;
   max-width: 1200px;
@@ -112,7 +108,6 @@ body {
   margin-top: 0.2rem;
 }
 
-/* SOBRE NÓS */
 #sobre {
   text-align: left;
 }
@@ -151,10 +146,10 @@ body {
 
 .team-photo {
   width: 100%;
-  height: 280px; /* Altura fixa para padronizar */
+  height: 280px; 
   border-radius: 6px;
   margin-bottom: 0.8rem;
-  object-fit: cover; /* Corta e centraliza */
+  object-fit: cover; 
 }
 
 
@@ -169,7 +164,6 @@ body {
   color: #666;
 }
 
-/* RESPONSIVO */
 @media (max-width: 768px) {
   .nav-links {
     display: none;

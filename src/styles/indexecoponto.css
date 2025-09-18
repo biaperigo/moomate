@@ -1,5 +1,3 @@
-
-/* ECOPONTO SECTION */
 #ecoponto {
   padding: 2rem 8%;
   background-color: #e8e8e8;
@@ -21,7 +19,6 @@
   overflow: hidden;
 }
 
-/* MAPA */
 #map {
   height: 450px;
   width: 100%;
@@ -29,7 +26,7 @@
   border: 2px solid #ccc;
 }
 
-/* INFORMAÇÃO DO ECOPONTO */
+
 #info {
   background-color: #f8f8f8;
   padding: 1.2rem;
@@ -41,7 +38,7 @@
   transition: all 0.3s ease;
 }
 
-/* BOTÃO */
+
 .button-wrapper {
   text-align: center;
   margin-top: 0.5rem;
@@ -65,14 +62,13 @@
   transform: translateY(-2px);
 }
 
-/* TEXTO EM DESTAQUE */
 #info strong {
   color: #1e1e1e;
   font-weight: 700;
   font-size: 1.1rem;
 }
 
-/* RESPONSIVO */
+
 @media (max-width: 768px) {
   #ecoponto {
     padding: 1rem 5%;

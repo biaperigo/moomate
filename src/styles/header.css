@@ -8,13 +8,11 @@ header {
   z-index: 3;
 }
 
-/* Header ao rolar */
 header.scrolled {
   background-color: #d8d6d6 !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Navbar layout */
 #navbar {
   width: 100%;
   display: flex;
@@ -27,8 +25,6 @@ header.scrolled {
   width: 100px;
   height: auto;
 }
-
-/* Menu principal */
 #nav_list {
   display: flex;
   list-style: none;
@@ -53,13 +49,11 @@ header.scrolled {
   border-bottom-color: #de5114;
 }
 
-/* Botões do topo */
 .nav-buttons {
   display: flex;
   gap: 16px;
 }
 
-/* Botão entrar (laranja) */
 .btn-default {
   border: none;
   background-color: #de5114;
@@ -76,7 +70,6 @@ header.scrolled {
   background-color: #b23e0f;
 }
 
-/* Botão cadastrar (outline) */
 .btn-outline {
   border: 2px solid #de5114;
   background-color: transparent;
@@ -93,7 +86,6 @@ header.scrolled {
   color: #fff;
 }
 
-/* Ícone mobile */
 #mobile_btn {
   display: none;
   border: none;
@@ -103,7 +95,6 @@ header.scrolled {
   color: #1e1e1e;
 }
 
-/* Menu mobile */
 #mobile_menu {
   display: none;
   flex-direction: column;
@@ -145,7 +136,6 @@ header.scrolled {
   margin-top: 12px;
 }
 
-/* Responsividade */
 @media screen and (max-width: 1170px) {
   #nav_list,
   .nav-buttons {
