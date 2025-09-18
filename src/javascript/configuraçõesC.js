@@ -1,12 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Menu mobile
+  
   const menuToggle = document.getElementById('menuToggle');
   const navMenu = document.getElementById('navMenu');
   menuToggle.addEventListener('click', () => {
     navMenu.classList.toggle('show');
   });
 
-  // Idioma toggle
   const idiomaToggle = document.querySelector('.idioma-toggle');
   const idiomaOpcoes = document.querySelector('.idioma-opcoes');
   const idiomaAtual = document.getElementById('idioma-atual');

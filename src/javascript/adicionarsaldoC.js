@@ -3,7 +3,6 @@ const metodo = document.getElementById("metodo");
 const resultado = document.getElementById("resultado");
 const toast = document.getElementById("toast");
 
-// MODAL SUCESSO
 const modalSucesso = document.createElement("div");
 modalSucesso.classList.add("modal-sucesso", "hidden");
 modalSucesso.innerHTML = `
@@ -25,7 +24,6 @@ document.body.appendChild(modalSucesso);
 function mostrarModalSucesso() {
   modalSucesso.classList.remove("hidden");
 
-  // Impede voltar usando botão do navegador
   history.pushState(null, "", location.href);
   window.onpopstate = () => {
     history.pushState(null, "", location.href);
@@ -80,7 +78,6 @@ form.addEventListener("submit", function (e) {
   }
 });
 
-// Menu Mobile
 document.getElementById("menuToggle").addEventListener("click", () => {
   document.getElementById("navMenu").classList.toggle("show");
 });

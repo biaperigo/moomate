@@ -4,7 +4,7 @@ function abrirModalPix() {
   modal.classList.remove("hidden");
 
   const qrcodeContainer = document.getElementById("qrcode");
-  qrcodeContainer.innerHTML = ""; // Limpa anterior
+  qrcodeContainer.innerHTML = ""; 
 
   const codigoPix = document.getElementById("codigoPixTexto").textContent;
 
@@ -18,13 +18,13 @@ function abrirModalPix() {
   });
 }
 
-// Fecha o modal
+
 function fecharModalPix() {
   const modal = document.getElementById("modalPix");
   modal.classList.add("hidden");
 }
 
-// Copia o código Pix para área de transferência
+
 function copiarCodigoPix() {
   const codigo = document.getElementById("codigoPixTexto").textContent;
   const aviso = document.getElementById("copiadoAviso");
@@ -37,7 +37,7 @@ function copiarCodigoPix() {
   });
 }
 
-// Evento do botão PAGAR
+
 document.addEventListener("DOMContentLoaded", () => {
   const botaoPagar = document.querySelector(".botao-pagar");
   if (botaoPagar) {
@@ -51,7 +51,7 @@ function abrirModalConfirmado() {
 function fecharModalConfirmado() {
   document.getElementById('modalConfirmado').classList.add('hidden');
 }
-// Bloqueia botão voltar do navegador
+
 window.history.pushState(null, "", window.location.href);
 window.onpopstate = function () {
   window.history.pushState(null, "", window.location.href);

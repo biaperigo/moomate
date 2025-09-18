@@ -1,6 +1,5 @@
-// Lista de ecopontos do estado de São Paulo para autocomplete
 const ecopontosSP = [
-  // Capital - São Paulo
+
   "Ecoponto Tereza Cristina - Rua Tereza Cristina, 10, Vila Monumento, São Paulo - SP",
   "Ecoponto Glicério - Baixos do Viaduto Glicério, São Paulo - SP",
   "Ecoponto Liberdade - Rua Jaceguai, 67, Liberdade, São Paulo - SP",
@@ -17,8 +16,6 @@ const ecopontosSP = [
   "Ecoponto Vila das Belezas - Rua Campo Novo do Sul, s/nº, Vila das Belezas, São Paulo - SP",
   "Ecoponto Paraisópolis - Rua Irapará, 73, Parque Morumbi, São Paulo - SP",
   "Ecoponto Vila Nova Cachoeirinha - Vila Nova Cachoeirinha, São Paulo - SP",
-  
-  // Região Metropolitana
   "Ecoponto Guarulhos - Guarulhos - SP",
   "Ecoponto Diadema - Diadema - SP",
   "Ecoponto Santo André - Santo André - SP",
@@ -41,8 +38,6 @@ const ecopontosSP = [
   "Ecoponto Juquitiba - Juquitiba - SP",
   "Ecoponto São Lourenço da Serra - São Lourenço da Serra - SP",
   "Ecoponto Taboão da Serra - Taboão da Serra - SP",
-  
-  // Interior do Estado
   "Ecoponto Campinas - Campinas - SP",
   "Ecoponto Sorocaba - Sorocaba - SP",
   "Ecoponto Ribeirão Preto - Ribeirão Preto - SP",
@@ -69,18 +64,15 @@ const ecopontosSP = [
   "Ecoponto Cubatão - Cubatão - SP",
   "Ecoponto Bertioga - Bertioga - SP"
 ];
-
-// Função para filtrar ecopontos baseado no texto digitado
 function filtrarEcopontos(texto) {
   if (!texto || texto.length < 2) return [];
   
   const textoLower = texto.toLowerCase();
   return ecopontosSP.filter(ecoponto => 
     ecoponto.toLowerCase().includes(textoLower)
-  ).slice(0, 10); // Limita a 10 resultados
+  ).slice(0, 10); 
 }
 
-// Exporta para uso em outros arquivos
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { ecopontosSP, filtrarEcopontos };
 }

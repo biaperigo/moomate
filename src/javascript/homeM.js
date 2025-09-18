@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // ================= Firebase =================
+
   const firebaseConfig = {
     apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
     authDomain: "moomate-39239.firebaseapp.com",
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let nomeMotoristaReal = "Motorista";
 
   auth.onAuthStateChanged(async (user) => {
-    if (!user) return; // Se não estiver logado, não faz nada
+    if (!user) return; 
     motoristaUid = user.uid;
     try {
       const snap = await db.collection("motoristas").doc(user.uid).get();
@@ -27,11 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error("Erro ao buscar dados do motorista:", err);
     }
-    // Inicia o listener do modal de proposta aceita
+
     ouvirAceitacaoPropostas();
   });
 
-  // ================= Elementos do DOM =================
+ 
   const deliveryList = document.getElementById('delivery-list');
   const loadingMessage = document.getElementById('loading-message');
   const submitBtn = document.getElementById('submitBtn');
@@ -45,10 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let selectedEntregaId = null;
   const fallbackMotoristaId = `motorista_${Math.random().toString(36).substr(2, 9)}`;
-  const entregasCache = {}; // entregaId -> dados
+  const entregasCache = {}; 
   let currentBounds = null;
 
-  // ================= Helpers =================
   (function fillHelpers() {
     proposalHelpersInput.innerHTML = "";
     for (let i = 0; i <= 10; i++) {
@@ -59,9 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })();
 
-  // ================= Utils de preço =================
+  // preço 
   function calcPriceBoundsFromDistance(distKm) {
-    const base = 24 * (Number(distKm) || 0); // 8xxkm
+    const base = 24 * (Number(distKm) || 0); 
     const min = Math.max(0, base - 150);
     const max = base + 150;
     return {
@@ -84,69 +83,94 @@ document.addEventListener('DOMContentLoaded', () => {
     return hint;
   }
 
-
-
-  // ================= Se for mudança ou descarte =================
+  //  Carregar Entregas 
   function carregarEntregas() {
+    // mudança
     db.collection('entregas')
       .orderBy('criadoEm', 'desc')
-      .onSnapshot(snapshot => {
-        deliveryList.innerHTML = '';
-  
-        if (snapshot.empty) {
-          loadingMessage.textContent = 'Nenhum pedido disponível no momento.';
-          loadingMessage.style.display = 'block';
-          deliveryList.appendChild(loadingMessage);
-          return;
-        }
-  
-        loadingMessage.style.display = 'none';
-  
-        snapshot.forEach(doc => {
-          const entregaId   = doc.id;
-          const entregaData = doc.data();
-          entregasCache[entregaId] = entregaData;
-  
-          // origem do pedido
-          const isDescarte =
-            entregaData.source === 'descarte' ||
-            entregaData.origemPagina === 'descarte' ||
-            entregaData.isDescarte === true ||
-            entregaData.categoria === 'descarte';
-  
-          const iconClass  = isDescarte ? 'fa-recycle' : 'fa-box-open';
-          const badgeClass = isDescarte ? 'recycle'   : 'box';
-  
-          const card = document.createElement('div');
-          card.className = 'delivery-card';
-          card.dataset.entregaId = entregaId;
-  
-          card.innerHTML = `
-            <strong>Entrega #${entregaId.substring(0, 6)}</strong>
-            <div class="info-container">
-              <div class="info-esquerda">
-                <p><strong>Origem:</strong> ${entregaData.origem?.endereco || entregaData.origem?.cep || ''} ${entregaData.origem?.complemento ? '- ' + entregaData.origem.complemento : ''}</p>
-                <p><strong>Destino:</strong> ${entregaData.destino?.endereco || ''} ${entregaData.destino?.numero ? ', ' + entregaData.destino.numero : ''}</p>
-              </div>
-              <div class="info-meio">
-                <p><strong>Distância:</strong> ${entregaData.distancia ? entregaData.distancia.toFixed(2) + ' km' : '---'}</p>
-                <p><strong>Volumes:</strong> ${entregaData.volumes ?? '---'}</p>
-                <p><strong>Tipo de veículo:</strong> ${entregaData.tipoVeiculo ?? '---'}</p>
-              </div>
-              <div class="info-meio">
-                <span class="icon-area ${badgeClass}"><i class="fa-solid ${iconClass}"></i></span>
-              </div>
-            </div>
-          `;
-  
-          deliveryList.appendChild(card);
-        });
-      });
+      .onSnapshot(snapshot => processSnapshot(snapshot, 'mudanca'));
+
+    // descartes
+    db.collection('descartes')
+      .orderBy('dataEnvio', 'desc')
+      .onSnapshot(snapshot => processSnapshot(snapshot, 'descarte'));
+
+    loadingMessage.textContent = 'Aguardando novas solicitações...';
+    loadingMessage.style.display = 'block';
+    deliveryList.innerHTML = '';
+    deliveryList.appendChild(loadingMessage);
   }
-  // ================= Modal abrir/fechar =================
+
+  function processSnapshot(snapshot, tipo) {
+    if (snapshot.empty && Object.keys(entregasCache).length === 0) {
+        loadingMessage.textContent = 'Nenhum pedido disponível no momento.';
+        return;
+    }
+
+    loadingMessage.style.display = 'none';
+
+    snapshot.docChanges().forEach(change => {
+        const entregaId = change.doc.id;
+        const entregaData = change.doc.data();
+
+        if (change.type === 'removed') {
+            delete entregasCache[entregaId];
+            const cardToRemove = deliveryList.querySelector(`[data-entrega-id="${entregaId}"]`);
+            if (cardToRemove) cardToRemove.remove();
+            return;
+        }
+
+        entregasCache[entregaId] = { ...entregaData, tipo };
+        
+        const existingCard = deliveryList.querySelector(`[data-entrega-id="${entregaId}"]`);
+        if(existingCard) existingCard.remove();
+
+        const card = criarCardEntrega(entregaId, { ...entregaData, tipo });
+        deliveryList.prepend(card); 
+    });
+  }
+
+function criarCardEntrega(entregaId, entregaData) {
+  const isDescarte = entregaData.tipo === 'descarte';
+  const iconClass = isDescarte ? 'fa-recycle' : 'fa-box-open';
+  const badgeClass = isDescarte ? 'recycle' : 'box';
+  const card = document.createElement('div');
+  card.className = 'delivery-card';
+  card.dataset.entregaId = entregaId;
+  card.dataset.tipoEntrega = entregaData.tipo;
+  const origem = entregaData.origem?.endereco || entregaData.localRetirada || 'Origem não informada';
+  const destino = entregaData.destino?.endereco || entregaData.localEntrega || 'Destino não informado';
+  const complemento = entregaData.origem?.complemento || '';
+  const distancia = entregaData.distancia ? `${Number(entregaData.distancia).toFixed(2)} km` : '---';
+  const volumes = entregaData.volumes ?? '---';
+  const tipoVeiculo = entregaData.tipoVeiculo || entregaData.tipoCaminhao || '---';
+
+  card.innerHTML = `
+    <strong>${isDescarte ? 'Descarte' : 'Entrega'} #${entregaId.substring(0, 6)}</strong>
+    <div class="info-container">
+      <div class="info-esquerda">
+        <p><strong>Origem:</strong> ${origem} ${complemento ? '- ' + complemento : ''}</p>
+        <p><strong>Destino:</strong> ${destino}</p>
+      </div>
+      <div class="info-meio">
+        <p><strong>Distância:</strong> ${distancia}</p>
+        <p><strong>Volumes:</strong> ${complemento}</p>
+        <p><strong>Tipo de veículo:</strong> ${tipoVeiculo}</p>
+      </div>
+      <div class="info-meio">
+        <span class="icon-area ${badgeClass}"><i class="fa-solid ${iconClass}"></i></span>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
   function abrirModal() {
     if (!selectedEntregaId) return alert("Selecione um pedido!");
-    const distKm = entregasCache[selectedEntregaId]?.distancia || 0;
+    const entrega = entregasCache[selectedEntregaId];
+    if (!entrega) return alert("Dados da entrega não encontrados.");
+
+    const distKm = entrega.distancia || 0;
     currentBounds = calcPriceBoundsFromDistance(distKm);
 
     proposalPriceInput.value = "";
@@ -175,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 300);
   }
 
-  // ================= Enviar proposta =================
+  //  Enviar proposta 
   function enviarProposta() {
     const precoBase = parseFloat((proposalPriceInput.value || "").replace(",", "."));
     const tempoChegada = parseInt(proposalTimeInput.value, 10);
@@ -211,13 +235,18 @@ document.addEventListener('DOMContentLoaded', () => {
       nomeMotorista: nomeMotoristaReal || `Motorista ${fallbackMotoristaId.substring(10, 15)}`
     };
 
-    db.collection('entregas')
+    const card = deliveryList.querySelector(`[data-entrega-id="${selectedEntregaId}"]`);
+    const tipoEntrega = card ? card.dataset.tipoEntrega : 'mudanca';
+    const collectionName = tipoEntrega === 'descarte' ? 'descartes' : 'entregas';
+
+    db.collection(collectionName)
       .doc(selectedEntregaId)
       .collection('propostas')
       .doc(idParaUsar)
       .set(propostaData)
       .then(() => {
-        return db.collection('entregas')
+
+        return db.collection(collectionName)
           .doc(selectedEntregaId)
           .update({
             [`propostas.${idParaUsar}`]: propostaData,
@@ -236,8 +265,6 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("Falha ao enviar proposta, tente novamente.");
       });
   }
-
-  // ============== MODAL de “Proposta aceita” (NOVO) ==============
   function ensureModalPropostaAceita(){
     let modal = document.getElementById('propostaAceitaModal');
     if (modal) return modal;
@@ -280,7 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(()=>{ modal.style.display = 'none'; }, 200);
   }
 
-  // Escuta quando o cliente aceita a SUA proposta
   function ouvirAceitacaoPropostas() {
     const idParaUsar = motoristaUid || fallbackMotoristaId;
     db.collection('entregas')
@@ -291,15 +317,27 @@ document.addEventListener('DOMContentLoaded', () => {
           if (ch.type !== 'added' && ch.type !== 'modified') return;
           const entregaId = ch.doc.id;
           const entregaData = ch.doc.data();
-          mostrarModalPropostaAceita(entregaId, entregaData);
+          mostrarModalPropostaAceita(entregaId, entregaData, 'entregas');
+        });
+      });
+
+    db.collection('descartes')
+      .where('status', '==', 'aceito')
+      .where('propostaAceita.motoristaId', '==', idParaUsar)
+      .onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(ch => {
+          if (ch.type !== 'added' && ch.type !== 'modified') return;
+          const entregaId = ch.doc.id;
+          const entregaData = ch.doc.data();
+          mostrarModalPropostaAceita(entregaId, entregaData, 'descartes');
         });
       });
   }
 
-  function mostrarModalPropostaAceita(entregaId, entregaData) {
+  function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
     const nomeCliente = entregaData.clienteNome || "Cliente";
-    const origem = entregaData.origem?.endereco || entregaData.origem?.cep || '';
-    const destino = entregaData.destino?.endereco || '';
+    const origem = entregaData.origem?.endereco || entregaData.localRetirada || '';
+    const destino = entregaData.destino?.endereco || entregaData.localEntrega || '';
     const valor = Number(entregaData.propostaAceita?.preco || 0).toFixed(2);
     const tempo = entregaData.propostaAceita?.tempoChegada || 0;
 
@@ -312,11 +350,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     abrirModalPropostaAceita();
 
-    document.getElementById('btnIniciarCorrida').onclick = () => iniciarCorrida(entregaId, entregaData, nomeCliente);
-    document.getElementById('btnRecusarCorrida').onclick = () => recusarCorridaAposAceite(entregaId);
+    document.getElementById('btnIniciarCorrida').onclick = () => iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName);
+    document.getElementById('btnRecusarCorrida').onclick = () => recusarCorridaAposAceite(entregaId, collectionName);
   }
 
-async function iniciarCorrida(entregaId, entregaData, nomeCliente) {
+async function iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName) {
   try {
     const corridaData = {
       entregaId,
@@ -327,15 +365,15 @@ async function iniciarCorrida(entregaId, entregaData, nomeCliente) {
       motoristaId: motoristaUid || fallbackMotoristaId,
       nomeMotorista: nomeMotoristaReal || 'Motorista',
       origem: {
-        endereco: entregaData.origem?.endereco || '',
+        endereco: entregaData.origem?.endereco || entregaData.localRetirada || '',
         numero: entregaData.origem?.numero || '',
         complemento: entregaData.origem?.complemento || '',
-        cep: entregaData.origem?.cep || '',
+        cep: entregaData.origem?.cep || entregaData.cep || '',
         lat: entregaData.origem?.coordenadas?.lat || null,
         lng: entregaData.origem?.coordenadas?.lng || null,
       },
       destino: {
-        endereco: entregaData.destino?.endereco || '',
+        endereco: entregaData.destino?.endereco || entregaData.localEntrega || '',
         numero: entregaData.destino?.numero || '',
         complemento: entregaData.destino?.complemento || '',
         lat: entregaData.destino?.coordenadas?.lat || null,
@@ -350,31 +388,21 @@ async function iniciarCorrida(entregaId, entregaData, nomeCliente) {
 
     const corridaRef = db.collection('corridas').doc(entregaId);
 
-    // 1) cria/atualiza corrida
     await corridaRef.set(corridaData, { merge: true });
-
-    // 2) estado inicial para o statusC/rotaM seguirem a fase
     await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
+    await db.collection(collectionName).doc(entregaId).delete();
 
-    // 3) remove a solicitação pública
-    await db.collection('entregas').doc(entregaId).delete();
-
-    // 4) passa o id para as telas do motorista
     localStorage.setItem('corridaSelecionada', entregaId);
     localStorage.setItem('ultimaCorridaMotorista', entregaId);
-
-    // 5) rota do motorista com ?corrida=
     window.location.href = `rotaM.html?corrida=${encodeURIComponent(entregaId)}`;
   } catch (error) {
     console.error('Erro ao iniciar corrida:', error);
     alert('Erro ao iniciar corrida. Tente novamente.');
   }
 }
-
-
-  async function recusarCorridaAposAceite(entregaId) {
+  async function recusarCorridaAposAceite(entregaId, collectionName) {
     try {
-      await db.collection('entregas').doc(entregaId).update({
+      await db.collection(collectionName).doc(entregaId).update({
         status: 'recusada_pelo_motorista',
         recusadaEm: firebase.firestore.FieldValue.serverTimestamp(),
         recusadaPor: motoristaUid || fallbackMotoristaId
@@ -385,9 +413,6 @@ async function iniciarCorrida(entregaId, entregaData, nomeCliente) {
       fecharModalPropostaAceita();
     }
   }
-  // ============ FIM do bloco novo do modal de proposta aceita ============
-
-  // ================= Interações da lista =================
   deliveryList.addEventListener('click', e => {
     const card = e.target.closest('.delivery-card');
     if (card) {
@@ -398,7 +423,6 @@ async function iniciarCorrida(entregaId, entregaData, nomeCliente) {
     }
   });
 
-  // ================= Eventos do modal =================
   submitBtn.addEventListener('click', abrirModal);
   modalClose.addEventListener('click', fecharModal);
   sendProposalBtn.addEventListener('click', enviarProposta);
@@ -406,7 +430,5 @@ async function iniciarCorrida(entregaId, entregaData, nomeCliente) {
     if (e.target === proposalModal) fecharModal();
   });
 
-  // ================= Boot =================
   carregarEntregas();
 });
-  

@@ -1,4 +1,3 @@
-// firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
@@ -21,5 +20,4 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// exporta para uso em outros módulos
 export { app, analytics, auth, db, storage };

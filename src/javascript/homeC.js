@@ -1,21 +1,12 @@
-/*********************************************************
- * homeC.js — Moomate (CLIENTE)
- * - Mapa travado no estado de São Paulo (com alerts)
- * - Validação de CEP/endereço só-SP (input, autocomplete, blur)
- * - Entrega + propostas em tempo real renderizadas no bloco azul
- * - Mantém TODA a lógica original de pedidos e propostas
- **********************************************************/
-
-// ===================== Estado de São Paulo =====================
+// latitude do estado de São Paulo 
 const SP_BOUNDS = L.latLngBounds(
-  L.latLng(-25.30, -53.10), // sudoeste
-  L.latLng(-19.80, -44.20)  // nordeste
+  L.latLng(-25.30, -53.10), 
+  L.latLng(-19.80, -44.20) 
 );
 function isWithinSaoPaulo(lat, lng) {
   return SP_BOUNDS.contains([lat, lng]);
 }
 
-// ======================= Firebase config =======================
 const firebaseConfig = {
   apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
   authDomain: "moomate-39239.firebaseapp.com",
@@ -26,7 +17,6 @@ const firebaseConfig = {
   measurementId: "G-62J7Q8CKP4"
 };
 
-// ===================== Variáveis globais =======================
 let db;
 let currentEntregaId = null;
 
@@ -35,9 +25,8 @@ let markerOrigem, markerDestino, routeLine;
 let origemCoords = null;
 let destinoCoords = null;
 
-// ===================== Mapa (travado em SP) ====================
 function initMap() {
-  const defaultLatLng = [-23.5505, -46.6333]; // São Paulo capital
+  const defaultLatLng = [-23.5505, -46.6333]; 
 
   map = L.map("map", {
     zoomControl: true,
@@ -55,14 +44,11 @@ function initMap() {
     noWrap: true,
     bounds: SP_BOUNDS
   }).addTo(map);
-
-  // Marcador origem
   markerOrigem = L.marker(defaultLatLng, { draggable: true })
     .addTo(map)
     .bindPopup("Origem (arraste para mudar)")
     .openPopup();
 
-  // Marcador destino (vermelho)
   const redIcon = L.icon({
     iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
     shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
@@ -73,12 +59,11 @@ function initMap() {
   });
 
   markerDestino = L.marker(defaultLatLng, {
-    draggable: false, // se quiser arrastar, troque para true
+    draggable: false, 
     opacity: 0.5,
     icon: redIcon
   }).addTo(map).bindPopup("Destino");
 
-  // Origem: impede sair de SP (alerta + volta)
   markerOrigem.on("dragend", () => {
     const { lat, lng } = markerOrigem.getLatLng();
     if (isWithinSaoPaulo(lat, lng)) {
@@ -91,7 +76,6 @@ function initMap() {
     }
   });
 
-  // Destino: se tornar arrastável, já fica protegido
   markerDestino.on("dragend", () => {
     const { lat, lng } = markerDestino.getLatLng();
     if (isWithinSaoPaulo(lat, lng)) {
@@ -103,8 +87,7 @@ function initMap() {
       markerDestino.setLatLng(destinoCoords || defaultLatLng);
     }
   });
-
-  // Geolocalização (só SP)
+  // Geolocalização
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
@@ -130,7 +113,7 @@ function initMap() {
   }
 }
 
-// =================== CEP (apenas SP) ===========================
+//  CEP (so SP) 
 function checarCEP() {
   let cep = document.getElementById("cep").value.replace(/\D/g, "");
   if (cep.length === 8) {
@@ -144,10 +127,9 @@ function checarCEP() {
 }
 function isCEPSaoPaulo(cep) {
   const cepNum = parseInt(cep, 10);
-  // Faixa SP (01000-000 a 19999-999)
   return cepNum >= 1000000 && cepNum <= 19999999;
 }
-// Atualiza o marcador e o mapa após alterar o CEP
+// Atualiza o marcador e o mapa dps de mudar o CEP
 async function buscarEnderecoPorCEP(cep) {
   try {
     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
@@ -163,7 +145,6 @@ async function buscarEnderecoPorCEP(cep) {
     const endereco = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
     document.getElementById("localRetirada").value = endereco;
 
-    // Geocodifica para obter a posição do marcador
     const q = encodeURIComponent(`${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`);
     const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
     const nominatimData = await nominatimRes.json();
@@ -172,24 +153,21 @@ async function buscarEnderecoPorCEP(cep) {
     const lat = parseFloat(nominatimData[0].lat);
     const lon = parseFloat(nominatimData[0].lon);
 
-    // Verifica se está dentro de SP
     if (!isWithinSaoPaulo(lat, lon)) {
       alert("Por favor, selecione um endereço dentro do estado de São Paulo.");
       return;
     }
 
     origemCoords = [lat, lon];
-    map.setView(origemCoords, 15); // Atualiza a visão do mapa
-    markerOrigem.setLatLng(origemCoords).setOpacity(1); // Atualiza a posição do marcador
-    reverseGeocode(lat, lon, "localRetirada", false); // Atualiza o campo do endereço
+    map.setView(origemCoords, 15); // muda a visão do mapa
+    markerOrigem.setLatLng(origemCoords).setOpacity(1); // muda a posição do marcador
+    reverseGeocode(lat, lon, "localRetirada", false); // muda o campo do endereço
     updateRoute(); // Atualiza a rota
   } catch {
     alert("Erro ao buscar o endereço pelo CEP.");
   }
 }
-
-
-// =================== Reverse geocode (só SP) ===================
+// reverse geocode openstreetmap api
 async function reverseGeocode(lat, lon, campo, setCep) {
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
@@ -200,7 +178,7 @@ async function reverseGeocode(lat, lon, campo, setCep) {
     const state = (a.state || "").toLowerCase();
     if (!isWithinSaoPaulo(lat, lon) || (!state.includes("são paulo") && !state.includes("sp"))) {
       alert("Endereço localizado fora do estado de São Paulo.");
-      return; // não preenche o campo
+      return; 
     }
 
     const enderecoMontado =
@@ -217,8 +195,6 @@ async function reverseGeocode(lat, lon, campo, setCep) {
     console.error("Erro reverse geocode", e);
   }
 }
-
-// ============= Validação por texto digitado (blur) =============
 async function validarEnderecoSPPorTexto(fieldId) {
   const input = document.getElementById(fieldId);
   const val = (input.value || "").trim();
@@ -255,7 +231,7 @@ async function validarEnderecoSPPorTexto(fieldId) {
     return true;
   } catch (e) {
     console.error("Erro ao validar endereço:", e);
-    return true; // não bloqueia se der erro de rede
+    return true; 
   }
 }
 
@@ -264,7 +240,6 @@ function formatarCEP(cep) {
   return cep.length === 8 ? cep.substr(0, 5) + "-" + cep.substr(5, 3) : cep;
 }
 
-// ================== Autocomplete (apenas SP) ===================
 let timeoutAutocomplete;
 async function autocompleteEndereco(campo) {
   clearTimeout(timeoutAutocomplete);
@@ -350,7 +325,7 @@ async function selectAutocompleteItem(campo, item) {
   updateRoute();
 }
 
-// ====================== Rota/Distância ========================
+// rota
 function updateRoute() {
   if (routeLine) map.removeLayer(routeLine);
   if (origemCoords && destinoCoords) {
@@ -374,7 +349,7 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ================= Propostas em tempo real (inline) ============
+// proposta
 async function ouvirPropostas(entregaId) {
   if (!db || !entregaId) return;
 
@@ -394,13 +369,9 @@ async function ouvirPropostas(entregaId) {
         lista.innerHTML = `<p>Aguardando propostas dos motoristas...</p>`;
         return;
       }
-
-      // cache: evita buscar o mesmo motorista várias vezes
       const cacheMotoristas = {};
-
-      // Função para buscar o motorista pelo ID (motoristaUid)
       async function getMotorista(uid) {
-        console.log("Buscando motorista com ID:", uid); // Log para verificar o ID do motorista
+        console.log("Buscando motorista com ID:", uid); 
         if (!uid) return { nome: "Motorista", foto: null };
 
         if (cacheMotoristas[uid]) return cacheMotoristas[uid];
@@ -408,14 +379,14 @@ async function ouvirPropostas(entregaId) {
         try {
           const snap = await db.collection("motoristas").doc(uid).get();
           if (!snap.exists) {
-            console.log("Motorista não encontrado com ID:", uid); // Log se o motorista não for encontrado
+            console.log("Motorista não encontrado com ID:", uid); 
             return { nome: "Motorista", foto: null };
           }
           const data = snap.data();
           const nome = data?.dadosPessoais?.nome || data?.nome || "Motorista";
           const foto = data?.dadosPessoais?.fotoPerfilUrl || data?.fotoPerfilUrl || null;
 
-          console.log("Foto do motorista (fotoPerfilUrl):", foto); // Log para verificar a URL da foto
+          console.log("Foto do motorista (fotoPerfilUrl):", foto); 
 
           cacheMotoristas[uid] = { nome, foto };
           return cacheMotoristas[uid];
@@ -424,8 +395,6 @@ async function ouvirPropostas(entregaId) {
           return { nome: "Motorista", foto: null };
         }
       }
-
-      // Formata a data de envio (Firestore Timestamp ou ISO)
       const fmtData = (v) => {
         try {
           if (v && typeof v.toDate === "function") return v.toDate().toLocaleString();
@@ -437,12 +406,10 @@ async function ouvirPropostas(entregaId) {
       lista.innerHTML = "";
       for (const doc of snapshot.docs) {
         const p = doc.data();
-
-        // compatibilidade: pode vir motoristaUid OU motoristaId (legado)
         const uidMotorista = p.motoristaUid || p.motoristaId || "";
-        console.log("ID do motorista na proposta:", uidMotorista); // Log para verificar o ID do motorista
+        console.log("ID do motorista na proposta:", uidMotorista); 
 
-        // se a proposta já trouxe nome/foto, usamos; senão buscamos
+
         let nomeMotorista = p.nomeMotorista || "";
         let fotoMotorista = p.fotoMotorista || null;
 
@@ -451,11 +418,9 @@ async function ouvirPropostas(entregaId) {
           if (!nomeMotorista) nomeMotorista = info.nome;
           if (fotoMotorista === undefined) fotoMotorista = info.foto;
         }
-
-        // Se a foto do motorista estiver disponível, exibe a foto; caso contrário, nada é exibido.
         const avatarHtml = fotoMotorista
           ? `<img src="${fotoMotorista}" alt="${nomeMotorista}" class="motorista-avatar">`
-          : ''; // Se não houver foto, não exibe nada.
+          : ''; 
 
         const card = document.createElement("div");
         card.className = "proposta-card inline";
@@ -484,8 +449,7 @@ async function ouvirPropostas(entregaId) {
 }
 
 
-// ============= (Seu modal antigo mantido – não usado) =========
-function mostrarModalPropostas(entregaId, snapshot) { /* mantém se quiser usar */ }
+function mostrarModalPropostas(entregaId, snapshot) {  }
 function fecharModalPropostas() {
   const modal = document.getElementById("propostasModal");
   if (modal) {
@@ -497,7 +461,7 @@ function fecharModalPropostas() {
   }
 }
 
-// ================== Aceitar proposta / corrida =================
+//aceitar proposta
 async function aceitarProposta(entregaId, propostaId, motoristaId) {
   if (!db) return alert("Erro: Firebase não inicializado.");
   try {
@@ -514,7 +478,6 @@ async function aceitarProposta(entregaId, propostaId, motoristaId) {
       clienteConfirmou: true
     });
 
-    // para o statusC pegar automaticamente
     localStorage.setItem("ultimaCorridaCliente", entregaId);
 
     alert("Proposta aceita com sucesso!");
@@ -527,7 +490,7 @@ async function aceitarProposta(entregaId, propostaId, motoristaId) {
 }
 
 function mostrarAguardandoMotorista(entregaId) {
-  // cria modal se não existir
+ 
   let modal = document.getElementById('aguardandoMotoristaModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -552,7 +515,6 @@ function mostrarAguardandoMotorista(entregaId) {
     modal.querySelector('.modal-content').style.transform = 'scale(1)';
   }, 10);
 
-  // fecha quando a corrida começar
   const stopCorrida = db.collection('corridas').doc(entregaId)
     .onSnapshot(doc => {
       const st = doc.exists ? doc.data()?.status : null;
@@ -563,7 +525,6 @@ function mostrarAguardandoMotorista(entregaId) {
       }
     });
 
-  // fecha se o motorista recusar
   const stopEntrega = db.collection('entregas').doc(entregaId)
     .onSnapshot(doc => {
       if (!doc.exists) return;
@@ -576,13 +537,9 @@ function mostrarAguardandoMotorista(entregaId) {
     });
 }
 
-
-
-// ================== Criar pedido / ver motoristas =============
 async function verMotoristas() {
   if (!origemCoords || !destinoCoords) return alert("Defina origem e destino.");
 
-  // reforço SP
   if (
     !isWithinSaoPaulo(origemCoords[0], origemCoords[1]) ||
     !isWithinSaoPaulo(destinoCoords[0], destinoCoords[1])
@@ -615,9 +572,8 @@ async function verMotoristas() {
     criadoEm: new Date().toISOString(),
     propostas: {}
   };
-  // antes de salvar dadosFormulario:
-dadosFormulario.clienteNome = (window.userNome || localStorage.getItem('clienteNome') || 'Cliente');
 
+dadosFormulario.clienteNome = (window.userNome || localStorage.getItem('clienteNome') || 'Cliente');
 
   const dist = calcularDistancia(
     origemCoords[0],
@@ -675,7 +631,7 @@ dadosFormulario.clienteNome = (window.userNome || localStorage.getItem('clienteN
   }
 }
 
-// ================ Tipo de veículo (toggle) =====================
+//tipo veiculo
 function selecionarTipo(tipo) {
   const opcoes = document.querySelectorAll(".vehicle-option");
   const atual = Array.from(opcoes).find((el) => el.dataset.type === tipo);
@@ -694,7 +650,6 @@ function selecionarTipo(tipo) {
   }
 }
 
-// ==================== Listeners de página ======================
 document.addEventListener("DOMContentLoaded", function () {
   const cepField = document.getElementById("cep");
   const localRetiradaField = document.getElementById("localRetirada");
@@ -719,7 +674,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (verMotoristasBtn) verMotoristasBtn.addEventListener("click", verMotoristas);
 
-  // fecha autocomplete ao clicar fora
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".input-box")) {
       closeAutocomplete("localRetirada");
@@ -728,7 +682,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
-// ===================== Bootstrap da página =====================
 window.onload = function () {
   initMap();
 

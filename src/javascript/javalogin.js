@@ -1,7 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // ================================
-  // Firebase init (v8)
-  // ================================
   const firebaseConfig = {
     apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
     authDomain: "moomate-39239.firebaseapp.com",
@@ -17,18 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const db = firebase.firestore();
   const googleProvider = new firebase.auth.GoogleAuthProvider();
 
-  // ================================
-  // Seletores conforme seu HTML/CSS
-  // ================================
   const form = document.querySelector(".cadastro-form");
   const emailInput = document.querySelector('input[placeholder="Email"]');
   const senhaInput = document.querySelector('input[placeholder="Senha"]');
   const btnGoogle = document.querySelector(".btn-google");
   const togglePass = document.querySelector(".toggle-password");
 
-  // ================================
-  // Toggle de visibilidade da senha
-  // ================================
   if (togglePass) {
     togglePass.addEventListener("click", () => {
       const tipo = senhaInput.type === "password" ? "text" : "password";
@@ -38,9 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ================================
-  // Entrar com e-mail/senha
-  // ================================
+  // Entrar com email
   if (form) {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -88,9 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ================================
-  // Entrar com Google
-  // ================================
+  // Entrar com google
   if (btnGoogle) {
     btnGoogle.addEventListener("click", async (e) => {
       e.preventDefault();

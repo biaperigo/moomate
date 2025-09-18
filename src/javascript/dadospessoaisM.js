@@ -1,4 +1,3 @@
-// Configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
   authDomain: "moomate-39239.firebaseapp.com",
@@ -9,16 +8,13 @@ const firebaseConfig = {
   measurementId: "G-62J7Q8CKP4"
 };
 
-// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// Variáveis globais
 let currentUserData = null;
 let currentUserId = null;
 
-// =================== Funções de formatação ===================
 function formatarCPF(cpf) {
   cpf = cpf.replace(/\D/g, "");
   if (cpf.length > 11) cpf = cpf.substring(0, 11);
@@ -78,7 +74,6 @@ function formatarCRLV(crlv) {
   return crlv;
 }
 
-// =================== UPLOAD CLOUDINARY ===================
 async function uploadImagemCloudinary(file) {
   if (!file) return null;
   
@@ -100,7 +95,6 @@ async function uploadImagemCloudinary(file) {
   }
 }
 
-// =================== CARREGAMENTO DE DADOS ===================
 async function carregarDadosUsuario() {
   try {
     const user = auth.currentUser;
@@ -125,9 +119,8 @@ async function carregarDadosUsuario() {
     alert("Erro ao carregar dados: " + error.message);
   }
 }
-
 function preencherCampos(dados) {
-  // Dados pessoais
+
   if (dados.dadosPessoais) {
     document.getElementById('nome').textContent = dados.dadosPessoais.nome || '';
     document.getElementById('dataNascimento').textContent = formatarData(dados.dadosPessoais.dataNascimento) || '';
@@ -135,7 +128,6 @@ function preencherCampos(dados) {
     document.getElementById('email').textContent = dados.dadosPessoais.email || '';
     document.getElementById('telefone').textContent = dados.dadosPessoais.telefone || '';
     
-    // Endereço
     if (dados.dadosPessoais.endereco) {
       document.getElementById('cep').textContent = dados.dadosPessoais.endereco.cep || '';
       document.getElementById('rua').textContent = dados.dadosPessoais.endereco.rua || '';
@@ -144,33 +136,28 @@ function preencherCampos(dados) {
       document.getElementById('estado').textContent = dados.dadosPessoais.endereco.estado || '';
     }
     
-    // Foto de perfil
     if (dados.dadosPessoais.fotoPerfilUrl) {
       document.getElementById('fotoPerfil').src = dados.dadosPessoais.fotoPerfilUrl;
     }
   }
   
-  // Documentação - corrigindo os caminhos dos dados
   if (dados.dadosPessoais) {
     document.getElementById('rg').textContent = dados.dadosPessoais.rg || '';
     document.getElementById('cnh').textContent = dados.dadosPessoais.cnh || '';
     document.getElementById('antecedentes').textContent = dados.dadosPessoais.antecedentes || '';
   }
   
-  // Veículo
   if (dados.veiculo) {
     document.getElementById('tipoVeiculo').textContent = formatarTipoVeiculo(dados.veiculo.tipo) || '';
     document.getElementById('placa').textContent = dados.veiculo.placa || '';
     document.getElementById('crlv').textContent = dados.veiculo.crlv || '';
     document.getElementById('ano').textContent = dados.veiculo.ano || '';
     
-    // Foto do veículo
     if (dados.veiculo.fotoVeiculoUrl) {
       document.getElementById('fotoVeiculo').src = dados.veiculo.fotoVeiculoUrl;
     }
   }
 }
-
 function formatarData(dataString) {
   if (!dataString) return '';
   const data = new Date(dataString);
@@ -186,14 +173,12 @@ function formatarTipoVeiculo(tipo) {
   return tipos[tipo] || tipo;
 }
 
-// =================== FUNCIONALIDADES DE EDIÇÃO ===================
 function iniciarEdicao(fieldElement) {
   const displayValue = fieldElement.querySelector('.display-value');
   const editInput = fieldElement.querySelector('.edit-input');
   const editBtn = fieldElement.querySelector('.edit-btn');
   const editActions = fieldElement.querySelector('.edit-actions');
-  
-  // Copiar valor atual para o input
+
   if (editInput.tagName === 'SELECT') {
     const fieldName = fieldElement.dataset.field;
     if (fieldName === 'tipoVeiculo' && currentUserData && currentUserData.veiculo) {
@@ -205,7 +190,6 @@ function iniciarEdicao(fieldElement) {
     editInput.value = displayValue.textContent;
   }
   
-  // Alternar visibilidade
   fieldElement.classList.add('editing');
   editBtn.style.display = 'none';
 }
@@ -227,13 +211,10 @@ async function salvarEdicao(fieldElement) {
       alert('Campo não pode estar vazio');
       return;
     }
-    
-    // Validações específicas
+
     if (!validarCampo(fieldName, newValue)) {
       return;
     }
-    
-    // Atualizar no Firebase
     const updateData = {};
     
     switch (fieldName) {
@@ -286,7 +267,6 @@ async function salvarEdicao(fieldElement) {
     
     await db.collection("motoristas").doc(currentUserId).update(updateData);
     
-    // Atualizar display
     if (fieldName === 'tipoVeiculo') {
       displayValue.textContent = formatarTipoVeiculo(newValue);
     } else if (fieldName === 'dataNascimento') {
@@ -295,7 +275,6 @@ async function salvarEdicao(fieldElement) {
       displayValue.textContent = newValue;
     }
     
-    // Sair do modo de edição
     cancelarEdicao(fieldElement);
     
     console.log('Campo atualizado com sucesso:', fieldName);
@@ -350,14 +329,11 @@ function validarCampo(fieldName, value) {
   }
   return true;
 }
-
-// =================== UPLOAD DE IMAGENS ===================
 async function handleImageUpload(inputElement, imageElement, isProfile = false) {
   const file = inputElement.files[0];
   if (!file) return;
   
   try {
-    // Mostrar preview
     const reader = new FileReader();
     reader.onload = function(e) {
       const previewId = isProfile ? 'previewFotoPerfil' : 'previewFotoVeiculo';
@@ -367,11 +343,9 @@ async function handleImageUpload(inputElement, imageElement, isProfile = false) 
     };
     reader.readAsDataURL(file);
     
-    // Upload para Cloudinary
     const imageUrl = await uploadImagemCloudinary(file);
     
     if (imageUrl) {
-      // Atualizar no Firebase
       const updateData = {};
       if (isProfile) {
         updateData['dadosPessoais.fotoPerfilUrl'] = imageUrl;
@@ -381,10 +355,9 @@ async function handleImageUpload(inputElement, imageElement, isProfile = false) 
       
       await db.collection("motoristas").doc(currentUserId).update(updateData);
       
-      // Atualizar imagem na tela
+
       imageElement.src = imageUrl;
       
-      // Esconder preview
       const previewId = isProfile ? 'previewFotoPerfil' : 'previewFotoVeiculo';
       const preview = document.getElementById(previewId);
       preview.style.display = 'none';
@@ -398,9 +371,7 @@ async function handleImageUpload(inputElement, imageElement, isProfile = false) 
   }
 }
 
-// =================== EVENT LISTENERS ===================
 document.addEventListener("DOMContentLoaded", function () {
-  // Verificar autenticação
   auth.onAuthStateChanged(function(user) {
     if (user) {
       carregarDadosUsuario();
@@ -409,7 +380,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
   
-  // Event listeners para botões de edição
   document.querySelectorAll('.edit-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const fieldElement = this.closest('.editable-field');
@@ -419,7 +389,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
   
-  // Event listeners para botões de salvar
   document.querySelectorAll('.save-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const fieldElement = this.closest('.editable-field');
@@ -429,7 +398,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
   
-  // Event listeners para botões de cancelar
   document.querySelectorAll('.cancel-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const fieldElement = this.closest('.editable-field');
@@ -439,7 +407,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
   
-  // Event listeners para upload de imagens
   const inputFotoPerfil = document.getElementById('inputFotoPerfil');
   const inputFotoVeiculo = document.getElementById('inputFotoVeiculo');
   const fotoPerfil = document.getElementById('fotoPerfil');
@@ -457,7 +424,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
   
-  // Formatação em tempo real para campos específicos
   document.addEventListener('input', function(e) {
     if (e.target.classList.contains('edit-input')) {
       const fieldElement = e.target.closest('.editable-field');
@@ -485,8 +451,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
   });
-  
-  // Menu toggle (se existir)
   const menuToggle = document.getElementById('menuToggle');
   const navMenu = document.getElementById('navMenu');
   

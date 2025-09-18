@@ -1,11 +1,8 @@
-
 const map = L.map('map').setView([-23.53, -46.56], 12);
-
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
 }).addTo(map);
-
 
 const ecopontos = [
     {
@@ -187,8 +184,6 @@ const ecopontos = [
         lat: -23.6465,
         lng: -46.7165,
     },
-
-    // Cidade Tiradentes
     {
         nome: "Ecoponto Nascer do Sol",
         endereco: "Rua Nascer do Sol, nº 356 – Bairro: Conjunto Habitacional Santa Etelvina II",
@@ -229,8 +224,6 @@ const ecopontos = [
         lat: -23.5540,
         lng: -46.4440,
       },
-    
-      // Freguesia do Ó / Brasilândia
       {
         nome: "Ecoponto Bandeirantes",
         endereco: "Rua Itaiquara, nº 237 - Bairro: Itaberaba",
@@ -255,8 +248,6 @@ const ecopontos = [
         lat: -23.4800,
         lng: -46.6850,
       },
-    
-      // Guaianases
       {
         nome: "Ecoponto Jardim São Paulo",
         endereco: "Rua Utaro Kanai, nº 374 – Bairro: Conjunto Habitacional Juscelino Kubitschek",
@@ -321,8 +312,6 @@ const ecopontos = [
         lat: -23.5950,
         lng: -46.6200,
       },
-    
-      // Itaim Paulista
       {
         nome: "Ecoponto Moreira",
         endereco: "Rua João Batista de Godói, nº 1164 – Bairro: Jardim das Oliveiras",
@@ -419,8 +408,6 @@ const ecopontos = [
         lat: -23.5505,
         lng: -46.4350,
       },
-    
-      // Jabaquara
       {
         nome: "Ecoponto Imigrantes",
         endereco: "Rua Opixe - Bairro: Vila Guarani (Zona Sul)",
@@ -437,8 +424,6 @@ const ecopontos = [
         lat: -23.6155,
         lng: -46.6550,
       },
-    
-      // Jaçanã/Tremembé
       {
         nome: "Ecoponto Anselmo Machado",
         endereco: "Avenida Paulo Lincoln do Valle Pontin, altura do nº 550 – Bairro: Jaçanã",
@@ -455,8 +440,6 @@ const ecopontos = [
         lat: -23.5000,
         lng: -46.6200,
       },
-    
-      // Lapa
       {
         nome: "Ecoponto Viaduto Antártica",
         endereco: "Rua Robert Bosch (Baixos Viaduto Antártica) – Bairro: Parque Industrial Tomas Edson",
@@ -489,8 +472,6 @@ const ecopontos = [
         lat: -23.6840,
         lng: -46.7345,
       },
-    
-      // Mooca
       {
         nome: "Ecoponto Bresser",
         endereco: "Pça. Giuseppe Cesari, nº 54 – Bairro: Brás",
@@ -651,8 +632,6 @@ const ecopontos = [
         lat: -23.5445,
         lng: -46.5088,
       },
-    
-      // Perus
       {
         nome: "Ecoponto Recanto dos Humildes",
         endereco: "Rua Sales Gomes, nº 415 – Bairro: Vila Perus",
@@ -693,8 +672,6 @@ const ecopontos = [
         lat: -23.5640,
         lng: -46.7100,
       },
-    
-      // Pirituba/Jaraguá
       {
         nome: "Ecoponto Cônego José Salomon",
         endereco: "Avenida Cônego José Salomon, nº 861 – Bairro: Vila Portugal",
@@ -727,8 +704,6 @@ const ecopontos = [
         lat: -23.4940,
         lng: -46.7520,
       },
-    
-      // Santana/Tucuruvi
       {
         nome: "Ecoponto Tucuruvi",
         endereco: "Rua Eduardo Vicente Nasser, nº 519 – Bairro: Barro Branco (Zona Norte)",
@@ -777,8 +752,6 @@ const ecopontos = [
         lat: -23.6492,
         lng: -46.7030,
       },
-    
-      // São Mateus
       {
         nome: "Ecoponto Cipoaba",
         endereco: "Rua Padre Luis de Siqueira, nº 947 – Jardim Rodolfo Pirani",
@@ -811,8 +784,6 @@ const ecopontos = [
         lat: -23.5605,
         lng: -46.3990,
       },
-    
-      // São Miguel Paulista
       {
         nome: "Ecoponto Imperador",
         endereco: "Av. Ribeirão Jacu, nº 201 – Jardim das Camélias",
@@ -917,8 +888,6 @@ const ecopontos = [
         lat: -23.5860,
         lng: -46.5005,
       },
-    
-      // Sé
       {
         nome: "Ecoponto Glicério",
         endereco: "Praça Ministro Francisco Sá Carneiro, nº 6 – Liberdade",
@@ -946,7 +915,7 @@ const ecopontos = [
       {
         nome: "Ecoponto Barra Funda",
         endereco: "Rua Cônego Vicente Miguel Marino, nº 76 – Barra Funda",
-        cep: "", // CEP não informado
+        cep: "",
         recebeGesso: false,
         lat: -23.5265,
         lng: -46.6610,
@@ -1000,12 +969,10 @@ const ecopontos = [
         lat: -23.4947,
         lng: -46.5895,
       },
-    
-      // Vila Mariana
       {
         nome: "Ecoponto Mirandópolis",
         endereco: "Av. Senador Casemiro da Rocha, nº 1220 – Mirandópolis",
-        cep: "", // CEP não informado
+        cep: "", 
         recebeGesso: true,
         lat: -23.6023,
         lng: -46.6365,
@@ -1034,8 +1001,6 @@ const ecopontos = [
         lat: -23.6020,
         lng: -46.6508,
       },
-    
-      // Vila Prudente
       {
         nome: "Ecoponto Anhaia Mello",
         endereco: "Rua da Prece, nº 296 – Vila Prudente",
@@ -1062,7 +1027,6 @@ const ecopontos = [
       }
 ];
 
-// Função para criar o conteúdo do info quando o ponto é clicado
 function criarConteudoInfo(ponto) {
     return `
         <h3>${ponto.nome}</h3>
@@ -1073,10 +1037,8 @@ function criarConteudoInfo(ponto) {
     `;
 }
 
-// Array para armazenar todos os marcadores e ajustar o zoom depois
-const markers = [];
 
-// Adiciona marcadores no mapa para cada ecoponto
+const markers = [];
 ecopontos.forEach(ponto => {
     const marker = L.marker([ponto.lat, ponto.lng]).addTo(map);
     marker.bindPopup(`<b>${ponto.nome}</b>`);
@@ -1086,7 +1048,5 @@ ecopontos.forEach(ponto => {
         document.getElementById('info').innerHTML = criarConteudoInfo(ponto);
     });
 });
-
-// Ajusta o zoom do mapa para mostrar todos os marcadores
 const group = L.featureGroup(markers);
 map.fitBounds(group.getBounds()); 

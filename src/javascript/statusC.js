@@ -1,20 +1,17 @@
-// controle de troca sem refresh
 let currentCorridaId = null;
 let unsubCorrida = () => {};
 let unsubSync = () => {};
 
-// src/javascript/statusC.js
 (() => {
   const { firebase, L } = window;
   if (!firebase || !firebase.apps.length) return;
   const db = firebase.firestore();
 
-  // ===== limites SP =====
+  //  limites SP 
   const SP_BOUNDS = L.latLngBounds([[-25.5, -53.5], [-19.5, -44.0]]);
   const inSP = (p) => p && p.lat >= -25.5 && p.lat <= -19.5 && p.lng >= -53.5 && p.lng <= -44.0;
   const ATIVAS = new Set(["aceito","aceita","pendente","em_andamento","indo_retirar","a_caminho_destino","finalizada_pendente"]);
 
-  // ===== utils/UI =====
   const $ = (id)=>document.getElementById(id);
   const getEl = (...ids) => ids.map(id=>document.getElementById(id)).find(Boolean) || null;
   const setText = (ids, txt) => { const el = getEl(...ids); if (el) el.textContent = txt; };
@@ -25,7 +22,7 @@ let unsubSync = () => {};
   const nomeMotoristaEl = getEl("driver-name","motorista-nome","nomeMotorista","driverName","motoristaInfo");
   const carroEl         = getEl("vehicle-info","motorista-carro","veiculoInfo","vehicleInfo","carroInfo");
 
-  // ===== mapa =====
+  //  mapa 
   const map = L.map("map", { maxBounds: SP_BOUNDS, maxBoundsViscosity: 1.0 });
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{ attribution:"© OpenStreetMap" }).addTo(map);
   map.fitBounds(SP_BOUNDS);
@@ -36,7 +33,6 @@ let unsubSync = () => {};
   let corridaId = null;
   let currentUser = null;
 
-  // ===== motorista + veículo =====
   async function hidratarMotorista(motoristaId, corridaData){
     let nome = corridaData?.motoristaNome || "—";
     let veiculoTxt = corridaData?.veiculo?.modelo || corridaData?.carro?.modelo || "";
@@ -54,7 +50,6 @@ let unsubSync = () => {};
     if (carroEl) carroEl.textContent = veiculoTxt || "—";
   }
 
-  // ===== pins =====
   function setMotorista(lat,lng){
     const p={lat,lng}; if(!inSP(p)) return;
     S.motorista = p;
@@ -70,7 +65,6 @@ let unsubSync = () => {};
     if(!mkD) mkD=L.marker([p.lat,p.lng],{icon:L.divIcon({className:"marker-destino",html:"<div></div>"})}).addTo(map);
     else mkD.setLatLng([p.lat,p.lng]); }
 
-  // ===== rota + painéis =====
   function atualizarPainel(durationSec, distanceM){
     setText(["estimated-time","tempoInfo","tempoPrevisto","tempo"], min(durationSec));
     setText(["distanciaInfo","estimated-distance","distPrevista","distancia"],  km(distanceM));
@@ -93,7 +87,6 @@ let unsubSync = () => {};
     if(pts.length){ map.fitBounds(L.latLngBounds(pts), { padding:[40,40] }); fitted=true; } else { map.fitBounds(SP_BOUNDS); }
   }
 
-  // ===== CSS botão destaque =====
   (function injectCss(){
     if (document.getElementById("css-destaque-chegada")) return;
     const st=document.createElement("style"); st.id="css-destaque-chegada";
@@ -107,7 +100,7 @@ let unsubSync = () => {};
     document.head.appendChild(st);
   })();
 
-  // ===== salvar avaliação =====
+  //  salvar avaliação 
   async function getMotoristaRef(motoristaId){
     const uRef = db.collection("usuarios").doc(motoristaId);
     const u = await uRef.get();
@@ -135,7 +128,6 @@ let unsubSync = () => {};
     });
   }
 
-  // ===== modal =====
   function abrirModalAvaliacao(){
     const modal = getEl("driver-rating-modal","user-rating-modal");
     if (!modal) return;
@@ -198,7 +190,6 @@ let unsubSync = () => {};
     fitOnce();
   }
 
-  // ===== resolver corrida =====
   async function pickCorridaId(uid){
     const qs=new URLSearchParams(location.search);
     const fromQS=qs.get("corrida")||qs.get("corridaId")||qs.get("id");
@@ -222,7 +213,6 @@ let unsubSync = () => {};
     return ids[0];
   }
 
-  // ===== troca de corrida sem refresh =====
   async function attachCorrida(newCorridaId){
     if (!newCorridaId || newCorridaId === currentCorridaId) return;
 
@@ -240,14 +230,13 @@ let unsubSync = () => {};
       history.replaceState(null, "", url);
     }
 
-    // zera estado visual
     fitted = false;
     if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
 
     const corridaRef = db.collection("corridas").doc(corridaId);
     const syncRef    = corridaRef.collection("sync").doc("estado");
 
-    // carga inicial
+
     const [cSnap,sSnap]=await Promise.all([corridaRef.get(), syncRef.get()]);
     if(cSnap.exists){
       C=cSnap.data()||{};
@@ -265,7 +254,6 @@ let unsubSync = () => {};
     }
     redraw();
 
-    // listeners
     unsubCorrida = corridaRef.onSnapshot(async doc=>{
       if(!doc.exists) return;
       C=doc.data()||{};
@@ -299,13 +287,10 @@ let unsubSync = () => {};
         if (doc.id !== currentCorridaId) attachCorrida(doc.id);
       });
   }
-
-  // ===== boot =====
   firebase.auth().onAuthStateChanged(async (user)=>{
     if(!user){ alert("Faça login."); return; }
     currentUser = user;
 
-    // preferências
     const qs = new URLSearchParams(location.search);
     const fromQS = qs.get("corrida") || qs.get("corridaId") || qs.get("id");
     const fromLS = localStorage.getItem("ultimaCorridaCliente");
@@ -319,19 +304,16 @@ let unsubSync = () => {};
       if (p) await attachCorrida(p);
       else { alert("Nenhuma corrida ativa encontrada."); return; }
     }
-
-    // observar mudanças sem refresh
     watchActiveCorridaCliente(user.uid);
   });
 })();
-/* ===== CHAT EMBUTIDO (cole este bloco no final do arquivo) ===== */
-/* ===== CHAT (corrigido: botão garante click, render por papel, fallback) ===== */
+
+// chat 
 (() => {
   const { firebase } = window;
   if (!firebase || !firebase.apps.length) return;
   const db = firebase.firestore();
 
-  // --- UI
   function ensureStyles() {
     if (document.getElementById("mm-chat-styles")) return;
     const s = document.createElement("style");
@@ -384,7 +366,6 @@ let unsubSync = () => {};
       document.body.appendChild(btn);
     }
     btn.onclick = (e) => { e.preventDefault(); window.CHAT?.open(); };
-    // Fallback global (se o botão for recriado por layout)
     document.addEventListener("click", (e) => {
       const t = e.target;
       if (t?.id === "openChat" || t?.closest?.("#openChat")) {
@@ -432,7 +413,6 @@ let unsubSync = () => {};
         list.innerHTML = "";
         snap.forEach(d => {
           const m = d.data() || {};
-          // Lado decidido pelo PAPEL; se faltar, cai no senderId
           const mine = m?.role ? (m.role === this._role) : (m.senderId === this._uid);
           const row = document.createElement("div");
           row.className = "mm-row " + (mine ? "me" : "them");
@@ -465,7 +445,7 @@ let unsubSync = () => {};
 
   window.CHAT = CHAT;
 
-  // Inicializa papel automaticamente por página e faz 1º attach
+
   firebase.auth().onAuthStateChanged(() => {
     const isCliente = /statusC\.html/i.test(location.pathname);
     CHAT.init(isCliente ? "cliente" : "motorista");

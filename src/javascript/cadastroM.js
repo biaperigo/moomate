@@ -1,4 +1,3 @@
-// Configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
   authDomain: "moomate-39239.firebaseapp.com",
@@ -9,12 +8,10 @@ const firebaseConfig = {
   measurementId: "G-62J7Q8CKP4"
 };
 
-// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const auth = firebase.auth(); // <— importante
-
-// =================== Funções de formatação ===================
+const auth = firebase.auth(); 
+// formatação
 function formatarCPF(cpf) {
   cpf = cpf.replace(/\D/g, "");
   if (cpf.length > 11) cpf = cpf.substring(0, 11);
@@ -74,7 +71,7 @@ function formatarCRLV(crlv) {
   return crlv;
 }
 
-// =================== Funções de validação ===================
+// validação
 function validarCPF(cpf) {
   cpf = cpf.replace(/\D/g, "");
   if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
@@ -121,7 +118,7 @@ function validarAntecedentes(antecedentes) {
   return antecedentes.trim().length > 0 && antecedentes.trim().length <= 255;
 }
 
-// =================== ViaCEP ===================
+// api cep
 async function buscarCEP(cep) {
   try {
     cep = cep.replace(/\D/g, "");
@@ -137,14 +134,14 @@ async function buscarCEP(cep) {
   }
 }
 
-// =================== UPLOAD CLOUDINARY ===================
+// cloudinary
 async function uploadImagemCloudinary(file) {
   if (!file) return null;
   
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('upload_preset', 'moomate'); // Defina seu preset do Cloudinary
-  formData.append('cloud_name', 'dal3nktmy'); // Defina seu cloud_name do Cloudinary
+  formData.append('upload_preset', 'moomate'); 
+  formData.append('cloud_name', 'dal3nktmy'); 
 
   const response = await fetch('https://api.cloudinary.com/v1_1/dal3nktmy/upload', {
     method: 'POST',
@@ -153,18 +150,16 @@ async function uploadImagemCloudinary(file) {
 
   const data = await response.json();
   if (data.secure_url) {
-    return data.secure_url; // Retorna a URL da imagem no Cloudinary
+    return data.secure_url; 
   } else {
     throw new Error('Erro ao fazer upload da imagem');
   }
 }
 
-// =================== PREVIEW DE IMAGENS ===================
 function criarElementoPreview(inputId, previewId) {
   const input = document.getElementById(inputId);
   if (!input) return;
 
-  // Criar container de preview se não existir
   let previewContainer = document.getElementById(previewId + '-container');
   if (!previewContainer) {
     previewContainer = document.createElement('div');
@@ -201,11 +196,8 @@ function mostrarPreviewImagem(input, previewId) {
   }
 }
 
-// =================== SALVAR DADOS (Auth + Firestore) ===================
-// Ajustando a função salvarDados para garantir que todos os campos sejam salvos
 async function salvarDados(dados) {
   try {
-    // Faz o upload das imagens para o Cloudinary
     let fotoPerfilUrl = null;
     let fotoVeiculoUrl = null;
 
@@ -217,11 +209,9 @@ async function salvarDados(dados) {
       fotoVeiculoUrl = await uploadImagemCloudinary(dados.veiculo.fotoVeiculo);
     }
 
-    // Remove os arquivos dos dados e adiciona as URLs
     delete dados.dadosPessoais.fotoPerfil;
     delete dados.veiculo.fotoVeiculo;
 
-    // Atribui as URLs às propriedades dos dados
     if (fotoPerfilUrl) {
       dados.dadosPessoais.fotoPerfilUrl = fotoPerfilUrl;
     }
@@ -239,7 +229,6 @@ async function salvarDados(dados) {
     const uid = userCred.user.uid;
     dados.uid = uid;
 
-    // Salva os dados no Firestore
     await db.collection("motoristas").doc(uid).set(dados);
 
     console.log("Documento salvo com ID:", uid);
@@ -259,8 +248,8 @@ async function salvarDados(dados) {
 }
 
 
-// =================== Validação do formulário ===================
-// Função de validação para os campos obrigatórios
+//validae formulario
+
 function validarFormulario() {
   const campos = {
     nome: document.getElementById("nome").value.trim(),
@@ -305,14 +294,13 @@ function validarFormulario() {
   return true;
 }
 
-
-// =================== Listeners ===================
+//Listeners 
 document.addEventListener("DOMContentLoaded", function () {
-  // Criar elementos de preview
+  
   criarElementoPreview('foto-perfil', 'preview-foto-perfil');
   criarElementoPreview('foto-veiculo', 'preview-foto-veiculo');
 
-  // Formatação e limitação
+  
   document.getElementById("cpf").addEventListener("input", e => e.target.value = formatarCPF(e.target.value));
   document.getElementById("cep").addEventListener("input", e => e.target.value = formatarCEP(e.target.value));
   document.getElementById("telefone").addEventListener("input", e => e.target.value = formatarTelefone(e.target.value));
@@ -321,7 +309,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("cnh").addEventListener("input", e => e.target.value = formatarCNH(e.target.value));
   document.getElementById("crlv").addEventListener("input", e => e.target.value = formatarCRLV(e.target.value));
 
-  // Preview das imagens
+  
   const fotoPerfilInput = document.getElementById("foto-perfil");
   const fotoVeiculoInput = document.getElementById("foto-veiculo");
   
@@ -337,7 +325,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // ViaCEP ao sair do campo
+  // ViaCEP qnd sair 
   document.getElementById("cep").addEventListener("blur", async function (e) {
     const cep = e.target.value.replace(/\D/g, "");
     if (cep.length === 8) {
@@ -353,7 +341,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Toggle senha
   const togglePassword = document.querySelector(".toggle-password");
   if (togglePassword) {
     togglePassword.addEventListener("click", function () {
@@ -365,7 +352,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Habilitar/desabilitar botão salvar
   const inputs = document.querySelectorAll("input[required], select[required]");
   const botaoSalvar = document.getElementById("salvar-dados");
 
@@ -382,10 +368,10 @@ document.addEventListener("DOMContentLoaded", function () {
     input.addEventListener("change", verificarCampos);
   });
 
-  // ---- Opções do tipo de veículo (somente isso) ----
+
   const tipoSelect = document.getElementById("tipo-veiculo");
   if (tipoSelect) {
-    const anterior = tipoSelect.value; // tenta preservar escolha anterior
+    const anterior = tipoSelect.value; 
     const opts = [
       { value: "pequeno", label: "Caminhão 3/4 (pequeno)" },
       { value: "medio",   label: "Caminhão toco (médio)" },
@@ -401,7 +387,6 @@ document.addEventListener("DOMContentLoaded", function () {
     tipoSelect.value = ["pequeno","medio","grande"].includes(anterior) ? anterior : "pequeno";
   }
 
-  // Submit do formulário
   document.getElementById("cadastro-form").addEventListener("submit", async function (e) {
     e.preventDefault();
 
@@ -417,7 +402,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const tipoConta = document.querySelector('input[name="tipo-conta"]:checked').value;
 
-      // Obtenha os arquivos de imagem
       const fotoPerfil = document.getElementById("foto-perfil").files[0];
       const fotoVeiculo = document.getElementById("foto-veiculo").files[0];
 
@@ -427,7 +411,7 @@ document.addEventListener("DOMContentLoaded", function () {
     dataNascimento: document.getElementById("data-nascimento").value,
     cpf: document.getElementById("cpf").value,
     email: document.getElementById("email").value,
-    senha: document.getElementById("senha").value, // será removida antes de salvar
+    senha: document.getElementById("senha").value, 
     telefone: document.getElementById("telefone").value,
     endereco: {
       cep: document.getElementById("cep").value,
@@ -437,9 +421,9 @@ document.addEventListener("DOMContentLoaded", function () {
       estado: document.getElementById("estado") ? document.getElementById("estado").value : ""
     },
     fotoPerfil: fotoPerfil,
-    rg: document.getElementById("rg").value,  // Adicionando RG
-    cnh: document.getElementById("cnh").value,  // Adicionando CNH
-    antecedentes: document.getElementById("antecedentes").value  // Adicionando Antecedentes Criminais
+    rg: document.getElementById("rg").value,  
+    cnh: document.getElementById("cnh").value,  
+    antecedentes: document.getElementById("antecedentes").value  
   },
   veiculo: {
     tipo: document.getElementById("tipo-veiculo").value,
@@ -459,16 +443,11 @@ document.addEventListener("DOMContentLoaded", function () {
   status: "pendente"
 };
 
-
-      // Salvar (Auth + Firestore)
       const docId = await salvarDados(dados);
-
       alert("Cadastro realizado com sucesso! ID: " + docId);
-
-      // Limpar formulário
+    
       document.getElementById("cadastro-form").reset();
       
-      // Limpar previews das imagens
       const previewPerfil = document.getElementById("preview-foto-perfil");
       const previewVeiculo = document.getElementById("preview-foto-veiculo");
       if (previewPerfil) previewPerfil.style.display = 'none';
@@ -476,7 +455,6 @@ document.addEventListener("DOMContentLoaded", function () {
       
       verificarCampos();
 
-      // Redirecionar para login
       window.location.href = "loginM.html";
 
     } catch (error) {
@@ -489,7 +467,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Helpers extras
   function apenasNumeros(valor) { return valor.replace(/\D/g, ""); }
   function apenasLetras(valor) { return valor.replace(/[^A-Za-zÀ-ÿ\s]/g, ""); }
 

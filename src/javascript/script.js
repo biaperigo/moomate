@@ -1,5 +1,5 @@
 $(document).ready(function () {
-  // Toggle menu mobile
+
   $('#mobile_btn').on('click', function () {
     $('#mobile_menu').toggleClass('active');
     $('#mobile_btn').find('i').toggleClass('fa-x');
@@ -40,7 +40,6 @@ $(document).ready(function () {
     $(navItems[activeSectionIndex]).addClass('active');
   });
 
-  // === ScrollReveal Animations ===
   ScrollReveal().reveal('section', {
     origin: 'left',
     distance: '60px',
@@ -113,9 +112,9 @@ $(document).ready(function () {
     delay: 400
   });
 
-  // === CÓDIGO PARA O MODAL DE CADASTRO ===
+
   $(".btn-outline").on("click", function (e) {
     e.preventDefault();
-    // aqui entra o resto do código do modal...
+    
   });
-}); // <-- fechamento único do document.ready
+}); 

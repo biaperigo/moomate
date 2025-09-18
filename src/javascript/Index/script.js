@@ -1,7 +1,4 @@
-// script.js
-
 $(document).ready(function(){
-  // Toggle menu mobile
   $('#mobile_btn').on('click', function (){
     $('#mobile_menu').toggleClass('active');
     $('#mobile_btn').find('i').toggleClass('fa-x');
@@ -42,7 +39,6 @@ $(document).ready(function(){
     $(navItems[activeSectionIndex]).addClass('active');
   });
 
-  // === ScrollReveal Animations ===
   ScrollReveal().reveal('section', {
     origin: 'left',
     distance: '60px',
@@ -115,50 +111,35 @@ $(document).ready(function(){
     delay: 400
   });
 
-  // Modal
 $(document).ready(function() {
-    // CÓDIGO PARA O MODAL DE CADASTRO
     $(".btn-outline, .btn-cinza").on("click", function (e) {
         e.preventDefault();
         $("#modal-tipo-cadastro").removeClass("hidden");
     });
 
-    // Evento para redirecionar quando clicar nas opções do modal de cadastro
     $("#modal-tipo-cadastro .btn-opcao").on("click", function () {
         const destino = $(this).data("destino");
         window.location.href = destino;
     });
-
-    // Prevenir que cliques no conteúdo do modal de cadastro fechem o modal
     $("#modal-tipo-cadastro .modal-content").on("click", function (e) {
         e.stopPropagation();
     });
-
-    // Fechar modal de cadastro ao clicar fora dele
     $("#modal-tipo-cadastro").on("click", function (e) {
         if ($(e.target).is("#modal-tipo-cadastro")) {
             $(this).addClass("hidden");
         }
     });
-
-    // CÓDIGO PARA O MODAL DE LOGIN (o que eu te passei)
     $(".btn-default").on("click", function (e) {
         e.preventDefault();
         $("#modal-tipo-login").removeClass("hidden");
     });
-
-    // Evento para redirecionar quando clicar nas opções do modal de login
     $("#modal-tipo-login .btn-opcao").on("click", function () {
         const destino = $(this).data("destino");
         window.location.href = destino;
     });
-
-    // Prevenir que cliques no conteúdo do modal de login fechem o modal
     $("#modal-tipo-login .modal-content").on("click", function (e) {
         e.stopPropagation();
     });
-
-    // Fechar modal de login ao clicar fora dele
     $("#modal-tipo-login").on("click", function (e) {
         if ($(e.target).is("#modal-tipo-login")) {
             $(this).addClass("hidden");

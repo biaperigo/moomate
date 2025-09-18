@@ -1,7 +1,6 @@
 (() => {
   const pick = (...ids) => ids.map((id) => document.getElementById(id)).find((el) => !!el) || null
 
-  // ===== Seletores =====
   const origemInfoEl = pick("origemInfo")
   const destinoInfoEl = pick("destinoInfo")
   const nomeClienteEl = pick("clienteInfo", "modal-client-name")
@@ -25,7 +24,7 @@
   ;[cancelarAvaliacaoBtn, fecharModalBtn].forEach((b) => b?.addEventListener("click", $closeModal))
   if (cancelarAvaliacaoBtn) cancelarAvaliacaoBtn.style.display = "none"
 
-  // ===== Firebase =====
+  
   const firebase = window.firebase
   const db = firebase.firestore()
   let corridaId = null
@@ -53,10 +52,10 @@
     return null
   }
 
-  // ===== Map =====
+  //  Mapa
   const L = window.L
   const MAPTILER_KEY = "lRS4UV8yOp62RauVV5D7"
-  const map = L.map("map") // sem setView fixo
+  const map = L.map("map")
   L.tileLayer(`https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`, {
     attribution: "&copy; OpenStreetMap & MapTiler",
     maxZoom: 20,
@@ -66,7 +65,6 @@
   let posMotorista = null
   let fase = "indo_retirar"
 
-  // ===== Utils =====
   const km = (m) => (m / 1000).toFixed(2) + " km"
   const min = (s) => Math.max(1, Math.round(s / 60)) + " min"
 
@@ -123,7 +121,7 @@
     renderInstrucoes(route.legs[0].steps || [])
   }
 
-  // ===== Marcadores =====
+  //  Marcadores 
   function desenharMarcadores() {
     // Motorista – verde com pulse
     if (posMotorista) {
@@ -163,7 +161,7 @@
     }
   }
 
-  // ======= Firestore sync =======
+  // sync 
   const getTexto = (el) => (el && el.textContent && el.textContent.trim()) || ""
 
   async function upsertCorridaBase() {
@@ -222,7 +220,6 @@
     )
   }
 
-  // ===== Botões =====
   btnTudoPronto?.addEventListener("click", async () => {
     if (!dadosCorrida) return
     fase = "a_caminho_destino"
@@ -246,7 +243,7 @@
     ])
   })
 
-  // ===== Init =====
+  
   firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) return alert("Usuário não logado.")
     corridaId = await obterCorridaAtiva(user.uid)
@@ -257,14 +254,10 @@
   window.CHAT.attach(corridaId);
 }
 
-
-
-
-
     corridaRef = db.collection("corridas").doc(corridaId)
     syncRef = corridaRef.collection("sync").doc("estado")
 
-    // fase inicial
+
     syncRef.set({ fase: "indo_retirar" }, { merge: true })
 
     db.collection("corridas")
@@ -280,7 +273,6 @@
         await upsertCorridaBase()
         desenharMarcadores()
 
-        // >>> NÃO voltar para motorista->origem após "Tudo pronto"
         if (posMotorista) {
           if (fase === "indo_retirar" && dadosCorrida?.origem) {
             desenharRota(posMotorista, dadosCorrida.origem)
@@ -293,7 +285,6 @@
     startGeolocation()
   })
 
-  // ===== Pulse CSS =====
   const style = document.createElement("style")
   style.innerHTML = `
     @keyframes pulse { 0%{transform:scale(.9);opacity:.7} 50%{transform:scale(1.2);opacity:1} 100%{transform:scale(.9);opacity:.7} }
@@ -301,10 +292,10 @@
   document.head.appendChild(style)
 })()
 
-// ===== Avaliação - Estrelas =====
+//  Avaliação  
 let ratingAtual = 0
-// ===== Avaliação - Estrelas (robusto, não quebra o JS) =====
-window.ratingAtual = 0; // mantém compatibilidade com o restante do código
+
+window.ratingAtual = 0; 
 (() => {
   const stars = document.querySelectorAll(".rating-stars .star");
   if (!stars || stars.length === 0) return;
@@ -322,14 +313,13 @@ window.ratingAtual = 0; // mantém compatibilidade com o restante do código
   });
 })();
 
-/* ===== CHAT EMBUTIDO (cole este bloco no final do arquivo) ===== */
-/* ===== CHAT (corrigido: botão garante click, render por papel, fallback) ===== */
+
+//  chat
 (() => {
   const { firebase } = window;
   if (!firebase || !firebase.apps.length) return;
   const db = firebase.firestore();
 
-  // --- UI
   function ensureStyles() {
     if (document.getElementById("mm-chat-styles")) return;
     const s = document.createElement("style");
@@ -382,7 +372,6 @@ window.ratingAtual = 0; // mantém compatibilidade com o restante do código
       document.body.appendChild(btn);
     }
     btn.onclick = (e) => { e.preventDefault(); window.CHAT?.open(); };
-    // Fallback global (se o botão for recriado por layout)
     document.addEventListener("click", (e) => {
       const t = e.target;
       if (t?.id === "openChat" || t?.closest?.("#openChat")) {
@@ -430,7 +419,6 @@ window.ratingAtual = 0; // mantém compatibilidade com o restante do código
         list.innerHTML = "";
         snap.forEach(d => {
           const m = d.data() || {};
-          // Lado decidido pelo PAPEL; se faltar, cai no senderId
           const mine = m?.role ? (m.role === this._role) : (m.senderId === this._uid);
           const row = document.createElement("div");
           row.className = "mm-row " + (mine ? "me" : "them");
@@ -463,7 +451,6 @@ window.ratingAtual = 0; // mantém compatibilidade com o restante do código
 
   window.CHAT = CHAT;
 
-  // Inicializa papel automaticamente por página e faz 1º attach
   firebase.auth().onAuthStateChanged(() => {
     const isCliente = /statusC\.html/i.test(location.pathname);
     CHAT.init(isCliente ? "cliente" : "motorista");
