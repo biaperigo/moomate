@@ -31,6 +31,13 @@ body {
   padding-top: 20px;
   border-top: 1px solid #eee;
 }
+.motorista-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 
 .proposta-card {
   background-color: #f9f9f9;

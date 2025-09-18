@@ -4,19 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rota do Motorista</title>
-
-  <!-- Leaflet 1.9.4 -->
+  
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Leaflet Routing Machine (ok manter, mesmo sem uso direto no JS) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-
-  <!-- Font Awesome -->
+  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
-  <!-- Seu CSS -->
   <link rel="stylesheet" href="src/styles/rotaM.css">
 </head>
 <body>
@@ -40,16 +36,13 @@
     </div>
   </header>
 
-  <!-- Mapa -->
   <div id="map"></div>
 
-  <!-- Instruções de navegação -->
   <div id="route-instructions" class="waze-instructions">
     <h4>📍 Próximas instruções</h4>
     <ol id="directionsList"><li>Carregando instruções…</li></ol>
   </div>
 
-  <!-- Informações da Corrida -->
   <div class="ride-info">
     <div class="ride-details">
       <h3>🚗 Informações da Corrida</h3>
@@ -66,14 +59,13 @@
         </button>
         <button id="btnFinalizar" class="action-btn success" style="display:none;">
           <i class="fas fa-flag-checkered"></i> Corrida concluída
-
         </button>
         
       </div>
     </div>
   </div>
 
-  <!-- Modal de Avaliação do Usuário -->
+
   <div id="user-rating-modal" class="modal" style="display:none;">
     <div class="modal-content">
       <div class="modal-header">
@@ -133,7 +125,6 @@
     </div>
   </footer>
 
-  <!-- Firebase compat -->
   <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
@@ -150,13 +141,7 @@
     firebase.initializeApp(firebaseConfig);
   </script>
 
-  <!-- JS da página (usa ids acima) -->
   <script src="src/javascript/rotaM.js"></script>
-    <!-- JS da página (usa ids acima) -->
- <!-- JS da página -->
-
-
-
-
+ 
 </body>
 </html>

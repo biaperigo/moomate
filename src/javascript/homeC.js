@@ -375,7 +375,7 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 }
 
 // ================= Propostas em tempo real (inline) ============
-function ouvirPropostas(entregaId) {
+async function ouvirPropostas(entregaId) {
   if (!db || !entregaId) return;
 
   db.collection("entregas")
@@ -395,27 +395,37 @@ function ouvirPropostas(entregaId) {
         return;
       }
 
-      // cache: evita buscar mesmo motorista várias vezes
+      // cache: evita buscar o mesmo motorista várias vezes
       const cacheMotoristas = {};
 
-      // pega nome + foto do Firestore (motoristas/{uid})
+      // Função para buscar o motorista pelo ID (motoristaUid)
       async function getMotorista(uid) {
+        console.log("Buscando motorista com ID:", uid); // Log para verificar o ID do motorista
         if (!uid) return { nome: "Motorista", foto: null };
+
         if (cacheMotoristas[uid]) return cacheMotoristas[uid];
+
         try {
           const snap = await db.collection("motoristas").doc(uid).get();
-          if (!snap.exists) return { nome: "Motorista", foto: null };
+          if (!snap.exists) {
+            console.log("Motorista não encontrado com ID:", uid); // Log se o motorista não for encontrado
+            return { nome: "Motorista", foto: null };
+          }
           const data = snap.data();
           const nome = data?.dadosPessoais?.nome || data?.nome || "Motorista";
-          const foto = data?.dadosPessoais?.foto || data?.foto || null;
+          const foto = data?.dadosPessoais?.fotoPerfilUrl || data?.fotoPerfilUrl || null;
+
+          console.log("Foto do motorista (fotoPerfilUrl):", foto); // Log para verificar a URL da foto
+
           cacheMotoristas[uid] = { nome, foto };
           return cacheMotoristas[uid];
-        } catch {
+        } catch (error) {
+          console.error("Erro ao carregar dados do motorista:", error);
           return { nome: "Motorista", foto: null };
         }
       }
 
-      // formata data Firestore Timestamp ou ISO
+      // Formata a data de envio (Firestore Timestamp ou ISO)
       const fmtData = (v) => {
         try {
           if (v && typeof v.toDate === "function") return v.toDate().toLocaleString();
@@ -424,21 +434,13 @@ function ouvirPropostas(entregaId) {
         return "";
       };
 
-      // iniciais para fallback
-      const iniciaisDe = (nome) => {
-        if (!nome) return "??";
-        const parts = nome.trim().split(/\s+/).filter(Boolean);
-        const first = parts[0]?.[0] || "";
-        const last  = parts.length > 1 ? parts[parts.length - 1][0] : (parts[0]?.[1] || "");
-        return (first + last).toUpperCase();
-      };
-
       lista.innerHTML = "";
       for (const doc of snapshot.docs) {
         const p = doc.data();
 
         // compatibilidade: pode vir motoristaUid OU motoristaId (legado)
         const uidMotorista = p.motoristaUid || p.motoristaId || "";
+        console.log("ID do motorista na proposta:", uidMotorista); // Log para verificar o ID do motorista
 
         // se a proposta já trouxe nome/foto, usamos; senão buscamos
         let nomeMotorista = p.nomeMotorista || "";
@@ -450,9 +452,10 @@ function ouvirPropostas(entregaId) {
           if (fotoMotorista === undefined) fotoMotorista = info.foto;
         }
 
+        // Se a foto do motorista estiver disponível, exibe a foto; caso contrário, nada é exibido.
         const avatarHtml = fotoMotorista
-          ? `<img src="${fotoMotorista}" alt="${nomeMotorista}">`
-          : `<span class="motorista-iniciais">${iniciaisDe(nomeMotorista)}</span>`;
+          ? `<img src="${fotoMotorista}" alt="${nomeMotorista}" class="motorista-avatar">`
+          : ''; // Se não houver foto, não exibe nada.
 
         const card = document.createElement("div");
         card.className = "proposta-card inline";
