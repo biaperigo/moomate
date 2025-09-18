@@ -152,42 +152,7 @@ input[type="password"] {
   font-size: 1.4rem;
 }
 
-/* Estilo do campo de senha e nova senha */
-input[type="password"] {
-  padding-right: 40px; /* Para acomodar o ícone de editar */
-}
 
-/* Estilo do botão de salvar */
-.btn-salvar {
-  width: 100%;
-  padding: 1rem;
-  background-color: #ff6c0c;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  margin-top: 1rem;
-}
-
-.btn-salvar:hover {
-  background-color: #e66b00;
-}
-
-/* Estilo do campo de nova senha */
-.input-nova-senha {
-  width: 100%;
-  padding: 0.8rem;
-  border: 2px solid #ff6c0c;
-  border-radius: 8px;
-  font-size: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.input-nova-senha:focus {
-  outline: none;
-  border-color: #e66b00;
-}
 
 /* RESPONSIVO */
 @media (max-width: 768px) {

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
   <link rel="stylesheet" href="src/styles/dadospessoaisM.css" />
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
-</head>
+ </head>
 <body data-role="motorista">
 
   <!-- HEADER -->
@@ -39,44 +39,210 @@
   <div class="profile-container">
     <main class="profile-main">
 
-      <h2 class="section-title">Informações Pessoais</h2>
-
       <div class="profile-item">
         <span>Foto de perfil</span>
-        <img id="fotoPerfil" src="src/images/default-profile.png" alt="Foto de perfil" />
-        <input type="file" id="inputFoto" style="display: none;" />
-        <button class="edit-btn" onclick="editField('fotoPerfil')"><i class="fa-solid fa-paintbrush"></i></button>
+        <div class="profile-image-container">
+          <img id="fotoPerfil" src="src/images/default-profile.png" alt="Foto de perfil" />
+          <div class="edit-overlay">
+            <i class="fa-solid fa-camera"></i>
+            <input type="file" id="inputFotoPerfil" accept="image/*" />
+          </div>
+        </div>
+        <img id="previewFotoPerfil" class="image-preview" style="display:none;" alt="Preview Foto Perfil"/>
       </div>
 
       <div class="left-side">
-        <div class="profile-item"><span>Nome completo</span><span id="nome"></span><button class="edit-btn" onclick="editField('nome')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Data de nascimento</span><span id="dataNascimento"></span><button class="edit-btn" onclick="editField('dataNascimento')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>CPF</span><span id="cpf"></span><button class="edit-btn" onclick="editField('cpf')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Email</span><span id="email"></span><button class="edit-btn" onclick="editField('email')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Telefone</span><span id="telefone"></span><button class="edit-btn" onclick="editField('telefone')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>CEP</span><span id="cep"></span><button class="edit-btn" onclick="editField('cep')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Rua</span><span id="rua"></span><button class="edit-btn" onclick="editField('rua')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Bairro</span><span id="bairro"></span><button class="edit-btn" onclick="editField('bairro')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Cidade</span><span id="cidade"></span><button class="edit-btn" onclick="editField('cidade')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Estado</span><span id="estado"></span><button class="edit-btn" onclick="editField('estado')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item editable-field" data-field="nome">
+          <span>Nome completo</span>
+          <span class="display-value" id="nome"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="dataNascimento">
+          <span>Data de nascimento</span>
+          <span class="display-value" id="dataNascimento"></span>
+          <input type="date" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="cpf">
+          <span>CPF</span>
+          <span class="display-value" id="cpf"></span>
+          <input type="text" class="edit-input"  disabled readonly /> <!-- CPF geralmente não é editável -->
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-lock edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="email">
+          <span>Email</span>
+          <span class="display-value" id="email"></span>
+          <input type="email" class="edit-input"  disabled readonly /> <!-- Email geralmente não é editável -->
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-lock edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="telefone">
+          <span>Telefone</span>
+          <span class="display-value" id="telefone"></span>
+          <input type="tel" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="cep">
+          <span>CEP</span>
+          <span class="display-value" id="cep"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="rua">
+          <span>Rua</span>
+          <span class="display-value" id="rua"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="bairro">
+          <span>Bairro</span>
+          <span class="display-value" id="bairro"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="cidade">
+          <span>Cidade</span>
+          <span class="display-value" id="cidade"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="estado">
+          <span>Estado</span>
+          <span class="display-value" id="estado"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
       </div>
 
       <div class="right-side">
         <h2 class="section-title"><i class="fa-solid fa-id-card"></i> Documentação</h2>
-        <div class="profile-item"><span>RG</span><span id="rg"></span><button class="edit-btn" onclick="editField('rg')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>CNH</span><span id="cnh"></span><button class="edit-btn" onclick="editField('cnh')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Antecedentes criminais</span><span id="antecedentes"></span><button class="edit-btn" onclick="editField('antecedentes')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item editable-field" data-field="rg">
+          <span>RG</span>
+          <span class="display-value" id="rg"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="cnh">
+          <span>CNH</span>
+          <span class="display-value" id="cnh"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="antecedentes">
+          <span>Antecedentes criminais</span>
+          <span class="display-value" id="antecedentes"></span>
+          <textarea class="edit-input"></textarea>
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
 
         <h2 class="section-title"><i class="fa-solid fa-truck"></i> Informações do Veículo</h2>
-        <div class="profile-item"><span>Tipo de veículo</span><span id="tipoVeiculo"></span><button class="edit-btn" onclick="editField('tipoVeiculo')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Placa</span><span id="placa"></span><button class="edit-btn" onclick="editField('placa')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>CRLV</span><span id="crlv"></span><button class="edit-btn" onclick="editField('crlv')"><i class="fa-solid fa-paintbrush"></i></button></div>
-        <div class="profile-item"><span>Ano</span><span id="ano"></span><button class="edit-btn" onclick="editField('ano')"><i class="fa-solid fa-paintbrush"></i></button></div>
+        <div class="profile-item editable-field" data-field="tipoVeiculo">
+          <span>Tipo de veículo</span>
+          <span class="display-value" id="tipoVeiculo"></span>
+          <select class="edit-input">
+            <option value="pequeno">Caminhão 3/4 (pequeno)</option>
+            <option value="medio">Caminhão toco (médio)</option>
+            <option value="grande">Caminhão truck (grande)</option>
+          </select>
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="placa">
+          <span>Placa</span>
+          <span class="display-value" id="placa"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="crlv">
+          <span>CRLV</span>
+          <span class="display-value" id="crlv"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
+        <div class="profile-item editable-field" data-field="ano">
+          <span>Ano</span>
+          <span class="display-value" id="ano"></span>
+          <input type="text" class="edit-input" />
+          <div class="edit-actions">
+            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
+            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+        </div>
 
         <div class="profile-item">
           <span>Foto do veículo</span>
-          <img id="fotoVeiculo" src="src/images/caminhao.png" alt="Veículo" />
-          <button class="edit-btn" onclick="editField('fotoVeiculo')"><i class="fa-solid fa-paintbrush"></i></button>
+          <div class="vehicle-image-container">
+            <img id="fotoVeiculo" src="src/images/caminhao.png" alt="Veículo" />
+            <div class="edit-overlay">
+              <i class="fa-solid fa-camera"></i>
+              <input type="file" id="inputFotoVeiculo" accept="image/*" />
+            </div>
+          </div>
+          <img id="previewFotoVeiculo" class="image-preview" style="display:none;" alt="Preview Foto Veículo"/>
         </div>
       </div>
 
@@ -91,3 +257,4 @@
   <script src="src/javascript/dadospessoaisM.js"></script>
 </body>
 </html>
+
