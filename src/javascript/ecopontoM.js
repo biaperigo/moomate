@@ -432,7 +432,7 @@ const ecopontos = [
       },
       {
         nome: "Ecoponto Silvio Bittencourt",
-        endereco: "Rua Maria Amália Lopes Azevedo, nº 4008 – Bairro: Vila Albertina",
+        endereco: "Rua Maria Amália Lopes Azevedo, nº 4026 – Bairro: Vila Albertina",
         cep: "02350-003",
         recebeGesso: false,
         lat: -23.5000,
@@ -1022,7 +1022,302 @@ const ecopontos = [
         recebeGesso: true,
         lat: -23.5891,
         lng: -46.5644,
-      }
+      },
+// sorocaba
+      {
+        nome: "Ecoponto Vila Helena",
+        endereco: "Rua Roque Sampaio, nº 100 - Vila Helena - Sorocaba",
+        cep: "18052-000",
+        recebeGesso: false,
+        lat: -23.5010,
+        lng: -47.4700,
+      },
+      {
+        nome: "Ecoponto Cajuru",
+        endereco: "Rua Mário Monteiro de Carvalho, s/n - Sorocaba",
+        cep: "18052-000",
+        recebeGesso: false,
+        lat: -23.5015,
+        lng: -47.4705,
+      },
+      {
+        nome: "Ecoponto Júlio de Mesquita Neto",
+        endereco: "Avenida Domingos Martins Vieira, s/n - Sorocaba",
+        cep: "18052-000",
+        recebeGesso: false,
+        lat: -23.5018,
+        lng: -47.4708
+      },
+         {
+        nome: "Ecoponto Vila Isabel",
+        endereco: "Rua Lourenço Molinero, nº 200 - Sorocaba",
+        cep: "18052-000",
+        recebeGesso: false,
+        lat: -23.5022,
+        lng: -47.4712
+      },
+       // Ribeirão Preto
+  {
+    nome: "Ecoponto Jardim Santos Dumont",
+    endereco: "Rua Guará, nº 2225 - Ribeirão Preto",
+    cep: "14055-000",
+    recebeGesso: false,
+    lat: -21.1725,
+    lng: -47.8108
+  },
+  {
+    nome: "Ecoponto Jardim Centenário",
+    endereco: "Rua Alexandre Balbo, s/n - Ribeirão Preto",
+    cep: "14070-000",
+    recebeGesso: false,
+    lat: -21.1845,
+    lng: -47.8042
+  },
+  {
+    nome: "Ecoponto Jardim das Palmeiras II",
+    endereco: "Rua Poeta Fernando Pessoa, nº 15 - Ribeirão Preto",
+    cep: "14090-000",
+    recebeGesso: false,
+    lat: -21.1798,
+    lng: -47.8056
+  },
+  {
+    nome: "Ecoponto Jardim Paiva",
+    endereco: "Avenida Senador Teotônio Vilella, nº 1285 - Ribeirão Preto",
+    cep: "14090-000",
+    recebeGesso: false,
+    lat: -21.1789,
+    lng: -47.8049
+  },
+  {
+    nome: "Ecoponto Jardim São Fernando",
+    endereco: "Avenida Miguel Padulla, nº 400 - Ribeirão Preto",
+    cep: "14090-000",
+    recebeGesso: false,
+    lat: -21.1770,
+    lng: -47.8035
+  },
+  {
+    nome: "Ecoponto Adelino Simioni",
+    endereco: "Avenida General Euclides Figueiredo, nº 120 - Ribeirão Preto",
+    cep: "14090-000",
+    recebeGesso: false,
+    lat: -21.1755,
+    lng: -47.8020
+  },
+  {
+    nome: "Ecoponto Conjunto Habitacional Alexandre Balbo",
+    endereco: "Avenida Ettore e Aurora Corauci, nº 1375 - Ribeirão Preto",
+    cep: "14090-000",
+    recebeGesso: false,
+    lat: -21.1740,
+    lng: -47.8015
+  },
+  
+   // Itu
+  {
+    nome: "Ecoponto Jardim das Rosas",
+    endereco: "Avenida das Rosas, nº 1800 - Itu",
+    cep: "13300-000",
+    recebeGesso: false,
+    lat: -23.1810,
+    lng: -47.2980
+  },
+  {
+    nome: "Ecoponto Jardim Santa Rosa",
+    endereco: "Rua Antenor Faustino, nº 567 - Itu",
+    cep: "13300-000",
+    recebeGesso: false,
+    lat: -23.1790,
+    lng: -47.2960
+  },
+  {
+    nome: "Ecoponto Jardim União",
+    endereco: "Avenida Ernesto Rodrigues, nº 80 - Itu",
+    cep: "13300-000",
+    recebeGesso: false,
+    lat: -23.1770,
+    lng: -47.2940
+  },
+  {
+    nome: "Ecoponto Jardim São Judas",
+    endereco: "Avenida Antônio Almeida Sampaio, nº 201 - Itu",
+    cep: "13300-000",
+    recebeGesso: false,
+    lat: -23.1750,
+    lng: -47.2920
+  },
+  {
+    nome: "Ecoponto Jardim Aeroporto",
+    endereco: "Avenida Abílio Piunti, nº 300 - Itu",
+    cep: "13300-000",
+    recebeGesso: false,
+    lat: -23.1730,
+    lng: -47.2900
+  },
+  {
+    nome: "Ecoponto Jardim Padre Bento",
+    endereco: "Avenida Carolina Cardin Piunti, nº 251 - Itu",
+    cep: "13300-000",
+    recebeGesso: false,
+    lat: -23.1710,
+    lng: -47.2880
+  },
+  {
+    nome: "Ecoponto Parque Almeida Jr",
+    endereco: "Avenida do Parque, nº 251 - Itu",
+    cep: "13300-000",
+    recebeGesso: false,
+    lat: -23.1690,
+    lng: -47.2860
+  },
+  // Bauru
+  {
+    nome: "Ecoponto Jardim Redentor/Geisel",
+    endereco: "Rua Noé Onofre Teixeira, quadra 3 - Bauru",
+    cep: "17000-000",
+    recebeGesso: true,
+    lat: -22.3145,
+    lng: -49.0700
+  },
+  {
+    nome: "Ecoponto Pousada I",
+    endereco: "Rua 41, quadra 1 - Bauru",
+    cep: "17000-000",
+    recebeGesso: false,
+    lat: -22.3125,
+    lng: -49.0680
+  },
+  {
+    nome: "Ecoponto Edson Francisco da Silva",
+    endereco: "Rua Dulce Duarte Carrijo, quadra 4 - Bauru",
+    cep: "17000-000",
+    recebeGesso: false,
+    lat: -22.3105,
+    lng: -49.0660
+  },
+  {
+    nome: "Ecoponto Parque Viaduto",
+    endereco: "Rua Bernardino de Campos, quadra 28 - Bauru",
+    cep: "17000-000",
+    recebeGesso: false,
+    lat: -22.3085,
+    lng: -49.0640
+  },
+  {
+    nome: "Ecoponto Mary Dota",
+    endereco: "Rua Américo Finazzi, quadra 4 - Bauru",
+    cep: "17000-000",
+    recebeGesso: false,
+    lat: -22.3075,
+    lng: -49.0620
+  },
+  // campinas 
+ {
+    nome: "Ecoponto Barão Geraldo",
+    endereco: "Av. Santa Isabel, s/n - Campinas",
+    cep: "13083-000",
+    recebeGesso: false,
+    lat: -22.8500,
+    lng: -47.0500
+  },
+  {
+    nome: "Ecoponto Região Central / Vila Industrial",
+    endereco: "Rua Francisco Theodoro, nº 1.050 - Campinas",
+    cep: "13025-000",
+    recebeGesso: false,
+    lat: -23.1897,
+    lng: -46.8978
+  },
+  {
+    nome: "Ecoponto Jardim Pacaembu",
+    endereco: "Rua Dante Suriane esquina Av. Padre Gaspar Bertoni, s/n - Campinas",
+    cep: "13060-000",
+    recebeGesso: false,
+    lat: -23.1950,
+    lng: -46.8980
+  },
+  {
+    nome: "Ecoponto Jardim Eulina",
+    endereco: "Av. Marechal Rondon esquina com Rua José Manuel Veiga, s/n - Campinas",
+    cep: "13056-000",
+    recebeGesso: false,
+    lat: -23.2010,
+    lng: -46.8975
+  },
+  {
+    nome: "Ecoponto Jardim Satélite",
+    endereco: "Rua Estrela Dalva, nº 135 - Campinas",
+    cep: "12245-030",
+    recebeGesso: false,
+    lat: -22.9111,
+    lng: -45.9000
+  },
+  {
+    nome: "Ecoponto Galo Branco",
+    endereco: "Av. Benedito Luiz Medeiros, nº 811 - Campinas",
+    cep: "12245-030",
+    recebeGesso: false,
+    lat: -22.9100,
+    lng: -45.9000
+  },
+  {
+    nome: "Ecoponto Novo Horizonte",
+    endereco: "Rua dos Topógrafos esquina Av. Tancredo Neves, s/n - Campinas",
+    cep: "12245-030",
+    recebeGesso: false,
+    lat: -22.9100,
+    lng: -45.9000
+  },
+  {
+    nome: "Ecoponto Copacabana",
+    endereco: "Rua Charles Diamond (em frente à Praça Joaquim Figueira de Andrade), s/n - Campinas",
+    cep: "12245-030",
+    recebeGesso: false,
+    lat: -22.9100,
+    lng: -45.9000
+  },
+  {
+    nome: "Ecoponto Jardim Santa Luzia",
+    endereco: "Av. Vicente Brandão, nº 293 - Campinas",
+    cep: "12245-030",
+    recebeGesso: false,
+    lat: -22.9100,
+    lng: -45.9000
+  },
+  {
+    nome: "Ecoponto Altos de Santana",
+    endereco: "Av. Alto do Rio Doce, nº 1075 - Campinas",
+    cep: "12245-030",
+    recebeGesso: false,
+    lat: -22.9100,
+    lng: -45.9000
+  },
+  {
+    nome: "Ecoponto Vila Jaci",
+    endereco: "Esquinas das ruas Xavantes e João Batista Lopes, s/n - Campinas",
+    cep: "12245-030",
+    recebeGesso: false,
+    lat: -22.9100,
+    lng: -45.9000
+  },
+  {
+    nome: "Ecoponto Martins Pereira",
+    endereco: "Rua Ana Gonçalves da Cunha, s/n - Campinas",
+    cep: "12245-030",
+    recebeGesso: false,
+    lat: -22.9100,
+    lng: -45.9000
+  },
+  {
+    nome: "Ecoponto São Francisco Xavier",
+    endereco: "Rua Joaquim Cláudio da Silva, s/n - Campinas",
+    cep: "12245-030",
+    recebeGesso: false,
+    lat: -22.9100,
+    lng: -45.9000
+  }
+
 ];
 
 

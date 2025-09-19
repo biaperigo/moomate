@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ouvirAceitacaoPropostas();
   });
 
- 
   const deliveryList = document.getElementById('delivery-list');
   const loadingMessage = document.getElementById('loading-message');
   const submitBtn = document.getElementById('submitBtn');
@@ -45,7 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let selectedEntregaId = null;
   const fallbackMotoristaId = `motorista_${Math.random().toString(36).substr(2, 9)}`;
-  const entregasCache = {}; 
+  
+  const todasSolicitacoes = new Map();
   let currentBounds = null;
 
   (function fillHelpers() {
@@ -57,8 +57,38 @@ document.addEventListener('DOMContentLoaded', () => {
       proposalHelpersInput.appendChild(opt);
     }
   })();
-
-  // preço 
+async function geocodificarEndereco(endereco) {
+  if (!endereco) return null;
+  
+  try {
+    const searchQuery = endereco.includes('SP') || endereco.includes('São Paulo') ? 
+      endereco : endereco + ', São Paulo, Brasil';
+    
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=1&countrycodes=br`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data && data.length > 0) {
+      const result = data[0];
+      const lat = parseFloat(result.lat);
+      const lng = parseFloat(result.lon);
+      
+      // Verificar se está dentro dos limites de SP
+      if (lat >= -25.30 && lat <= -19.80 && lng >= -53.10 && lng <= -44.20) {
+        return {
+          lat: lat,
+          lng: lng,
+          endereco: result.display_name
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao geocodificar endereço:', error);
+  }
+  
+  return null;
+}
+  // Calcular preço 
   function calcPriceBoundsFromDistance(distKm) {
     const base = 24 * (Number(distKm) || 0); 
     const min = Math.max(0, base - 150);
@@ -83,94 +113,165 @@ document.addEventListener('DOMContentLoaded', () => {
     return hint;
   }
 
-  //  Carregar Entregas 
-  function carregarEntregas() {
-    // mudança
+  // Função principal p carregar todas as entregas
+  function carregarTodasSolicitacoes() {
+    console.log('Iniciando listeners para todas as solicitações...');
+    
     db.collection('entregas')
-      .orderBy('criadoEm', 'desc')
-      .onSnapshot(snapshot => processSnapshot(snapshot, 'mudanca'));
+      .where('status', 'in', ['aguardando_propostas', 'pendente', 'ativo', 'disponivel'])
+      .onSnapshot(snapshot => {
+        console.log(' Mudanças recebidas:', snapshot.size);
+        processarSnapshot(snapshot, 'mudanca');
+      });
 
-    // descartes
     db.collection('descartes')
-      .orderBy('dataEnvio', 'desc')
-      .onSnapshot(snapshot => processSnapshot(snapshot, 'descarte'));
-
-    loadingMessage.textContent = 'Aguardando novas solicitações...';
-    loadingMessage.style.display = 'block';
-    deliveryList.innerHTML = '';
-    deliveryList.appendChild(loadingMessage);
+      .where('status', 'in', ['aguardando_propostas', 'pendente', 'ativo', 'disponivel'])
+      .onSnapshot(snapshot => {
+        console.log('Descartes recebidos:', snapshot.size);
+        processarSnapshot(snapshot, 'descarte');
+      });
   }
 
-  function processSnapshot(snapshot, tipo) {
-    if (snapshot.empty && Object.keys(entregasCache).length === 0) {
-        loadingMessage.textContent = 'Nenhum pedido disponível no momento.';
-        return;
-    }
-
-    loadingMessage.style.display = 'none';
-
+  function processarSnapshot(snapshot, tipo) {
     snapshot.docChanges().forEach(change => {
-        const entregaId = change.doc.id;
-        const entregaData = change.doc.data();
+      const id = change.doc.id;
+      const data = change.doc.data();
 
-        if (change.type === 'removed') {
-            delete entregasCache[entregaId];
-            const cardToRemove = deliveryList.querySelector(`[data-entrega-id="${entregaId}"]`);
-            if (cardToRemove) cardToRemove.remove();
-            return;
+      if (change.type === 'removed') {
+        todasSolicitacoes.delete(id);
+      } else {
+        let dataOrdenacao = Date.now();
+        if (data.criadoEm) {
+          dataOrdenacao = data.criadoEm.toDate ? data.criadoEm.toDate().getTime() : new Date(data.criadoEm).getTime();
+        } else if (data.dataEnvio) {
+          dataOrdenacao = data.dataEnvio.toDate ? data.dataEnvio.toDate().getTime() : new Date(data.dataEnvio).getTime();
         }
 
-        entregasCache[entregaId] = { ...entregaData, tipo };
-        
-        const existingCard = deliveryList.querySelector(`[data-entrega-id="${entregaId}"]`);
-        if(existingCard) existingCard.remove();
-
-        const card = criarCardEntrega(entregaId, { ...entregaData, tipo });
-        deliveryList.prepend(card); 
+        todasSolicitacoes.set(id, {
+          ...data,
+          tipo,
+          id,
+          dataOrdenacao
+        });
+      }
     });
+
+    atualizarInterface();
   }
 
-function criarCardEntrega(entregaId, entregaData) {
-  const isDescarte = entregaData.tipo === 'descarte';
-  const iconClass = isDescarte ? 'fa-recycle' : 'fa-box-open';
-  const badgeClass = isDescarte ? 'recycle' : 'box';
-  const card = document.createElement('div');
-  card.className = 'delivery-card';
-  card.dataset.entregaId = entregaId;
-  card.dataset.tipoEntrega = entregaData.tipo;
-  const origem = entregaData.origem?.endereco || entregaData.localRetirada || 'Origem não informada';
-  const destino = entregaData.destino?.endereco || entregaData.localEntrega || 'Destino não informado';
-  const complemento = entregaData.origem?.complemento || '';
-  const distancia = entregaData.distancia ? `${Number(entregaData.distancia).toFixed(2)} km` : '---';
-  const volumes = entregaData.volumes ?? '---';
-  const tipoVeiculo = entregaData.tipoVeiculo || entregaData.tipoCaminhao || '---';
+  function atualizarInterface() {
+    loadingMessage.style.display = 'none';
+    deliveryList.innerHTML = '';
 
-  card.innerHTML = `
-    <strong>${isDescarte ? 'Descarte' : 'Entrega'} #${entregaId.substring(0, 6)}</strong>
-    <div class="info-container">
-      <div class="info-esquerda">
-        <p><strong>Origem:</strong> ${origem} ${complemento ? '- ' + complemento : ''}</p>
-        <p><strong>Destino:</strong> ${destino}</p>
+    if (todasSolicitacoes.size === 0) {
+      loadingMessage.textContent = 'Nenhum pedido disponível no momento.';
+      loadingMessage.style.display = 'block';
+      deliveryList.appendChild(loadingMessage);
+      return;
+    }
+    const solicitacoesOrdenadas = Array.from(todasSolicitacoes.values())
+      .sort((a, b) => b.dataOrdenacao - a.dataOrdenacao);
+
+    solicitacoesOrdenadas.forEach(solicitacao => {
+      const card = criarCardEntrega(solicitacao);
+      deliveryList.appendChild(card);
+    });
+
+    console.log(`📋 Interface atualizada: ${solicitacoesOrdenadas.length} solicitações`);
+  }
+
+  function criarCardEntrega(solicitacao) {
+    const isDescarte = solicitacao.tipo === 'descarte';
+    const iconClass = isDescarte ? 'fa-recycle' : 'fa-box-open';
+    const badgeClass = isDescarte ? 'recycle' : 'box';
+    
+    const card = document.createElement('div');
+    card.className = 'delivery-card';
+    card.dataset.entregaId = solicitacao.id;
+    card.dataset.tipoEntrega = solicitacao.tipo;
+    
+    let origem = '';
+    if (isDescarte) {
+      origem = solicitacao.localRetirada || solicitacao.origem?.endereco || 'Origem não informada';
+    } else {
+      origem = solicitacao.origem?.endereco || solicitacao.localRetirada || 'Origem não informada';
+    }
+    
+    let destino = '';
+    if (isDescarte) {
+      destino = solicitacao.localEntrega || solicitacao.destino?.endereco || 'Destino não informado';
+    } else {
+      destino = solicitacao.destino?.endereco || solicitacao.localEntrega || 'Destino não informado';
+    }
+    
+    const complemento = !isDescarte && solicitacao.origem?.complemento ? solicitacao.origem.complemento : '';
+    
+    let distancia = '---';
+    if (solicitacao.distancia && solicitacao.distancia > 0) {
+      distancia = `${Number(solicitacao.distancia).toFixed(2)} km`;
+    } else if (isDescarte) {
+      distancia = 'A calcular';
+    }
+    
+    let volumes = '';
+    if (isDescarte) {
+      volumes = solicitacao.descricao ? 
+        (solicitacao.descricao.length > 30 ? solicitacao.descricao.substring(0, 30) + '...' : solicitacao.descricao)
+        : 'Não informado';
+    } else {
+      volumes = solicitacao.volumes ? `${solicitacao.volumes} itens` : '---';
+    }
+      
+    const tipoVeiculo = solicitacao.tipoVeiculo || solicitacao.tipoCaminhao || '---';    
+    const tempoPostagem = getTempoPostagem(solicitacao);
+
+    card.innerHTML = `
+      <strong>${isDescarte ? 'Descarte' : 'Entrega'} #${solicitacao.id.substring(0, 6)}</strong>
+      <div class="tempo-postagem">${tempoPostagem}</div>
+      <div class="info-container">
+        <div class="info-esquerda">
+          <p><strong>Origem:</strong> ${origem} ${complemento ? '- ' + complemento : ''}</p>
+          <p><strong>Destino:</strong> ${destino}</p>
+        </div>
+        <div class="info-meio">
+          <p><strong>Distância:</strong> ${distancia}</p>
+          <p><strong>${isDescarte ? 'Descrição' : 'Volumes'}:</strong> ${volumes}</p>
+          <p><strong>Tipo de veículo:</strong> ${tipoVeiculo}</p>
+        </div>
+        <div class="info-direita">
+          <span class="icon-area ${badgeClass}"><i class="fa-solid ${iconClass}"></i></span>
+        </div>
       </div>
-      <div class="info-meio">
-        <p><strong>Distância:</strong> ${distancia}</p>
-        <p><strong>Volumes:</strong> ${complemento}</p>
-        <p><strong>Tipo de veículo:</strong> ${tipoVeiculo}</p>
-      </div>
-      <div class="info-meio">
-        <span class="icon-area ${badgeClass}"><i class="fa-solid ${iconClass}"></i></span>
-      </div>
-    </div>
-  `;
-  return card;
-}
+    `;
+    return card;
+  }
+
+  function getTempoPostagem(solicitacao) {
+    try {
+      const agora = new Date();
+      const dataPostagem = new Date(solicitacao.dataOrdenacao);
+      const diffMs = agora - dataPostagem;
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      
+      if (diffMins < 1) return 'Agora';
+      if (diffMins < 60) return `${diffMins}min atrás`;
+      
+      const diffHoras = Math.floor(diffMins / 60);
+      if (diffHoras < 24) return `${diffHoras}h atrás`;
+      
+      const diffDias = Math.floor(diffHoras / 24);
+      return `${diffDias}d atrás`;
+    } catch (error) {
+      return 'Agora';
+    }
+  }
 
   function abrirModal() {
     if (!selectedEntregaId) return alert("Selecione um pedido!");
-    const entrega = entregasCache[selectedEntregaId];
-    if (!entrega) return alert("Dados da entrega não encontrados.");
+    const solicitacao = todasSolicitacoes.get(selectedEntregaId);
+    if (!solicitacao) return alert("Dados da entrega não encontrados.");
 
-    const distKm = entrega.distancia || 0;
+    const distKm = solicitacao.distancia || 0;
     currentBounds = calcPriceBoundsFromDistance(distKm);
 
     proposalPriceInput.value = "";
@@ -199,7 +300,6 @@ function criarCardEntrega(entregaId, entregaData) {
     }, 300);
   }
 
-  //  Enviar proposta 
   function enviarProposta() {
     const precoBase = parseFloat((proposalPriceInput.value || "").replace(",", "."));
     const tempoChegada = parseInt(proposalTimeInput.value, 10);
@@ -217,7 +317,7 @@ function criarCardEntrega(entregaId, entregaData) {
 
     const custoAjudantes = numAjudantes * 50;
     const precoTotalMotorista = precoBase + custoAjudantes;
-    const precoFinalCliente = precoTotalMotorista * 1.10; // +10% plataforma
+    const precoFinalCliente = precoTotalMotorista * 1.10;
 
     const idParaUsar = motoristaUid || fallbackMotoristaId;
     const propostaData = {
@@ -235,9 +335,8 @@ function criarCardEntrega(entregaId, entregaData) {
       nomeMotorista: nomeMotoristaReal || `Motorista ${fallbackMotoristaId.substring(10, 15)}`
     };
 
-    const card = deliveryList.querySelector(`[data-entrega-id="${selectedEntregaId}"]`);
-    const tipoEntrega = card ? card.dataset.tipoEntrega : 'mudanca';
-    const collectionName = tipoEntrega === 'descarte' ? 'descartes' : 'entregas';
+    const solicitacao = todasSolicitacoes.get(selectedEntregaId);
+    const collectionName = solicitacao.tipo === 'descarte' ? 'descartes' : 'entregas';
 
     db.collection(collectionName)
       .doc(selectedEntregaId)
@@ -245,7 +344,6 @@ function criarCardEntrega(entregaId, entregaData) {
       .doc(idParaUsar)
       .set(propostaData)
       .then(() => {
-
         return db.collection(collectionName)
           .doc(selectedEntregaId)
           .update({
@@ -265,6 +363,7 @@ function criarCardEntrega(entregaId, entregaData) {
         alert("Falha ao enviar proposta, tente novamente.");
       });
   }
+
   function ensureModalPropostaAceita(){
     let modal = document.getElementById('propostaAceitaModal');
     if (modal) return modal;
@@ -291,6 +390,7 @@ function criarCardEntrega(entregaId, entregaData) {
     modal.addEventListener('click',(e)=>{ if(e.target===modal) fecharModalPropostaAceita(); });
     return modal;
   }
+  
   function abrirModalPropostaAceita(){
     const modal = ensureModalPropostaAceita();
     modal.style.display = 'flex';
@@ -299,6 +399,7 @@ function criarCardEntrega(entregaId, entregaData) {
       modal.querySelector('.modal-content').style.transform = 'scale(1)';
     });
   }
+  
   function fecharModalPropostaAceita(){
     const modal = document.getElementById('propostaAceitaModal');
     if (!modal) return;
@@ -309,35 +410,252 @@ function criarCardEntrega(entregaId, entregaData) {
 
   function ouvirAceitacaoPropostas() {
     const idParaUsar = motoristaUid || fallbackMotoristaId;
+    
+   
     db.collection('entregas')
       .where('status', '==', 'proposta_aceita')
-      .where('propostaAceita.motoristaId', '==', idParaUsar)
       .onSnapshot(snapshot => {
         snapshot.docChanges().forEach(ch => {
           if (ch.type !== 'added' && ch.type !== 'modified') return;
           const entregaId = ch.doc.id;
           const entregaData = ch.doc.data();
-          mostrarModalPropostaAceita(entregaId, entregaData, 'entregas');
+          
+          const propostaAceita = entregaData.propostaAceita;
+          if (propostaAceita && (propostaAceita.motoristaId === idParaUsar || propostaAceita.motoristaUid === idParaUsar)) {
+            todasSolicitacoes.delete(entregaId);
+            atualizarInterface();
+            mostrarModalPropostaAceita(entregaId, entregaData, 'entregas');
+          }
         });
       });
 
+  
     db.collection('descartes')
       .where('status', '==', 'aceito')
-      .where('propostaAceita.motoristaId', '==', idParaUsar)
       .onSnapshot(snapshot => {
         snapshot.docChanges().forEach(ch => {
           if (ch.type !== 'added' && ch.type !== 'modified') return;
-          const entregaId = ch.doc.id;
-          const entregaData = ch.doc.data();
-          mostrarModalPropostaAceita(entregaId, entregaData, 'descartes');
+          const descarteId = ch.doc.id;
+          const descarteData = ch.doc.data();
+          
+          const propostaAceita = descarteData.propostaAceita;
+          if (propostaAceita && (propostaAceita.motoristaId === idParaUsar || propostaAceita.motoristaUid === idParaUsar)) {
+          
+            todasSolicitacoes.delete(descarteId);
+            atualizarInterface();
+            mostrarModalPropostaAceitaDescarte(descarteId, descarteData);
+          }
         });
       });
-  }
+}
+
+
+function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
+    const nomeCliente = descarteData.clienteNome || descarteData.clienteId || "Cliente";
+    const origem = descarteData.localRetirada || descarteData.origem?.endereco || 'Não informado';
+    const destino = descarteData.localEntrega || descarteData.destino?.endereco || 'Não informado';
+    const valor = Number(descarteData.propostaAceita?.preco || 0).toFixed(2);
+    const tempo = descarteData.propostaAceita?.tempoChegada || 0;
+
+    const modalExistente = document.getElementById('modalPropostaAceitaDescarte');
+    if (modalExistente) {
+        modalExistente.remove();
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'modalPropostaAceitaDescarte';
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999;opacity:1;';
+    
+    modal.innerHTML = `
+        <div class="modal-content proposta-aceita-style" style="width:min(520px,92vw);background:#fff;border-radius:12px;padding:20px;border:3px solid #ff6b35;">
+            <div class="modal-header" style="text-align:center;margin-bottom:20px;">
+                <h3 style="color:#ff6b35;margin:0;"><i class="fa-solid fa-check-circle" style="color:#28a745;margin-right:8px;"></i> Proposta Aceita</h3>
+            </div>
+            <div class="modal-body">
+                <div class="proposta-info" style="margin-bottom:20px;">
+                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Origem:</strong> <span style="color:#666;">${origem}</span></p>
+                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Destino:</strong> <span style="color:#666;">${destino}</span></p>
+                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Valor para o cliente:</strong> <span style="color:#333;font-weight:600;">R$ ${valor}</span></p>
+                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Tempo até a retirada:</strong> <span style="color:#333;">${tempo} min</span></p>
+                </div>
+                <div class="modal-actions" style="display:flex;gap:12px;justify-content:center;">
+                    <button id="btnIniciarCorridaDescarte" style="padding:12px 20px;background:#ff6b35;border:0;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;flex:1;max-width:200px;">
+                        <i class="fa-solid fa-truck" style="margin-right:6px;"></i> Iniciar Corrida
+                    </button>
+                    <button id="btnRecusarCorridaDescarte" style="padding:12px 20px;background:#6c757d;border:0;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;flex:1;max-width:200px;">
+                        <i class="fa-solid fa-times" style="margin-right:6px;"></i> Recusar Corrida
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    
+    document.getElementById('btnIniciarCorridaDescarte').onclick = () => iniciarCorridaDescarte(descarteId, descarteData, nomeCliente);
+    document.getElementById('btnRecusarCorridaDescarte').onclick = () => recusarCorridaDescarte(descarteId);
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            if (confirm('Deseja recusar esta corrida?')) {
+                recusarCorridaDescarte(descarteId);
+            }
+        }
+    });
+}
+
+async function iniciarCorridaDescarte(descarteId, descarteData, nomeCliente) {
+    try {
+        console.log('Iniciando corrida de descarte:', descarteId);
+        
+        // Geocodificar origem se não tiver coordenadas
+        let origemCoords = null;
+        if (descarteData.origem?.coordenadas?.lat && descarteData.origem?.coordenadas?.lng) {
+            origemCoords = descarteData.origem.coordenadas;
+        } else if (descarteData.localRetirada) {
+            const geocoded = await geocodificarEndereco(descarteData.localRetirada);
+            if (geocoded) {
+                origemCoords = { lat: geocoded.lat, lng: geocoded.lng };
+                
+                // Atualizar o documento com as coordenadas
+                await db.collection('descartes').doc(descarteId).update({
+                    'origem.coordenadas': origemCoords
+                });
+            }
+        }
+        
+        // Geocodificar destino se não tiver coordenadas
+        let destinoCoords = null;
+        if (descarteData.destino?.coordenadas?.lat && descarteData.destino?.coordenadas?.lng) {
+            destinoCoords = descarteData.destino.coordenadas;
+        } else if (descarteData.localEntrega) {
+            const geocoded = await geocodificarEndereco(descarteData.localEntrega);
+            if (geocoded) {
+                destinoCoords = { lat: geocoded.lat, lng: geocoded.lng };
+                
+                await db.collection('descartes').doc(descarteId).update({
+                    'destino.coordenadas': destinoCoords
+                });
+            }
+        }
+        
+        const origemData = {
+            endereco: descarteData.localRetirada || '',
+            numero: descarteData.numero || '',
+            complemento: descarteData.complemento || '',
+            cep: descarteData.cep || '',
+            lat: origemCoords?.lat || null,
+            lng: origemCoords?.lng || null,
+        };
+        
+        const destinoData = {
+            endereco: descarteData.localEntrega || '',
+            numero: '',
+            complemento: '',
+            lat: destinoCoords?.lat || null,
+            lng: destinoCoords?.lng || null,
+        };
+
+        // Calcular distância se as coordenadas estiverem disponíveis
+        let distancia = null;
+        if (origemCoords && destinoCoords) {
+            const R = 6371; 
+            const dLat = (destinoCoords.lat - origemCoords.lat) * Math.PI / 180;
+            const dLon = (destinoCoords.lng - origemCoords.lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                     Math.cos(origemCoords.lat * Math.PI / 180) * Math.cos(destinoCoords.lat * Math.PI / 180) * 
+                     Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            distancia = R * c; // Distância em km
+        }
+
+        const corridaData = {
+            entregaId: descarteId,
+            tipo: 'descarte',
+            status: 'em_andamento',
+            iniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
+            clienteId: descarteData.clienteId || null,
+            clienteNome: nomeCliente || 'Cliente',
+            motoristaId: motoristaUid || fallbackMotoristaId,
+            nomeMotorista: nomeMotoristaReal || 'Motorista',
+            origem: origemData,
+            destino: destinoData,
+            distancia: distancia,
+            preco: Number(descarteData.propostaAceita?.preco || 0),
+            tempoChegada: descarteData.propostaAceita?.tempoChegada || 0,
+            ajudantes: descarteData.propostaAceita?.ajudantes || 0,
+            veiculo: descarteData.propostaAceita?.veiculo || descarteData.tipoVeiculo || descarteData.tipoCaminhao || '',
+            criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+      
+        const corridaRef = db.collection('corridas').doc(descarteId);
+        await corridaRef.set(corridaData, { merge: true });
+        await corridaRef.collection('sync').doc('estado').set({ 
+            fase: 'indo_retirar',
+            corridaId: descarteId,
+            tipo: 'descarte'
+        }, { merge: true });
+        
+        await db.collection('descartes').doc(descarteId).update({
+            status: 'em_corrida',
+            corridaIniciada: true,
+            corridaIniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
+            motoristaConfirmou: true,
+            distancia: distancia
+        });
+
+
+        todasSolicitacoes.delete(descarteId);
+        atualizarInterface();
+
+        localStorage.setItem('corridaSelecionada', descarteId);
+        localStorage.setItem('ultimaCorridaMotorista', descarteId);   
+        document.getElementById('modalPropostaAceitaDescarte')?.remove();
+        window.location.href = `rotaM.html?corrida=${encodeURIComponent(descarteId)}`;
+        
+    } catch (error) {
+        console.error('Erro ao iniciar corrida de descarte:', error);
+        alert('Erro ao iniciar corrida. Tente novamente.');
+    }
+}
+
+async function recusarCorridaDescarte(descarteId) {
+    try {
+        console.log('Recusando corrida de descarte:', descarteId);
+        
+        await db.collection('descartes').doc(descarteId).update({
+            status: 'pendente',
+            propostaAceita: null,
+            motoristaEscolhido: null,
+            recusadaEm: firebase.firestore.FieldValue.serverTimestamp(),
+            recusadaPor: motoristaUid || fallbackMotoristaId,
+            motoristaRecusou: true
+        });
+      
+        document.getElementById('modalPropostaAceitaDescarte').remove();
+        
+        alert('Corrida recusada. A solicitação voltará para a lista de disponíveis.');
+        
+    } catch (error) {
+        console.error('Erro ao recusar corrida de descarte:', error);
+    }
+}
 
   function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
     const nomeCliente = entregaData.clienteNome || "Cliente";
-    const origem = entregaData.origem?.endereco || entregaData.localRetirada || '';
-    const destino = entregaData.destino?.endereco || entregaData.localEntrega || '';
+    
+    let origem, destino;
+    if (collectionName === 'descartes') {
+      origem = entregaData.localRetirada || entregaData.origem?.endereco || '';
+      destino = entregaData.localEntrega || entregaData.destino?.endereco || '';
+    } else {
+      origem = entregaData.origem?.endereco || entregaData.localRetirada || '';
+      destino = entregaData.destino?.endereco || entregaData.localEntrega || '';
+    }
+    
     const valor = Number(entregaData.propostaAceita?.preco || 0).toFixed(2);
     const tempo = entregaData.propostaAceita?.tempoChegada || 0;
 
@@ -354,65 +672,147 @@ function criarCardEntrega(entregaId, entregaData) {
     document.getElementById('btnRecusarCorrida').onclick = () => recusarCorridaAposAceite(entregaId, collectionName);
   }
 
-async function iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName) {
-  try {
-    const corridaData = {
-      entregaId,
-      status: 'em_andamento',
-      iniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
-      clienteId: entregaData.clienteId || null,
-      clienteNome: nomeCliente || entregaData.clienteNome || 'Cliente',
-      motoristaId: motoristaUid || fallbackMotoristaId,
-      nomeMotorista: nomeMotoristaReal || 'Motorista',
-      origem: {
-        endereco: entregaData.origem?.endereco || entregaData.localRetirada || '',
-        numero: entregaData.origem?.numero || '',
-        complemento: entregaData.origem?.complemento || '',
-        cep: entregaData.origem?.cep || entregaData.cep || '',
-        lat: entregaData.origem?.coordenadas?.lat || null,
-        lng: entregaData.origem?.coordenadas?.lng || null,
-      },
-      destino: {
-        endereco: entregaData.destino?.endereco || entregaData.localEntrega || '',
-        numero: entregaData.destino?.numero || '',
-        complemento: entregaData.destino?.complemento || '',
-        lat: entregaData.destino?.coordenadas?.lat || null,
-        lng: entregaData.destino?.coordenadas?.lng || null,
-      },
-      preco: Number(entregaData.propostaAceita?.preco || 0),
-      tempoChegada: entregaData.propostaAceita?.tempoChegada || 0,
-      ajudantes: entregaData.propostaAceita?.ajudantes || 0,
-      veiculo: entregaData.propostaAceita?.veiculo || entregaData.tipoVeiculo || '',
-      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-    };
+ async function iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName) {
+    try {
+        let origemData, destinoData;
+        
+        if (collectionName === 'descartes') {
+           
+            return await iniciarCorridaDescarte(entregaId, entregaData, nomeCliente);
+        }
+        
+        // Para entregas regulares
+        let origemCoords = null;
+        if (entregaData.origem?.coordenadas?.lat && entregaData.origem?.coordenadas?.lng) {
+            origemCoords = entregaData.origem.coordenadas;
+        } else if (entregaData.origem?.endereco || entregaData.localRetirada) {
+            const endereco = entregaData.origem?.endereco || entregaData.localRetirada;
+            const geocoded = await geocodificarEndereco(endereco);
+            if (geocoded) {
+                origemCoords = { lat: geocoded.lat, lng: geocoded.lng };
+                
+                // Atualizar o documento com as coordenadas
+                await db.collection('entregas').doc(entregaId).update({
+                    'origem.coordenadas': origemCoords
+                });
+            }
+        }
+        
+        let destinoCoords = null;
+        if (entregaData.destino?.coordenadas?.lat && entregaData.destino?.coordenadas?.lng) {
+            destinoCoords = entregaData.destino.coordenadas;
+        } else if (entregaData.destino?.endereco || entregaData.localEntrega) {
+            const endereco = entregaData.destino?.endereco || entregaData.localEntrega;
+            const geocoded = await geocodificarEndereco(endereco);
+            if (geocoded) {
+                destinoCoords = { lat: geocoded.lat, lng: geocoded.lng };
+                
+        
+                await db.collection('entregas').doc(entregaId).update({
+                    'destino.coordenadas': destinoCoords
+                });
+            }
+        }
 
-    const corridaRef = db.collection('corridas').doc(entregaId);
+        origemData = {
+            endereco: entregaData.origem?.endereco || entregaData.localRetirada || '',
+            numero: entregaData.origem?.numero || '',
+            complemento: entregaData.origem?.complemento || '',
+            cep: entregaData.origem?.cep || entregaData.cep || '',
+            lat: origemCoords?.lat || null,
+            lng: origemCoords?.lng || null,
+        };
+        
+        destinoData = {
+            endereco: entregaData.destino?.endereco || entregaData.localEntrega || '',
+            numero: entregaData.destino?.numero || '',
+            complemento: entregaData.destino?.complemento || '',
+            lat: destinoCoords?.lat || null,
+            lng: destinoCoords?.lng || null,
+        };
 
-    await corridaRef.set(corridaData, { merge: true });
-    await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
-    await db.collection(collectionName).doc(entregaId).delete();
+        // Calcular distância
+        let distancia = null;
+        if (origemCoords && destinoCoords) {
+            const R = 6371;
+            const dLat = (destinoCoords.lat - origemCoords.lat) * Math.PI / 180;
+            const dLon = (destinoCoords.lng - origemCoords.lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                     Math.cos(origemCoords.lat * Math.PI / 180) * Math.cos(destinoCoords.lat * Math.PI / 180) * 
+                     Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            distancia = R * c;
+        }
 
-    localStorage.setItem('corridaSelecionada', entregaId);
-    localStorage.setItem('ultimaCorridaMotorista', entregaId);
-    window.location.href = `rotaM.html?corrida=${encodeURIComponent(entregaId)}`;
-  } catch (error) {
-    console.error('Erro ao iniciar corrida:', error);
-    alert('Erro ao iniciar corrida. Tente novamente.');
-  }
+        const corridaData = {
+            entregaId,
+            tipo: 'mudanca',
+            status: 'em_andamento',
+            iniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
+            clienteId: entregaData.clienteId || null,
+            clienteNome: nomeCliente || entregaData.clienteNome || 'Cliente',
+            motoristaId: motoristaUid || fallbackMotoristaId,
+            nomeMotorista: nomeMotoristaReal || 'Motorista',
+            origem: origemData,
+            destino: destinoData,
+            distancia: distancia,
+            preco: Number(entregaData.propostaAceita?.preco || 0),
+            tempoChegada: entregaData.propostaAceita?.tempoChegada || 0,
+            ajudantes: entregaData.propostaAceita?.ajudantes || 0,
+            veiculo: entregaData.propostaAceita?.veiculo || entregaData.tipoVeiculo || entregaData.tipoCaminhao || '',
+            criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        const corridaRef = db.collection('corridas').doc(entregaId);
+        await corridaRef.set(corridaData, { merge: true });
+        await corridaRef.collection('sync').doc('estado').set({ 
+            fase: 'indo_retirar',
+            corridaId: entregaId,
+            tipo: 'mudanca'
+        }, { merge: true });
+        
+        await db.collection('entregas').doc(entregaId).update({
+            status: 'em_corrida',
+            corridaIniciada: true,
+            corridaIniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
+            motoristaConfirmou: true,
+            distancia: distancia
+        });
+
+        todasSolicitacoes.delete(entregaId);
+        atualizarInterface();
+
+        localStorage.setItem('corridaSelecionada', entregaId);
+        localStorage.setItem('ultimaCorridaMotorista', entregaId);
+
+        fecharModalPropostaAceita();
+        window.location.href = `rotaM.html?corrida=${encodeURIComponent(entregaId)}`;
+        
+    } catch (error) {
+        console.error('Erro ao iniciar corrida:', error);
+        alert('Erro ao iniciar corrida. Tente novamente.');
+    }
 }
   async function recusarCorridaAposAceite(entregaId, collectionName) {
     try {
       await db.collection(collectionName).doc(entregaId).update({
-        status: 'recusada_pelo_motorista',
+        status: collectionName === 'descartes' ? 'pendente' : 'aguardando_propostas',
+        propostaAceita: null,
+        motoristaEscolhido: null,
         recusadaEm: firebase.firestore.FieldValue.serverTimestamp(),
-        recusadaPor: motoristaUid || fallbackMotoristaId
+        recusadaPor: motoristaUid || fallbackMotoristaId,
+        motoristaRecusou: true
       });
+      
+      alert('Corrida recusada. A solicitação voltará para a lista de disponíveis.');
     } catch (error) {
       console.error('Erro ao recusar a corrida:', error);
     } finally {
       fecharModalPropostaAceita();
     }
   }
+
+  // Event listeners
   deliveryList.addEventListener('click', e => {
     const card = e.target.closest('.delivery-card');
     if (card) {
@@ -430,5 +830,13 @@ async function iniciarCorrida(entregaId, entregaData, nomeCliente, collectionNam
     if (e.target === proposalModal) fecharModal();
   });
 
-  carregarEntregas();
+  // Atualizar quando a página volta ao foco
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      setTimeout(atualizarInterface, 1000);
+    }
+  });
+
+  // Inicializar
+  carregarTodasSolicitacoes();
 });
