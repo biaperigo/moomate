@@ -7,47 +7,45 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
-  <link rel="stylesheet" href="src/styles/configuraçõesM.css" />
+  <link rel="stylesheet" href="src/styles/configuracoesC.css" />
 </head>
 <body>
 
   <header class="top-bar">
-      <div class="logo-area">
-        <img src="src/images/favicon.png" alt="Logo Moomate" />
-      </div>
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate" />
+    </div>
 
-      <nav class="nav-links" id="navMenu">
+    <nav class="nav-links" id="navMenu">
       <a href="homeM.html">Home</a>
-      <a href="entregasM.html">Entregas</a>
+      <a href="pedidosM.html">Pedidos</a>
       <a href="carteiraM.html">Carteira</a>
       <a href="suporteM.html">Suporte</a>
       <a href="ecopontosM.html">Pontos de coleta</a>
     </nav>
-
     <div class="header-icons">
       <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
       <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
       <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
-      
       <button class="menu-toggle" id="menuToggle">
         <i class="fa-solid fa-bars"></i>
       </button>
     </div>
-
-</header>
+  </header>
 
   <main class="config-container">
     <h1 class="title">Configurações</h1>
 
     <section class="config-section">
       <h2 class="section-title">Conta</h2>
-      <div class="config-item">
-        <span>Mudar senha</span>
-        <i class="fa-solid fa-chevron-right"></i>
+
+      <div class="form-group">
+        <label for="senhaAtual">Digite sua senha</label>
+        <input type="password" id="senhaAtual" name="senhaAtual" required>
       </div>
-      <div class="config-item">
-        <span>Sair</span>
-        <i class="fa-solid fa-chevron-right"></i>
+      <div class="form-group">
+        <label for="novaSenha">Digite sua nova senha</label>
+        <input type="password" id="novaSenha" name="novaSenha" required>
       </div>
     </section>
 
@@ -61,12 +59,13 @@
           <span class="slider"></span>
         </label>
       </div>
-      
+
       <div class="config-item">
         <span>Sobre Moomate</span>
         <i class="fa-solid fa-chevron-right"></i>
       </div>
     </section>
+    <button class="btn-sair">Sair</button>
   </main>
 
   <footer>
@@ -93,8 +92,9 @@
       </span>
     </div>
   </footer>
-
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="src/javascript/configuraçõesM.js"></script>
-
-</body> 
+</body>
 </html>
