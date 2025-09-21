@@ -35,15 +35,37 @@
     </div>
 
 </header>
-
   <main class="suporte-container">
     <h1 class="title">Tópicos</h1>
 
+<main class="suporte-container">
+    <h1 class="title">Tópicos</h1>
+
     <div class="topics">
-      <div class="topic"><span class="title-topic">Aceitar corridas</span><p>Como funciona...</p></div>
-      <div class="topic"><span class="title-topic">Pagamentos</span><p>Como recebo, como acompanhar ganhos...</p></div>
-      <div class="topic"><span class="title-topic">Veículo</span><p>Requisitos do caminhão...</p></div>
-      <div class="topic" id="abrir-feedback"><span class="title-topic">Feedback</span><p>Conte o que acha do nós.</p></div>
+      <div class="topic" id="aceitar-corridas">
+        <span class="title-topic">Aceitar corridas</span>
+         <div class="topic-explanation" id="explanation-aceitar-corridas" style="display: none;">
+          <p>Para aceitar uma corrida no Moomate, primeiro acesse a home da plataforma e selecione a corrida mais próxima de você. Verifique os detalhes, como local de retirada e entrega, e, em seguida, informe sua proposta de valor, que será baseada em uma faixa de preço recomendada pela plataforma, levando em consideração o tempo e a distância da viagem. Após definir o valor, envie sua proposta e aguarde a aceitação do cliente. Se sua proposta for aceita, a corrida será confirmada e você poderá iniciar o transporte. </p>
+        </div>
+      </div>
+
+      <div class="topic" id="pagamentos">
+        <span class="title-topic">Pagamentos</span>
+        <div class="topic-explanation" id="explanation-pagamentos" style="display: none;">
+          <p>O dinheiro referente à corrida será creditado na sua carteira Moomate assim que o pagamento do cliente for confirmado, que pode ser feito via Pix, cartões de débito ou cartões de crédito. Assim, após a conclusão da viagem e o pagamento, o valor ficará disponível para você retirar ou utilizar conforme preferir. </p>
+        </div>
+      </div>
+
+      <div class="topic" id="veículo">
+        <span class="title-topic">Veículo</span>
+        <div class="topic-explanation" id="explanation-veiculo" style="display: none;">
+          <p>Durante o cadastro, informe o tipo do seu veículo para que o sistema possa filtrar e enviar apenas as corridas que se encaixam nas características do seu veículo. Assim, você receberá apenas as oportunidades que correspondem ao tamanho e tipo de transporte que você pode oferecer, facilitando a escolha das viagens mais adequadas para você.</p>
+        </div>
+      </div>
+
+      <div class="topic" id="abrir-feedback">
+        <span class="title-topic">Feedback</span>
+        <p>Conte o que acha do nós.</p></div>
     </div>
 
     <section id="sobre">
@@ -54,7 +76,7 @@
         <div class="team-member">
           <img src="src/images/Maria Eduarda Augusto.JPG" alt="Maria Eduarda Augusto" class="team-photo">
           <h3 class="team-name">Maria Eduarda Augusto</h3>
-          <p class="team-role">Analista de Projeto</p>
+          <p class="team-role">CEO e Analista de Projeto</p>
         </div>
         <div class="team-member">
           <img src="src/images/Gabriel Massao.JPG" alt="Gabriel Massao" class="team-photo">
@@ -75,13 +97,12 @@
     </section>
   </main>
 
-  
   <div id="modal-feedback" class="modal hidden">
     <div class="modal-content">
       <h2>Nos envie um feedback</h2>
       <p>Fale conosco por e-mail clicando no botão abaixo:</p>
-      <a class="btn-email" href="mailto:suporte@moomate.com?subject=Feedback%20sobre%20o%20app%20Moomate&body=Olá%2C%20gostaria%20de%20enviar%20o%20seguinte%20feedback%3A" target="_blank">
-        Enviar email para suporte@moomate.com
+      <a class="btn-email" href="mailto:moomateoficial@gmail.com?subject=Feedback%20sobre%20o%20app%20Moomate&body=Olá%2C%20gostaria%20de%20enviar%20o%20seguinte%20feedback%3A" target="_blank">
+        Enviar email para moomateoficial@gmail.com
       </a>
       <button id="fechar-modal">Fechar</button>
     </div>

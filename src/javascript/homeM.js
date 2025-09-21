@@ -16,6 +16,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let motoristaUid = null;
   let nomeMotoristaReal = "Motorista";
+  const STORAGE_SEL_UID = 'motorista.uid.selecionado';
+  const STORAGE_SEL_NOME = 'motorista.nome.selecionado';
+
+  function salvarSelecaoMotorista(uid, nome){
+    try { localStorage.setItem(STORAGE_SEL_UID, uid||''); localStorage.setItem(STORAGE_SEL_NOME, nome||''); } catch{}
+  }
+  function lerSelecaoMotorista(){
+    try {
+      const uid = localStorage.getItem(STORAGE_SEL_UID) || '';
+      const nome = localStorage.getItem(STORAGE_SEL_NOME) || '';
+      return (uid && nome) ? { uid, nome } : null;
+    } catch { return null; }
+  }
+
+  async function buscarMotoristasPorNome(term){
+    try{
+      const out=[];
+      // Tenta ordenar por 'nome' (raiz), depois por 'dadosPessoais.nome', senão pega sem ordenação
+      const tryRoot = await db.collection('motoristas').orderBy('nome').limit(30).get().catch(()=>null);
+      const tryDP   = tryRoot?.docs?.length ? null : await db.collection('motoristas').orderBy('dadosPessoais.nome').limit(30).get().catch(()=>null);
+      const lista = tryRoot?.docs?.length ? tryRoot.docs : (tryDP?.docs?.length ? tryDP.docs : (await db.collection('motoristas').limit(30).get()).docs);
+      const low = (term||'').toLowerCase();
+      lista.forEach(d=>{
+        const data = d.data()||{};
+        const nome = data?.nome || data?.dadosPessoais?.nome || d.id;
+        const foto = data?.fotoPerfilUrl || data?.dadosPessoais?.fotoPerfilUrl || null;
+        if(!term || nome.toLowerCase().includes(low)) out.push({ uid:d.id, nome, foto });
+      });
+      return out;
+    }catch(e){ console.warn('[homeM] buscarMotoristasPorNome falhou:', e?.message||e); return []; }
+  }
+
+  async function selecionarMotoristaInterativo(){
+    const termo = prompt('Buscar motorista por nome (deixe vazio para listar alguns):') || '';
+    const itens = await buscarMotoristasPorNome(termo);
+    if(!itens.length){ alert('Nenhum motorista encontrado.'); return null; }
+    const texto = itens.map((m,i)=>`${i+1}) ${m.nome} — ${m.uid}`).join('\n');
+    const idxStr = prompt(`Escolha o número do motorista:\n\n${texto}`);
+    const idx = Number(idxStr)-1;
+    if(Number.isNaN(idx) || idx<0 || idx>=itens.length){ alert('Seleção inválida.'); return null; }
+    const escolhido = itens[idx];
+    salvarSelecaoMotorista(escolhido.uid, escolhido.nome);
+    return escolhido;
+  }
 
   auth.onAuthStateChanged(async (user) => {
     if (!user) return; 
@@ -205,14 +249,59 @@ async function geocodificarEndereco(endereco) {
     }
     
     const complemento = !isDescarte && solicitacao.origem?.complemento ? solicitacao.origem.complemento : '';
-    
+
     let distancia = '---';
     if (solicitacao.distancia && solicitacao.distancia > 0) {
       distancia = `${Number(solicitacao.distancia).toFixed(2)} km`;
     } else if (isDescarte) {
-      distancia = 'A calcular';
+      // Calcular localmente com heurística sem chamadas externas
+      const getNum = (v) => (v === undefined || v === null ? null : Number(v));
+      const oLat = getNum(solicitacao.origem?.lat ?? solicitacao.origem?.coordenadas?.lat);
+      const oLng = getNum(solicitacao.origem?.lng ?? solicitacao.origem?.coordenadas?.lng);
+      const dLat = getNum(solicitacao.destino?.lat ?? solicitacao.destino?.coordenadas?.lat);
+      const dLng = getNum(solicitacao.destino?.lng ?? solicitacao.destino?.coordenadas?.lng);
+
+      const R = 6371;
+      const toRad = (deg) => deg * Math.PI / 180;
+      const haversine = (lat1, lon1, lat2, lon2) => {
+        const dPhi = toRad(lat2 - lat1);
+        const dLam = toRad(lon2 - lon1);
+        const a = Math.sin(dPhi/2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLam/2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      };
+
+      // Centro aproximado do Estado de São Paulo (lat/lng aproximados)
+      const SP_CENTER = { lat: -22.1900, lng: -48.7900 };
+
+      if (
+        typeof oLat === 'number' && !Number.isNaN(oLat) &&
+        typeof oLng === 'number' && !Number.isNaN(oLng) &&
+        typeof dLat === 'number' && !Number.isNaN(dLat) &&
+        typeof dLng === 'number' && !Number.isNaN(dLng)
+      ) {
+        const distKm = haversine(oLat, oLng, dLat, dLng);
+        distancia = `${distKm.toFixed(2)} km`;
+      } else if (
+        typeof dLat === 'number' && !Number.isNaN(dLat) &&
+        typeof dLng === 'number' && !Number.isNaN(dLng)
+      ) {
+        // Sem origem: usar centro da cidade -> destino
+        const distKm = haversine(SP_CENTER.lat, SP_CENTER.lng, dLat, dLng);
+        distancia = `${distKm.toFixed(2)} km (aprox.)`;
+      } else if (
+        typeof oLat === 'number' && !Number.isNaN(oLat) &&
+        typeof oLng === 'number' && !Number.isNaN(oLng)
+      ) {
+        // Sem destino: usar origem -> centro da cidade
+        const distKm = haversine(oLat, oLng, SP_CENTER.lat, SP_CENTER.lng);
+        distancia = `${distKm.toFixed(2)} km (aprox.)`;
+      } else {
+        // Sem nenhuma coord: distância aproximada média intra-SP
+        distancia = `10.00 km (aprox.)`;
+      }
     }
-    
+
     let volumes = '';
     if (isDescarte) {
       volumes = solicitacao.descricao ? 
@@ -234,7 +323,7 @@ async function geocodificarEndereco(endereco) {
           <p><strong>Destino:</strong> ${destino}</p>
         </div>
         <div class="info-meio">
-          <p><strong>Distância:</strong> ${distancia}</p>
+          <p><strong>Distância:</strong> <span class="distancia-valor" data-id="${solicitacao.id}">${distancia}</span></p>
           <p><strong>${isDescarte ? 'Descrição' : 'Volumes'}:</strong> ${volumes}</p>
           <p><strong>Tipo de veículo:</strong> ${tipoVeiculo}</p>
         </div>
@@ -243,7 +332,91 @@ async function geocodificarEndereco(endereco) {
         </div>
       </div>
     `;
+    // Não chamar geocodificação no homeM para evitar erros e lentidão
     return card;
+  }
+
+  
+
+  async function calcularDistanciaDescarteParaCard(solicitacao, cardEl) {
+    try {
+      // Guard: evita chamadas duplicadas para o mesmo card
+      if (cardEl.dataset.calcDistRunning === '1') return;
+      cardEl.dataset.calcDistRunning = '1';
+
+      console.log('[homeM] Calcular distância (card)', {
+        id: solicitacao.id,
+        origemEnd: solicitacao.origem?.endereco || solicitacao.localRetirada,
+        destinoEnd: solicitacao.destino?.endereco || solicitacao.localEntrega
+      });
+
+      const distSpan = cardEl.querySelector('.distancia-valor');
+      if (!distSpan) return;
+
+      // Pegar coordenadas já existentes
+      const getNum = (v) => (v === undefined || v === null ? null : Number(v));
+      let oLat = getNum(solicitacao.origem?.lat ?? solicitacao.origem?.coordenadas?.lat);
+      let oLng = getNum(solicitacao.origem?.lng ?? solicitacao.origem?.coordenadas?.lng);
+      let dLat = getNum(solicitacao.destino?.lat ?? solicitacao.destino?.coordenadas?.lat);
+      let dLng = getNum(solicitacao.destino?.lng ?? solicitacao.destino?.coordenadas?.lng);
+
+      console.log('[homeM] Coords iniciais', { oLat, oLng, dLat, dLng });
+
+      // Se faltar alguma coordenada, tentar geocodificar pelo endereço
+      const precisaOrigem = !(typeof oLat === 'number' && !Number.isNaN(oLat) && typeof oLng === 'number' && !Number.isNaN(oLng));
+      const precisaDestino = !(typeof dLat === 'number' && !Number.isNaN(dLat) && typeof dLng === 'number' && !Number.isNaN(dLng));
+
+      const enderecoOrigem = solicitacao.origem?.endereco || solicitacao.localRetirada || '';
+      const enderecoDestino = solicitacao.destino?.endereco || solicitacao.localEntrega || '';
+
+      // Geocodificar faltantes com orçamento curto
+      const TIMEOUT_MS = 1200;
+      const withTimeout = (promise, ms) => Promise.race([
+        promise,
+        new Promise(resolve => setTimeout(() => resolve(null), ms))
+      ]);
+
+      if (precisaOrigem && enderecoOrigem) {
+        console.log('[homeM] Geocodificando origem…', enderecoOrigem);
+        const geoO = await withTimeout(geocodificarEndereco(enderecoOrigem), TIMEOUT_MS);
+        if (geoO && typeof geoO.lat === 'number' && typeof geoO.lng === 'number') {
+          oLat = geoO.lat; oLng = geoO.lng;
+          console.log('[homeM] Origem geocodificada', { oLat, oLng });
+        }
+      }
+      if (precisaDestino && enderecoDestino) {
+        console.log('[homeM] Geocodificando destino…', enderecoDestino);
+        const geoD = await withTimeout(geocodificarEndereco(enderecoDestino), TIMEOUT_MS);
+        if (geoD && typeof geoD.lat === 'number' && typeof geoD.lng === 'number') {
+          dLat = geoD.lat; dLng = geoD.lng;
+          console.log('[homeM] Destino geocodificado', { dLat, dLng });
+        }
+      }
+
+      if (
+        typeof oLat === 'number' && !Number.isNaN(oLat) &&
+        typeof oLng === 'number' && !Number.isNaN(oLng) &&
+        typeof dLat === 'number' && !Number.isNaN(dLat) &&
+        typeof dLng === 'number' && !Number.isNaN(dLng)
+      ) {
+        const R = 6371;
+        const toRad = (deg) => deg * Math.PI / 180;
+        const dPhi = toRad(dLat - oLat);
+        const dLam = toRad(dLng - oLng);
+        const a = Math.sin(dPhi/2) ** 2 + Math.cos(toRad(oLat)) * Math.cos(toRad(dLat)) * Math.sin(dLam/2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distKm = R * c;
+        distSpan.textContent = `${distKm.toFixed(2)} km`;
+        console.log('[homeM] Distância calculada', { id: solicitacao.id, km: distKm });
+      } else {
+        console.log('[homeM] Distância não pôde ser calculada (faltam coords válidas)', { oLat, oLng, dLat, dLng });
+      }
+    } catch (e) {
+      // Silenciar erros para não afetar a UI
+      console.warn('[homeM] Falha ao calcular distância do card:', e?.message || e);
+    } finally {
+      delete cardEl.dataset.calcDistRunning;
+    }
   }
 
   function getTempoPostagem(solicitacao) {
@@ -300,7 +473,7 @@ async function geocodificarEndereco(endereco) {
     }, 300);
   }
 
-  function enviarProposta() {
+  async function enviarProposta() {
     const precoBase = parseFloat((proposalPriceInput.value || "").replace(",", "."));
     const tempoChegada = parseInt(proposalTimeInput.value, 10);
     const numAjudantes = parseInt(proposalHelpersInput.value, 10);
@@ -319,7 +492,27 @@ async function geocodificarEndereco(endereco) {
     const precoTotalMotorista = precoBase + custoAjudantes;
     const precoFinalCliente = precoTotalMotorista * 1.10;
 
-    const idParaUsar = motoristaUid || fallbackMotoristaId;
+    // Exigir motorista autenticado – evita gravar ID errado
+    const auth = firebase.auth();
+    const idParaUsar = auth?.currentUser?.uid || motoristaUid || null;
+    if(!idParaUsar){
+      alert('Faça login nesta página com a CONTA DE MOTORISTA para enviar propostas.');
+      return;
+    }
+    // Validar que o UID logado é de motorista e puxar o nome
+    try {
+      const mSnap = await db.collection('motoristas').doc(idParaUsar).get();
+      if (!mSnap.exists) {
+        alert('Esta conta logada não está cadastrada em motoristas. Entre com a conta de MOTORISTA.');
+        return;
+      }
+      const mData = mSnap.data()||{};
+      nomeMotoristaReal = mData?.nome || mData?.dadosPessoais?.nome || nomeMotoristaReal || 'Motorista';
+    } catch(e){ console.warn('[homeM] validação motorista falhou:', e?.message||e); }
+    // Carregar dados do cliente da entrega para anexar (somente leitura)
+    const solicitacao = todasSolicitacoes.get(selectedEntregaId);
+    const collectionName = solicitacao.tipo === 'descarte' ? 'descartes' : 'entregas';
+
     const propostaData = {
       preco: precoFinalCliente,
       tempoChegada,
@@ -332,11 +525,15 @@ async function geocodificarEndereco(endereco) {
       },
       dataEnvio: firebase.firestore.FieldValue.serverTimestamp(),
       motoristaUid: idParaUsar,
-      nomeMotorista: nomeMotoristaReal || `Motorista ${fallbackMotoristaId.substring(10, 15)}`
+      motoristaId: idParaUsar,
+      nomeMotorista: nomeMotoristaReal || 'Motorista',
+      gravadoPor: 'motorista'
     };
-
-    const solicitacao = todasSolicitacoes.get(selectedEntregaId);
-    const collectionName = solicitacao.tipo === 'descarte' ? 'descartes' : 'entregas';
+    // Tentar agregar dados do cliente (se disponíveis na lista em memória)
+    try {
+      if (solicitacao?.clienteId) propostaData.clienteId = solicitacao.clienteId;
+      if (solicitacao?.clienteNome) propostaData.clienteNome = solicitacao.clienteNome;
+    } catch {}
 
     db.collection(collectionName)
       .doc(selectedEntregaId)

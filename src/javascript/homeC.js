@@ -7,6 +7,35 @@ function isWithinSaoPaulo(lat, lng) {
   return SP_BOUNDS.contains([lat, lng]);
 }
 
+// Aguarda o Firebase Auth disponibilizar o usuário atual (com timeout)
+function getCurrentUserAsync(timeoutMs = 4000) {
+  try {
+    const auth = firebase.auth && firebase.auth();
+    const immediate = auth?.currentUser || null;
+    if (immediate) return Promise.resolve(immediate);
+    return new Promise((resolve) => {
+      let done = false;
+      const to = setTimeout(() => { if (!done) { done = true; resolve(null); } }, timeoutMs);
+      auth.onAuthStateChanged((u) => { if (!done) { done = true; clearTimeout(to); resolve(u || null); } });
+    });
+  } catch { return Promise.resolve(null); }
+}
+
+// Utilitário para obter nome do cliente a partir do UID
+async function getClienteNome(uid) {
+  if (!uid || !db) return 'Cliente';
+  try {
+    // Tenta em 'usuarios' e depois em 'clientes'
+    let s = await db.collection('usuarios').doc(uid).get();
+    if (!s.exists) s = await db.collection('clientes').doc(uid).get();
+    const d = s.exists ? (s.data()||{}) : {};
+    return d?.dadosPessoais?.nome || d?.nome || 'Cliente';
+  } catch (e) {
+    console.warn('Falha ao obter nome do cliente:', e?.message||e);
+    return 'Cliente';
+  }
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
   authDomain: "moomate-39239.firebaseapp.com",
@@ -406,18 +435,14 @@ async function ouvirPropostas(entregaId) {
       lista.innerHTML = "";
       for (const doc of snapshot.docs) {
         const p = doc.data();
-        const uidMotorista = p.motoristaUid || p.motoristaId || "";
-        console.log("ID do motorista na proposta:", uidMotorista); 
+        // Descoberta robusta do UID do motorista (inclui mais campos comuns)
+        let uidMotorista = p.motoristaUid || p.motoristaId || p.uidMotorista || p.uid || p.userId || p.authorId || doc.id || "";
+        console.log("[proposta] UID do motorista (resolvido):", uidMotorista, "|| bruto:", { motoristaUid: p.motoristaUid, motoristaId: p.motoristaId, uidMotorista: p.uidMotorista, uid: p.uid, userId: p.userId, authorId: p.authorId });
 
-
-        let nomeMotorista = p.nomeMotorista || "";
-        let fotoMotorista = p.fotoMotorista || null;
-
-        if (!nomeMotorista || fotoMotorista === undefined) {
-          const info = await getMotorista(uidMotorista);
-          if (!nomeMotorista) nomeMotorista = info.nome;
-          if (fotoMotorista === undefined) fotoMotorista = info.foto;
-        }
+        // Buscar por cadastro; se não achar, usar o nome vindo da proposta como último recurso
+        const info = uidMotorista ? await getMotorista(uidMotorista) : { nome: null, foto: null };
+        let nomeMotorista = info?.nome || p.nomeMotorista || p.motoristaNome || p.nome || "Motorista";
+        const fotoMotorista = info?.foto || p.fotoMotorista || null;
         const avatarHtml = fotoMotorista
           ? `<img src="${fotoMotorista}" alt="${nomeMotorista}" class="motorista-avatar">`
           : ''; 
@@ -471,12 +496,44 @@ async function aceitarProposta(entregaId, propostaId, motoristaId) {
     if (!propostaDoc.exists) return alert("Proposta não encontrada.");
     const propostaData = propostaDoc.data();
 
+    // Se o motoristaId vier vazio do botão, tentar deduzir da proposta
+    if (!motoristaId) {
+      motoristaId = propostaData.motoristaUid || propostaData.motoristaId || propostaData.uidMotorista || propostaData.uid || propostaData.userId || propostaData.authorId || null;
+      console.log("[aceitarProposta] motoristaId deduzido da proposta:", motoristaId);
+    }
+
+    // Buscar dados confiáveis do motorista para salvar no banco
+    let motoristaNome = "Motorista";
+    try {
+      const snapM = await db.collection("motoristas").doc(motoristaId).get();
+      const snapU = snapM.exists ? null : await db.collection("usuarios").doc(motoristaId).get();
+      const d = snapM.exists ? (snapM.data()||{}) : (snapU?.exists ? (snapU.data()||{}) : {});
+      motoristaNome = d?.dadosPessoais?.nome || d?.nome || motoristaNome;
+    } catch {}
+
+    const clienteUid = (firebase.auth && firebase.auth().currentUser) ? (firebase.auth().currentUser.uid || null) : null;
+
     await db.collection("entregas").doc(entregaId).update({
       status: "proposta_aceita",
       propostaAceita: { propostaId, motoristaId, ...propostaData },
+      motoristaId: motoristaId,
+      motoristaNome: motoristaNome,
+      clienteId: clienteUid,
       aceitoEm: new Date().toISOString(),
       clienteConfirmou: true
     });
+
+    // Garantir que a corrida espelho receba os identificadores corretos
+    try {
+      await db.collection('corridas').doc(entregaId).set({
+        motoristaId: motoristaId,
+        motoristaNome: motoristaNome,
+        clienteId: clienteUid,
+        tipo: 'mudanca'
+      }, { merge: true });
+    } catch (e) {
+      console.warn('Falha ao pré-preencher corridas/', entregaId, e?.message||e);
+    }
 
     localStorage.setItem("ultimaCorridaCliente", entregaId);
 
@@ -550,6 +607,13 @@ async function verMotoristas() {
   const tipoVeiculo = document.getElementById("tipoVeiculo").value;
   if (!tipoVeiculo) return alert("Selecione um tipo de veículo.");
 
+  // Garantir cliente autenticado (aguarda auth caso ainda não tenha carregado)
+  const user = await getCurrentUserAsync();
+  if (!user) {
+    alert('Faça login para criar o pedido (ou aguarde alguns segundos e tente novamente).');
+    return;
+  }
+
   const dadosFormulario = {
     origem: {
       endereco: document.getElementById("localRetirada").value,
@@ -573,7 +637,17 @@ async function verMotoristas() {
     propostas: {}
   };
 
-dadosFormulario.clienteNome = (window.userNome || localStorage.getItem('clienteNome') || 'Cliente');
+  // Preencher clienteId e clienteNome corretos
+  try {
+    const uid = user.uid;
+    dadosFormulario.clienteId = uid;
+    const nomeCli = await getClienteNome(uid);
+    dadosFormulario.clienteNome = nomeCli;
+    try { localStorage.setItem('clienteNome', nomeCli); } catch {}
+  } catch (e) {
+    console.warn('Não foi possível preencher clienteId/nome:', e?.message||e);
+    dadosFormulario.clienteNome = (window.userNome || localStorage.getItem('clienteNome') || 'Cliente');
+  }
 
   const dist = calcularDistancia(
     origemCoords[0],
@@ -589,6 +663,13 @@ dadosFormulario.clienteNome = (window.userNome || localStorage.getItem('clienteN
   try {
     if (db) {
       const docRef = await db.collection("entregas").add(dadosFormulario);
+      // Ref refina os campos de cliente por segurança (evita qualquer tela antiga gravar errado)
+      try {
+        await db.collection('entregas').doc(docRef.id).update({
+          clienteId: dadosFormulario.clienteId,
+          clienteNome: dadosFormulario.clienteNome
+        });
+      } catch (e) { console.warn('Falha ao reforçar clienteId/nome na entrega:', e?.message||e); }
       currentEntregaId = docRef.id;
 
       alert(

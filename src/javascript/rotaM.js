@@ -3,8 +3,11 @@
 
   const origemInfoEl = pick("origemInfo")
   const destinoInfoEl = pick("destinoInfo")
-  const nomeClienteEl = pick("clienteInfo", "modal-client-name")
+  // Separar elementos: um na página e outro no modal de avaliação
+  const nomeClienteMainEl = pick("clienteInfo")
+  const nomeClienteModalEl = pick("modal-client-name")
   const nomeMotoristaEl = pick("motoristaInfo")
+
   const distEl = pick("distanciaInfo")
   const tempoEl = pick("tempoInfo")
   const btnTudoPronto = pick("btnSeguirDestino")
@@ -24,37 +27,367 @@
   ;[cancelarAvaliacaoBtn, fecharModalBtn].forEach((b) => b?.addEventListener("click", $closeModal))
   if (cancelarAvaliacaoBtn) cancelarAvaliacaoBtn.style.display = "none"
 
-  
+  // Verificar se Firebase está disponível
+  if (!window.firebase) {
+    console.error("Firebase não está carregado!")
+    return
+  }
+
   const firebase = window.firebase
   const db = firebase.firestore()
   let corridaId = null
   let dadosCorrida = null
   let corridaRef = null
   let syncRef = null
+  let tipoAtual = null // 'mudanca', 'descarte'
+  let colecaoAtual = null // 'corridas' ou 'descartes'
+
+  async function resolverNomeCliente({ docData, corridaId }) {
+    try {
+      // 1) Priorizar campos do próprio documento
+      let nome = docData?.clienteNome || dadosCorrida?.clienteNome || null;
+      if (nome && typeof nome === 'string' && nome.trim() && nome.toLowerCase() !== 'cliente') return nome;
+
+      // 2) Tentar na coleção entregas (espelho) pelo mesmo ID
+      try {
+        const eSnap = await db.collection('entregas').doc(corridaId).get();
+        if (eSnap.exists) {
+          const e = eSnap.data() || {};
+          if (e.clienteNome && typeof e.clienteNome === 'string' && e.clienteNome.trim()) return e.clienteNome;
+          if (e.clienteId) {
+            const uNome = await obterNome(e.clienteId);
+            if (uNome && uNome !== '—') return uNome;
+          }
+        }
+      } catch {}
+
+      // 3) Fallback: obterNome pelo clienteId do doc atual
+      if (docData?.clienteId) {
+        const uNome = await obterNome(docData.clienteId);
+        if (uNome && uNome !== '—') return uNome;
+      }
+    } catch {}
+    return null;
+  }
+
+  // Função para criar e mostrar modal de cancelamento
+  function criarModalCancelamento() {
+    console.log("🚨 CRIANDO MODAL DE CANCELAMENTO");
+    
+    let modal = document.getElementById('client-cancel-modal');
+    if (modal) {
+      modal.remove();
+    }
+
+    modal = document.createElement('div');
+    modal.id = 'client-cancel-modal';
+    modal.style.cssText = `
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background: rgba(0, 0, 0, 0.8) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 99999 !important;
+      animation: fadeIn 0.3s ease !important;
+    `;
+    
+    modal.innerHTML = `
+      <div style="
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        max-width: 450px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        animation: slideIn 0.3s ease;
+        position: relative;
+        z-index: 100000;
+      ">
+        <div style="
+          width: 80px;
+          height: 80px;
+          background: #ff6b35;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+        ">
+          <i class="fas fa-times" style="color: white; font-size: 36px;"></i>
+        </div>
+        
+        <h2 style="
+          color: #dc3545;
+          margin-bottom: 15px;
+          font-size: 28px;
+          font-weight: 700;
+        ">🚫 ${tipoAtual === 'descarte' ? 'Descarte Cancelado' : 'Corrida Cancelada'}</h2>
+        
+        <p style="
+          color: #666;
+          margin-bottom: 30px;
+          font-size: 18px;
+          line-height: 1.5;
+        ">O cliente cancelou ${tipoAtual === 'descarte' ? 'o descarte' : 'a corrida'}. Você será redirecionado para a página inicial.</p>
+        
+        <button id="ok-cancel-btn" style="
+          background: #007bff;
+          color: white;
+          border: none;
+          padding: 15px 30px;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          width: 100%;
+        ">
+          <i class="fas fa-check"></i> Entendi
+        </button>
+      </div>
+      
+      <style>
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+          from { 
+            transform: translateY(-50px);
+            opacity: 0;
+          }
+          to { 
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        
+        #client-cancel-modal button:hover {
+          background: #0056b3 !important;
+        }
+        
+        #client-cancel-modal button:active {
+          transform: translateY(1px);
+        }
+      </style>
+    `;
+
+    document.body.appendChild(modal);
+
+    const okBtn = document.getElementById('ok-cancel-btn');
+    if (okBtn) {
+      okBtn.addEventListener('click', () => {
+        localStorage.removeItem("ultimaCorridaMotorista");
+        localStorage.removeItem("corridaSelecionada");
+        
+        if (window.cancelamentoListeners) {
+          try {
+            window.cancelamentoListeners.unsubscribeCorreda();
+            window.cancelamentoListeners.unsubscribeSync();
+          } catch (e) {
+            console.log("Erro ao limpar listeners:", e);
+          }
+        }
+        
+        window.location.href = "homeM.html";
+      });
+    }
+
+    setTimeout(() => {
+      if (document.getElementById('client-cancel-modal')) {
+        okBtn?.click();
+      }
+    }, 10000);
+  }
+
+  // Função para validar coordenadas
+  function validarCoordenadas(lat, lng) {
+    if (lat === null || lng === null || lat === undefined || lng === undefined) {
+      return false
+    }
+    
+    const latNum = parseFloat(lat)
+    const lngNum = parseFloat(lng)
+    
+    if (isNaN(latNum) || isNaN(lngNum)) {
+      return false
+    }
+    
+    if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
+      return false
+    }
+    
+    // Verificação específica para SP (bounds mais amplos para segurança)
+    if (latNum < -25.50 || latNum > -19.50 || lngNum < -53.50 || lngNum > -44.00) {
+      return false
+    }
+    
+    return true
+  }
+
+ // No rotaM.js, você pode ajustar a função geocodificarEndereco:
+async function geocodificarEndereco(endereco) {
+  if (!endereco || typeof endereco !== 'string') {
+    return null;
+  }
+
+  let searchQuery = endereco;
+
+  // Melhor tratamento para ecopontos
+  if (searchQuery.toLowerCase().includes('ecoponto')) {
+    // Extrair partes principais do endereço
+    const partes = searchQuery.split('–');
+    if (partes.length > 1) {
+      // Pegar a parte do endereço após o "–"
+      searchQuery = partes[1].trim();
+    }
+    // Remover informações desnecessárias
+    searchQuery = searchQuery.replace(/(defronte|bairro:|nº)/gi, '');
+    searchQuery = searchQuery.replace(/\s+/g, ' ').trim();
+  }
+
+  // Tentar múltiplas variações
+  const queries = [
+    searchQuery + ', São Paulo, SP, Brasil',
+    searchQuery + ', São Paulo, Brasil',
+    searchQuery.split(',')[0] + ', São Paulo, Brasil' // Só a rua principal
+  ];
+
+  for (const query of queries) {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=3&countrycodes=br`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const result = data[0];
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+
+        if (validarCoordenadas(lat, lng)) {
+          return { lat, lng, endereco: result.display_name };
+        }
+      }
+    } catch (error) {
+      console.warn(`Erro na query: ${query}`, error);
+    }
+  }
+
+  return null;
+}
 
   async function obterNome(uid) {
     if (!uid) return "—"
     try {
-      const doc = await db.collection("usuarios").doc(uid).get()
-      if (doc.exists) return doc.data().nome || "—"
-    } catch {}
+      let doc = await db.collection("usuarios").doc(uid).get()
+      if (doc.exists) {
+        const data = doc.data()
+        return data.nome || data.dadosPessoais?.nome || "—"
+      }
+      
+      doc = await db.collection("motoristas").doc(uid).get()
+      if (doc.exists) {
+        const data = doc.data()
+        return data.nome || data.dadosPessoais?.nome || "—"
+      }
+    } catch (error) {
+      console.error("Erro ao obter nome:", error)
+    }
     return "—"
   }
 
+  // Função atualizada para buscar corrida/descarte ativo
   async function obterCorridaAtiva(uid) {
-    const ultima = localStorage.getItem("ultimaCorridaMotorista")
-    if (ultima) {
-      const d = await db.collection("corridas").doc(ultima).get()
-      if (d.exists && d.data().status !== "finalizada") return d.id
+    try {
+      const ultima = localStorage.getItem("ultimaCorridaMotorista")
+      if (ultima) {
+        // Tentar primeiro na coleção corridas
+        try {
+          let d = await db.collection("corridas").doc(ultima).get()
+          if (d.exists) {
+            const data = d.data()
+            if (data && data.status && data.status !== "finalizada" && data.status !== "cancelada") {
+              return { id: d.id, tipo: data.tipo || 'mudanca', colecao: 'corridas' }
+            }
+          }
+        } catch (error) {
+          console.warn("Erro ao buscar corrida específica:", error)
+        }
+        
+        // Se não encontrar, tentar na coleção descartes
+        try {
+          let d = await db.collection("descartes").doc(ultima).get()
+          if (d.exists) {
+            const data = d.data()
+            if (data && data.status && data.status !== "finalizada" && data.status !== "cancelada") {
+              return { id: d.id, tipo: 'descarte', colecao: 'descartes' }
+            }
+          }
+        } catch (error) {
+          console.warn("Erro ao buscar descarte específico:", error)
+        }
+      }
+      
+      // Buscar corrida ativa mais recente
+      try {
+        let q = await db.collection("corridas")
+          .where("motoristaId", "==", uid)
+          .where("status", "in", ["indo_retirar", "a_caminho_destino", "aceita", "em_andamento"])
+          .orderBy("criadoEm", "desc")
+          .limit(1)
+          .get()
+          
+        if (!q.empty) {
+          const doc = q.docs[0]
+          return { id: doc.id, tipo: doc.data().tipo || 'mudanca', colecao: 'corridas' }
+        }
+      } catch (error) {
+        console.warn("Erro ao buscar corridas ativas:", error)
+      }
+      
+      // Buscar em descartes aceitos
+      try {
+        let q = await db.collection("descartes")
+          .where("propostaAceita.motoristaUid", "==", uid)
+          .where("status", "==", "aceito")
+          .orderBy("dataEnvio", "desc")
+          .limit(1)
+          .get()
+          
+        if (!q.empty) {
+          const doc = q.docs[0]
+          return { id: doc.id, tipo: 'descarte', colecao: 'descartes' }
+        }
+      } catch (error) {
+        console.warn("Erro ao buscar descartes aceitos:", error)
+      }
+    } catch (error) {
+      console.error("Erro ao obter corrida ativa:", error)
     }
-    const q = await db.collection("corridas").where("motoristaId", "==", uid).orderBy("criadoEm", "desc").limit(1).get()
-    if (!q.empty) return q.docs[0].id
     return null
   }
 
-  //  Mapa
+  // Verificar se Leaflet está disponível
+  if (!window.L) {
+    console.error("Leaflet não está carregado!")
+    return
+  }
+
   const L = window.L
   const MAPTILER_KEY = "lRS4UV8yOp62RauVV5D7"
+  
+  const mapElement = document.getElementById("map")
+  if (!mapElement) {
+    console.error("Elemento do mapa não encontrado!")
+    return
+  }
+  
   const map = L.map("map")
   L.tileLayer(`https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`, {
     attribution: "&copy; OpenStreetMap & MapTiler",
@@ -90,240 +423,823 @@
     if (!instrWrap || !instrList) return
     instrWrap.style.display = "block"
     instrList.innerHTML = ""
+    if (!steps || !Array.isArray(steps)) return
+    
     steps.forEach((s) => {
+      if (!s || !s.maneuver) return
       const li = document.createElement("li")
       const via = s.name ? ` pela ${s.name}` : ""
       li.textContent = `${ptTurn(s.maneuver.type, s.maneuver.modifier)}${via}`
       const badge = document.createElement("span")
       badge.className = "badge"
-      badge.textContent = `${km(s.distance)} · ${min(s.duration)}`
+      badge.textContent = `${km(s.distance || 0)} · ${min(s.duration || 0)}`
       li.appendChild(badge)
       instrList.appendChild(li)
     })
   }
 
   async function desenharRota(from, to) {
-    if (!from || !to) return
-    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`
-    const resp = await fetch(url)
-    if (!resp.ok) return console.error("OSRM indisponível")
-    const data = await resp.json()
-    const route = data?.routes?.[0]
-    if (!route) return console.error("Rota não encontrada")
+    if (!from || !to) {
+      console.warn("Coordenadas de origem ou destino não fornecidas")
+      return
+    }
+    
+    if (!validarCoordenadas(from.lat, from.lng) || !validarCoordenadas(to.lat, to.lng)) {
+      console.error("Coordenadas inválidas para rota:", { from, to })
+      return
+    }
+    
+    const fromLat = parseFloat(from.lat)
+    const fromLng = parseFloat(from.lng)
+    const toLat = parseFloat(to.lat)
+    const toLng = parseFloat(to.lng)
+    
+    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson&steps=true`
+    
+    try {
+      const resp = await fetch(url)
+      if (!resp.ok) {
+        console.error(`OSRM retornou ${resp.status}: ${resp.statusText}`)
+        return
+      }
+      
+      const data = await resp.json()
+      const route = data?.routes?.[0]
+      if (!route || !route.geometry || !route.geometry.coordinates) {
+        console.error("Nenhuma rota válida encontrada nos dados:", data)
+        return
+      }
 
-    const latlngs = route.geometry.coordinates.map(([lng, lat]) => [lat, lng])
-    if (routeLayer) map.removeLayer(routeLayer)
-    routeLayer = L.polyline(latlngs, { weight: 6, opacity: 0.95, color: "#ff6c0c" }).addTo(map)
-    map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] })
+      const latlngs = route.geometry.coordinates.map(([lng, lat]) => {
+        if (validarCoordenadas(lat, lng)) {
+          return [lat, lng]
+        }
+        return null
+      }).filter(coord => coord !== null)
+      
+      if (latlngs.length === 0) {
+        console.error("Nenhuma coordenada válida na rota")
+        return
+      }
+      
+      if (routeLayer) map.removeLayer(routeLayer)
+      routeLayer = L.polyline(latlngs, { weight: 6, opacity: 0.95, color: "#ff6c0c" }).addTo(map)
+      map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] })
 
-    distEl && (distEl.textContent = km(route.distance))
-    tempoEl && (tempoEl.textContent = min(route.duration))
-    renderInstrucoes(route.legs[0].steps || [])
+      if (distEl) distEl.textContent = km(route.distance || 0)
+      if (tempoEl) tempoEl.textContent = min(route.duration || 0)
+      renderInstrucoes(route.legs && route.legs[0] ? route.legs[0].steps || [] : [])
+      
+    } catch (error) {
+      console.error("Erro ao buscar rota:", error)
+    }
   }
 
-  //  Marcadores 
   function desenharMarcadores() {
-    // Motorista – verde com pulse
-    if (posMotorista) {
-      if (!motoristaMarker) {
-        motoristaMarker = L.marker([posMotorista.lat, posMotorista.lng], {
-          icon: L.divIcon({
-            className: "marker-motorista",
-            html: `<div style="width:20px;height:20px;background:#3DBE34;border:3px solid #fff;border-radius:50%;
-                   box-shadow:0 0 10px rgba(0,0,0,0.5);animation:pulse 1.2s infinite;"></div>`,
-          }),
-        }).addTo(map)
-      } else motoristaMarker.setLatLng([posMotorista.lat, posMotorista.lng])
-    }
-
-    // Origem – azul
-    if (dadosCorrida?.origem) {
-      if (!origemMarker) {
-        origemMarker = L.marker([dadosCorrida.origem.lat, dadosCorrida.origem.lng], {
-          icon: L.divIcon({
-            className: "marker-origem",
-            html: `<div style="width:22px;height:22px;background:#1E3A8A;border:3px solid #fff;border-radius:50%;"></div>`,
-          }),
-        }).addTo(map)
-      } else origemMarker.setLatLng([dadosCorrida.origem.lat, dadosCorrida.origem.lng])
-    }
-
-    // Destino – laranja
-    if (fase === "a_caminho_destino" && dadosCorrida?.destino) {
-      if (!destinoMarker) {
-        destinoMarker = L.marker([dadosCorrida.destino.lat, dadosCorrida.destino.lng], {
-          icon: L.divIcon({
-            className: "marker-destino",
-            html: `<div style="width:22px;height:22px;background:#FF6C0C;border:3px solid #fff;border-radius:50%;"></div>`,
-          }),
-        }).addTo(map)
-      } else destinoMarker.setLatLng([dadosCorrida.destino.lat, dadosCorrida.destino.lng])
+  const isDescarte = tipoAtual === 'descarte'
+  
+  // Motorista – verde com pulse (igual para todos)
+  if (posMotorista && validarCoordenadas(posMotorista.lat, posMotorista.lng)) {
+    if (!motoristaMarker) {
+      motoristaMarker = L.marker([posMotorista.lat, posMotorista.lng], {
+        icon: L.divIcon({
+          className: "marker-motorista",
+          html: `<div style="width:20px;height:20px;background:#3DBE34;border:3px solid #fff;border-radius:50%;
+                 box-shadow:0 0 10px rgba(0,0,0,0.5);animation:pulse 1.2s infinite;"></div>`,
+        }),
+      }).addTo(map)
+    } else {
+      motoristaMarker.setLatLng([posMotorista.lat, posMotorista.lng])
     }
   }
 
-  // sync 
+  // Origem – azul padrão (igual para todos)
+  if (dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
+    const origemIcon = `<div style="width:22px;height:22px;background:#1E3A8A;border:3px solid #fff;border-radius:50%;"></div>`
+    
+    if (!origemMarker) {
+      origemMarker = L.marker([dadosCorrida.origem.lat, dadosCorrida.origem.lng], {
+        icon: L.divIcon({
+          className: "marker-origem",
+          html: origemIcon,
+        }),
+      }).addTo(map)
+    } else {
+      origemMarker.setLatLng([dadosCorrida.origem.lat, dadosCorrida.origem.lng])
+    }
+  }
+
+  // Destino – laranja padrão; para descartes usar símbolo de reciclagem com fundo laranja
+  if (fase === "a_caminho_destino" && dadosCorrida?.destino && validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
+    const destinoIcon = isDescarte ?
+      `<div style="width:22px;height:22px;background:#FF6C0C;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-recycle" style="font-size:12px;color:#fff;"></i>
+      </div>` :
+      `<div style="width:22px;height:22px;background:#FF6C0C;border:3px solid #fff;border-radius:50%;"></div>`
+    
+    if (!destinoMarker) {
+      destinoMarker = L.marker([dadosCorrida.destino.lat, dadosCorrida.destino.lng], {
+        icon: L.divIcon({
+          className: "marker-destino",
+          html: destinoIcon,
+        }),
+      }).addTo(map)
+    } else {
+      destinoMarker.setLatLng([dadosCorrida.destino.lat, dadosCorrida.destino.lng])
+    }
+  }
+}
+
   const getTexto = (el) => (el && el.textContent && el.textContent.trim()) || ""
 
+  // Função para mapear dados de descarte para formato de corrida
+  function mapearDadosDescarte(docData) {
+    console.log("Mapeando dados de descarte:", docData);
+    
+    return {
+      ...docData,
+      tipo: 'descarte',
+      clienteId: docData.clienteId || 'cliente_descarte',
+      motoristaId: docData.propostaAceita?.motoristaUid,
+      
+      // Mapear endereços
+      origem: docData.origem || {
+        endereco: docData.localRetirada || '',
+        lat: null,
+        lng: null
+      },
+      destino: docData.destino || {
+        endereco: docData.localEntrega || '',
+        lat: null,
+        lng: null
+      },
+      
+      // Manter campos originais do descarte
+      localRetirada: docData.localRetirada,
+      localEntrega: docData.localEntrega,
+      tipoCaminhao: docData.tipoCaminhao || docData.tipoVeiculo,
+      descricao: docData.descricao
+    };
+  }
+
   async function upsertCorridaBase() {
-    if (!corridaRef) return
-    const snap = await corridaRef.get()
-    const base = snap.exists ? (snap.data() || {}) : {}
+    if (!corridaRef || !dadosCorrida) return
+    
+    try {
+      const snap = await corridaRef.get()
+      const base = snap.exists ? (snap.data() || {}) : {}
 
-    const payload = {}
-    if (dadosCorrida?.clienteId) payload.clienteId = dadosCorrida.clienteId
-    if (dadosCorrida?.motoristaId) payload.motoristaId = dadosCorrida.motoristaId
+      const payload = {}
+      if (dadosCorrida?.clienteId) payload.clienteId = dadosCorrida.clienteId
+      if (dadosCorrida?.motoristaId) payload.motoristaId = dadosCorrida.motoristaId
 
-    if (dadosCorrida?.origem?.lat && dadosCorrida?.origem?.lng) {
-      payload.origem = {
-        lat: dadosCorrida.origem.lat,
-        lng: dadosCorrida.origem.lng,
-        endereco: dadosCorrida.origem.endereco || getTexto(origemInfoEl) || base?.origem?.endereco || "",
+      const isDescarte = tipoAtual === 'descarte'
+
+      // Processar origem (local de retirada)
+      if (dadosCorrida?.origem) {
+        // Se tem coordenadas válidas, usar direto
+        if (validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
+          payload.origem = {
+            lat: parseFloat(dadosCorrida.origem.lat),
+            lng: parseFloat(dadosCorrida.origem.lng),
+            endereco: dadosCorrida.origem.endereco || getTexto(origemInfoEl) || base?.origem?.endereco || "",
+          }
+        }
+        // Se não tem coordenadas mas tem endereço, tentar geocodificar
+        else if (dadosCorrida.origem.endereco && typeof dadosCorrida.origem.endereco === 'string' && dadosCorrida.origem.endereco.trim()) {
+          try {
+            console.log("Geocodificando origem:", dadosCorrida.origem.endereco)
+            const coords = await geocodificarEndereco(dadosCorrida.origem.endereco)
+            if (coords && validarCoordenadas(coords.lat, coords.lng)) {
+              payload.origem = {
+                lat: parseFloat(coords.lat),
+                lng: parseFloat(coords.lng),
+                endereco: dadosCorrida.origem.endereco,
+              }
+              dadosCorrida.origem = payload.origem
+              console.log("Origem geocodificada:", payload.origem)
+            }
+          } catch (error) {
+            console.warn("Erro ao geocodificar origem:", error.message)
+          }
+        }
       }
-    }
-    if (dadosCorrida?.destino?.lat && dadosCorrida?.destino?.lng) {
-      payload.destino = {
-        lat: dadosCorrida.destino.lat,
-        lng: dadosCorrida.destino.lng,
-        endereco: dadosCorrida.destino.endereco || getTexto(destinoInfoEl) || base?.destino?.endereco || "",
-      }
-    }
-    if (!base.status) payload.status = "indo_retirar"
 
-    if (Object.keys(payload).length) await corridaRef.set(payload, { merge: true })
+      // Processar destino (local de entrega/ecoponto)
+      if (dadosCorrida?.destino) {
+        if (validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
+          payload.destino = {
+            lat: parseFloat(dadosCorrida.destino.lat),
+            lng: parseFloat(dadosCorrida.destino.lng),
+            endereco: dadosCorrida.destino.endereco || getTexto(destinoInfoEl) || base?.destino?.endereco || "",
+          }
+        }
+        else if (dadosCorrida.destino.endereco && typeof dadosCorrida.destino.endereco === 'string' && dadosCorrida.destino.endereco.trim()) {
+          try {
+            console.log("Geocodificando destino:", dadosCorrida.destino.endereco)
+            const coords = await geocodificarEndereco(dadosCorrida.destino.endereco)
+            if (coords && validarCoordenadas(coords.lat, coords.lng)) {
+              payload.destino = {
+                lat: parseFloat(coords.lat),
+                lng: parseFloat(coords.lng),
+                endereco: dadosCorrida.destino.endereco,
+              }
+              dadosCorrida.destino = payload.destino
+              console.log("Destino geocodificado:", payload.destino)
+            }
+          } catch (error) {
+            console.warn("Erro ao geocodificar destino:", error.message)
+          }
+        }
+      }
+      
+      // Manter campos originais dos descartes
+      if (isDescarte) {
+        if (dadosCorrida.localRetirada) payload.localRetirada = dadosCorrida.localRetirada
+        if (dadosCorrida.localEntrega) payload.localEntrega = dadosCorrida.localEntrega
+      }
+      
+      if (!base.status) payload.status = "indo_retirar"
+
+      if (Object.keys(payload).length) {
+        await corridaRef.set(payload, { merge: true })
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar corrida base:", error)
+    }
   }
 
   function publicarPosicao(lat, lng, heading) {
-    posMotorista = { lat, lng }
-    desenharMarcadores()
-    if (fase === "indo_retirar" && dadosCorrida?.origem) {
-      desenharRota(posMotorista, dadosCorrida.origem)
+    if (!validarCoordenadas(lat, lng)) {
+      console.warn("Coordenadas inválidas para posição do motorista:", { lat, lng })
+      return
     }
-    syncRef?.set(
-      {
-        motorista: {
-          lat,
-          lng,
-          heading: heading ?? null,
-          ts: firebase.firestore.FieldValue.serverTimestamp(),
+
+    posMotorista = { lat: parseFloat(lat), lng: parseFloat(lng) }
+    desenharMarcadores()
+    
+    if (fase === "indo_retirar" && dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
+      desenharRota(posMotorista, dadosCorrida.origem).catch(error => 
+        console.warn("Erro ao desenhar rota para origem:", error.message)
+      )
+    }
+    
+    if (syncRef) {
+      syncRef.set(
+        {
+          motorista: {
+            lat: parseFloat(lat),
+            lng: parseFloat(lng),
+            heading: heading ?? null,
+            ts: firebase.firestore.FieldValue.serverTimestamp(),
+          },
         },
-      },
-      { merge: true },
-    )
+        { merge: true },
+      ).catch(error => console.error("Erro ao publicar posição:", error))
+    }
   }
 
   function startGeolocation() {
-    if (!navigator.geolocation) return console.error("Geolocalização indisponível")
+    if (!navigator.geolocation) {
+      console.error("Geolocalização indisponível")
+      return
+    }
+    
     navigator.geolocation.watchPosition(
-      (p) => publicarPosicao(p.coords.latitude, p.coords.longitude, p.coords.heading),
-      () => {},
+      (p) => {
+        if (p && p.coords) {
+          publicarPosicao(p.coords.latitude, p.coords.longitude, p.coords.heading)
+        }
+      },
+      (error) => {
+        console.error("Erro na geolocalização:", error)
+      },
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 },
     )
   }
 
   btnTudoPronto?.addEventListener("click", async () => {
     if (!dadosCorrida) return
-    fase = "a_caminho_destino"
-    if (routeLayer) map.removeLayer(routeLayer)
-    desenharMarcadores()
-    desenharRota(dadosCorrida.origem, dadosCorrida.destino)
-    btnTudoPronto.style.display = "none"
-    btnFinalizar.style.display = "inline-block"
+    
+    try {
+      fase = "a_caminho_destino"
+      if (routeLayer) map.removeLayer(routeLayer)
+      desenharMarcadores()
+      
+      if (dadosCorrida.origem && dadosCorrida.destino && 
+          validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng) &&
+          validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
+        await desenharRota(dadosCorrida.origem, dadosCorrida.destino)
+      }
+      
+      // Antes de esconder, restaurar o texto padrão do botão (caso ele reapareça depois)
+      btnTudoPronto.innerHTML = '<i class="fas fa-check"></i> Tudo pronto, seguir até o destino'
+      btnTudoPronto.style.display = "none"
+      if (btnFinalizar) btnFinalizar.style.display = "inline-block"
 
-    await Promise.all([
-      syncRef?.set({ fase: "a_caminho_destino" }, { merge: true }),
-      corridaRef?.set({ status: "a_caminho_destino" }, { merge: true }),
-    ])
+      // Atualizar texto do botão baseado no tipo
+      if (btnFinalizar && tipoAtual === 'descarte') {
+        btnFinalizar.innerHTML = '<i class="fas fa-recycle"></i> Descarte concluído'
+      }
+
+      const updatePromises = []
+      // Atualizar sync com fase e, se disponíveis, origem/destino para que o cliente sincronize a mudança imediatamente
+      if (syncRef) {
+        const payload = { fase: "a_caminho_destino" }
+        if (dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
+          payload.origem = {
+            lat: parseFloat(dadosCorrida.origem.lat),
+            lng: parseFloat(dadosCorrida.origem.lng),
+            endereco: dadosCorrida.origem.endereco || ''
+          }
+        }
+        if (dadosCorrida?.destino && validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
+          payload.destino = {
+            lat: parseFloat(dadosCorrida.destino.lat),
+            lng: parseFloat(dadosCorrida.destino.lng),
+            endereco: dadosCorrida.destino.endereco || ''
+          }
+        }
+        updatePromises.push(syncRef.set(payload, { merge: true }))
+      }
+      if (corridaRef) updatePromises.push(corridaRef.set({ status: "a_caminho_destino" }, { merge: true }))
+      
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises)
+      }
+
+      // Esconder o botão de cancelar no cliente quando motorista vai para destino
+      console.log("Motorista seguindo para destino - botão de cancelar será escondido no cliente");
+      
+    } catch (error) {
+      console.error("Erro ao processar 'Tudo Pronto':", error)
+    }
   })
 
   btnFinalizar?.addEventListener("click", async () => {
-    $openModal()
-    await Promise.all([
-      syncRef?.set({ fase: "finalizada_pendente" }, { merge: true }),
-      corridaRef?.set({ status: "finalizada_pendente" }, { merge: true }),
-    ])
+    try {
+      $openModal()
+      
+      const updatePromises = []
+      if (syncRef) updatePromises.push(syncRef.set({ fase: "finalizada_pendente" }, { merge: true }))
+      if (corridaRef) updatePromises.push(corridaRef.set({ status: "finalizada_pendente" }, { merge: true }))
+      
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises)
+      }
+    } catch (error) {
+      console.error("Erro ao finalizar corrida:", error)
+    }
   })
 
-  
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) return alert("Usuário não logado.")
-    corridaId = await obterCorridaAtiva(user.uid)
-    if (!corridaId) return alert("Nenhuma corrida ativa encontrada.")
-    localStorage.setItem("ultimaCorridaMotorista", corridaId)
- if (window.CHAT) {
-  window.CHAT.init('motorista');
-  window.CHAT.attach(corridaId);
-}
-
-    corridaRef = db.collection("corridas").doc(corridaId)
-    syncRef = corridaRef.collection("sync").doc("estado")
-
-
-    syncRef.set({ fase: "indo_retirar" }, { merge: true })
-
-    db.collection("corridas")
-      .doc(corridaId)
-      .onSnapshot(async (doc) => {
-        if (!doc.exists) return
-        dadosCorrida = doc.data()
-        if (origemInfoEl) origemInfoEl.textContent = dadosCorrida.origem?.endereco || "—"
-        if (destinoInfoEl) destinoInfoEl.textContent = dadosCorrida.destino?.endereco || "—"
-        if (nomeClienteEl) nomeClienteEl.textContent = await obterNome(dadosCorrida.clienteId)
-        if (nomeMotoristaEl) nomeMotoristaEl.textContent = await obterNome(dadosCorrida.motoristaId)
-
-        await upsertCorridaBase()
-        desenharMarcadores()
-
-        if (posMotorista) {
-          if (fase === "indo_retirar" && dadosCorrida?.origem) {
-            desenharRota(posMotorista, dadosCorrida.origem)
-          } else if (fase === "a_caminho_destino" && dadosCorrida?.origem && dadosCorrida?.destino) {
-            desenharRota(dadosCorrida.origem, dadosCorrida.destino)
+  // Salvar avaliação
+  salvarAvaliacaoBtn?.addEventListener("click", async () => {
+    try {
+      const comentario = comentarioEl ? comentarioEl.value || "" : ""
+      const rating = window.ratingAtual || 0
+      
+      if (corridaRef && rating > 0) {
+        const novoStatus = 'finalizada'
+        await corridaRef.set({
+          avaliacao: {
+            nota: rating,
+            comentario: comentario,
+            avaliadoEm: firebase.firestore.FieldValue.serverTimestamp()
+          },
+          status: novoStatus
+        }, { merge: true })
+        // Também gravar a avaliação no perfil do cliente (usuarios/{clienteId}/avaliacoes/{motoristaId})
+        try {
+          const clienteUid = dadosCorrida?.clienteId || null;
+          if (clienteUid) {
+            const userRef = db.collection('usuarios').doc(clienteUid);
+            // Capturar SEMPRE o motorista a partir do auth desta página
+            const motId = firebase.auth()?.currentUser?.uid || null;
+            let motNome = null;
+            try {
+              if (motId) {
+                const mSnap = await db.collection('motoristas').doc(motId).get();
+                const m = mSnap.exists ? (mSnap.data()||{}) : {};
+                motNome = m.nome || m.dadosPessoais?.nome || null;
+              }
+            } catch {}
+            // Estrutura: usuarios/{clienteId}/avaliacoes/{motoristaId}/avaliacoes/{autoId}
+            if (motId) {
+              const contRef = userRef.collection('avaliacoes').doc(motId);
+              // 1) Acrescenta avaliação como item da subcoleção (não sobrescreve nada existente)
+              await contRef.collection('avaliacoes').add({
+                corridaId: corridaId,
+                motoristaId: motId,
+                motoristaNome: motNome || null,
+                nota: rating,
+                comentario: comentario,
+                avaliadoPor: 'motorista',
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+              });
+              // 2) Atualiza um resumo leve no doc do motorista (merge)
+              await contRef.set({
+                motoristaId: motId,
+                motoristaNome: motNome || null,
+                lastNota: rating,
+                lastComentario: comentario || '',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              }, { merge: true });
+            } else {
+              // fallback extremamente raro
+              await userRef.collection('avaliacoes').add({
+                corridaId: corridaId,
+                motoristaId: motId,
+                motoristaNome: motNome || null,
+                nota: rating,
+                comentario: comentario,
+                avaliadoPor: 'motorista',
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+              });
+            }
+            // Agregados no documento do usuário (atômicos)
+            await userRef.set({
+              ratingCount: firebase.firestore.FieldValue.increment(1),
+              ratingSum: firebase.firestore.FieldValue.increment(Number(rating) || 0)
+            }, { merge: true });
+            // Calcular média após incrementos (não atômico, mas seguro o suficiente para UI)
+            try {
+              const aggSnap = await userRef.get();
+              const d = aggSnap.exists ? (aggSnap.data()||{}) : {};
+              const count = Number(d.ratingCount || 0);
+              const sum = Number(d.ratingSum || 0);
+              const media = count > 0 ? (sum / count) : 0;
+              await userRef.set({ ratingMedia: media }, { merge: true });
+            } catch {}
           }
+        } catch (e) {
+          console.warn('Falha ao salvar avaliação no perfil do cliente:', e?.message||e);
         }
+      }
+      
+      $closeModal()
+      
+      // Redirecionar ou mostrar mensagem de sucesso
+      setTimeout(() => {
+        alert(`${tipoAtual === 'descarte' ? 'Descarte' : 'Corrida'} finalizada com sucesso!`)
+        window.location.href = "carteiraM.html"
+      }, 500)
+    } catch (error) {
+      console.error("Erro ao salvar avaliação:", error)
+      alert("Erro ao finalizar corrida. Tente novamente.")
+    }
+  })
+
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (!user) {
+      console.error("Usuário não logado.")
+      alert("Usuário não logado.")
+      return
+    }
+    
+    console.log("Usuário logado:", user.uid)
+    
+    try {
+      const corridaAtiva = await obterCorridaAtiva(user.uid)
+      if (!corridaAtiva) {
+        console.error("Nenhuma corrida/descarte ativo encontrado.")
+        alert("Nenhuma corrida/descarte ativo encontrado.")
+        return
+      }
+      
+      corridaId = corridaAtiva.id
+      tipoAtual = corridaAtiva.tipo
+      
+      console.log(`${tipoAtual === 'descarte' ? 'Descarte' : 'Corrida'} ativo encontrado: ${corridaId} (tipo: ${tipoAtual})`)
+      
+      localStorage.setItem("ultimaCorridaMotorista", corridaId)
+      
+      if (window.CHAT) {
+        window.CHAT.init('motorista');
+        window.CHAT.attach(corridaId);
+      }
+
+      // Definir as referências baseado no tipo
+      const isDescarte = tipoAtual === 'descarte'
+      const colecao = isDescarte ? 'descartes' : 'corridas'
+      
+      console.log(`Usando coleção: ${colecao}`)
+      
+      corridaRef = db.collection(colecao).doc(corridaId)
+      syncRef = corridaRef.collection("sync").doc("estado")
+
+      if (syncRef) {
+        syncRef.set({ fase: "indo_retirar" }, { merge: true }).catch(error => 
+          console.error("Erro ao definir fase inicial:", error)
+        )
+      }
+
+      // **SISTEMA DE DETECÇÃO DE CANCELAMENTO ATUALIZADO**
+      // Listener principal para mudanças no documento
+      const unsubscribeCorreda = db.collection(colecao)
+        .doc(corridaId)
+        .onSnapshot(async (doc) => {
+          console.log("Snapshot recebido, doc exists:", doc.exists)
+          
+          if (!doc.exists) {
+            console.warn("Documento não existe!")
+            return
+          }
+          
+          try {
+            const docData = doc.data()
+            console.log("Dados do documento:", docData)
+            
+            if (!docData) {
+              console.warn("Documento sem dados!")
+              return
+            }
+
+            // **VERIFICAÇÃO CRÍTICA DE CANCELAMENTO**
+            if (docData.status === "cancelada" || docData.canceladoPor === "cliente") {
+              console.log("🚨 CORRIDA/DESCARTE CANCELADO PELO CLIENTE DETECTADO!")
+              console.log("Status:", docData.status)
+              console.log("Cancelado por:", docData.canceladoPor)
+              
+              // Mostrar modal imediatamente
+              criarModalCancelamento()
+              return // Parar processamento aqui
+            }
+            
+            // **PROCESSAMENTO ESPECÍFICO PARA DESCARTES**
+            if (isDescarte) {
+              console.log("Processando como descarte")
+              
+              // Mapear dados do descarte para formato compatível
+              dadosCorrida = {
+                ...docData,
+                tipo: 'descarte',
+                clienteId: docData.clienteId || 'cliente_descarte',
+                motoristaId: docData.propostaAceita?.motoristaUid || user.uid,
+                clienteNome: docData.clienteNome || dadosCorrida?.clienteNome || null,
+                motoristaNome: docData.motoristaNome || dadosCorrida?.motoristaNome || null,
+                
+                // **MAPEAMENTO DOS ENDEREÇOS**
+                origem: docData.origem || {
+                  endereco: docData.localRetirada || '',
+                  lat: null,
+                  lng: null
+                },
+                destino: docData.destino || {
+                  endereco: docData.localEntrega || '',
+                  lat: null,
+                  lng: null
+                },
+                
+                // Manter campos originais
+                localRetirada: docData.localRetirada,
+                localEntrega: docData.localEntrega,
+                tipoCaminhao: docData.tipoCaminhao || docData.tipoVeiculo,
+                descricao: docData.descricao
+              }
+
+              // **GEOCODIFICAÇÃO AUTOMÁTICA PARA DESCARTES**
+              // Se origem não tem coordenadas mas tem endereço
+              if (!validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng) && 
+                  dadosCorrida.localRetirada) {
+                try {
+                  const coordsOrigem = await geocodificarEndereco(dadosCorrida.localRetirada)
+                  if (coordsOrigem && validarCoordenadas(coordsOrigem.lat, coordsOrigem.lng)) {
+                    dadosCorrida.origem = {
+                      endereco: dadosCorrida.localRetirada,
+                      lat: coordsOrigem.lat,
+                      lng: coordsOrigem.lng
+                    }
+                  }
+                } catch (error) {
+                  console.warn("Erro ao geocodificar local de retirada:", error)
+                }
+              }
+
+              // Se destino não tem coordenadas mas tem endereço
+              if (!validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng) && 
+                  dadosCorrida.localEntrega) {
+                try {
+                  const coordsDestino = await geocodificarEndereco(dadosCorrida.localEntrega)
+                  if (coordsDestino && validarCoordenadas(coordsDestino.lat, coordsDestino.lng)) {
+                    dadosCorrida.destino = {
+                      endereco: dadosCorrida.localEntrega,
+                      lat: coordsDestino.lat,
+                      lng: coordsDestino.lng
+                    }
+                  }
+                } catch (error) {
+                  console.warn("Erro ao geocodificar local de entrega:", error)
+                }
+              }
+
+              console.log("Dados da corrida processados (descarte):", dadosCorrida)
+            } else {
+              console.log("Processando como corrida normal")
+              dadosCorrida = {
+                ...docData,
+                tipo: docData.tipo || 'mudanca',
+                clienteNome: docData.clienteNome || null,
+                motoristaNome: docData.motoristaNome || null,
+              }
+            }
+            
+            tipoAtual = dadosCorrida.tipo || tipoAtual
+            
+            // Atualizar elementos da UI
+            if (origemInfoEl) {
+              const textoOrigem = isDescarte ? 
+                (dadosCorrida.localRetirada || dadosCorrida.origem?.endereco || "—") :
+                (dadosCorrida.origem?.endereco || "—")
+              origemInfoEl.textContent = textoOrigem
+              console.log("Origem atualizada na UI:", textoOrigem)
+            }
+            
+            if (destinoInfoEl) {
+              const textoDestino = isDescarte ? 
+                (dadosCorrida.localEntrega || dadosCorrida.destino?.endereco || "—") :
+                (dadosCorrida.destino?.endereco || "—")
+              destinoInfoEl.textContent = textoDestino
+              console.log("Destino atualizado na UI:", textoDestino)
+            }
+            
+            {
+              let nomeCliente = docData.clienteNome || dadosCorrida.clienteNome || null;
+              if (!nomeCliente || nomeCliente.toLowerCase?.() === 'cliente') {
+                const resolvido = await resolverNomeCliente({ docData, corridaId });
+                if (resolvido) nomeCliente = resolvido;
+              }
+              if (!nomeCliente) nomeCliente = await obterNome(dadosCorrida.clienteId);
+              if (nomeClienteMainEl && nomeCliente) nomeClienteMainEl.textContent = nomeCliente;
+              if (nomeClienteModalEl && nomeCliente) nomeClienteModalEl.textContent = nomeCliente;
+              console.log("Nome do cliente atualizado:", nomeCliente)
+              // Persistir no documento para evitar voltar "Cliente"
+              try {
+                if (nomeCliente && corridaRef) {
+                  await corridaRef.set({ clienteNome: nomeCliente }, { merge: true });
+                }
+              } catch (e) { console.warn('Falha ao persistir clienteNome:', e?.message||e); }
+            }
+            
+            if (nomeMotoristaEl) {
+              const nomeMotorista = docData.motoristaNome || dadosCorrida.motoristaNome || await obterNome(dadosCorrida.motoristaId)
+              nomeMotoristaEl.textContent = nomeMotorista
+              console.log("Nome do motorista atualizado:", nomeMotorista)
+            }
+
+            // Atualizar botões com texto apropriado
+            if (btnTudoPronto && isDescarte) {
+              btnTudoPronto.innerHTML = '<i class="fas fa-recycle"></i> Material coletado'
+            }
+
+            console.log("Chamando upsertCorridaBase...")
+            await upsertCorridaBase()
+            
+            console.log("Chamando desenharMarcadores...")
+            desenharMarcadores()
+
+            // Desenhar rotas apenas se tiver posição do motorista
+            if (posMotorista && validarCoordenadas(posMotorista.lat, posMotorista.lng)) {
+              console.log("Motorista tem posição válida, verificando rotas...")
+              if (fase === "indo_retirar" && dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
+                console.log("Desenhando rota para origem")
+                await desenharRota(posMotorista, dadosCorrida.origem)
+              } else if (fase === "a_caminho_destino" && dadosCorrida?.origem && dadosCorrida?.destino && 
+                        validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng) &&
+                        validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
+                console.log("Desenhando rota origem -> destino")
+                await desenharRota(dadosCorrida.origem, dadosCorrida.destino)
+              }
+            } else {
+              console.log("Motorista sem posição válida ainda, aguardando geolocalização...")
+            }
+          } catch (error) {
+            console.error("Erro ao processar snapshot:", error)
+          }
+        }, (error) => {
+          console.error("Erro no listener:", error)
+        })
+
+      // **LISTENER ADICIONAL NO SYNC PARA CANCELAMENTOS RÁPIDOS**
+      const unsubscribeSync = syncRef.onSnapshot((syncDoc) => {
+        try {
+          const syncData = syncDoc.data() || {}
+          console.log("Dados do sync:", syncData)
+
+          // **VERIFICAÇÃO ADICIONAL DE CANCELAMENTO NO SYNC**
+          if (syncData.fase === "cancelada" || syncData.cancelamento) {
+            console.log("🚨 CANCELAMENTO DETECTADO NO SYNC!")
+            console.log("Fase:", syncData.fase)
+            console.log("Cancelamento:", syncData.cancelamento)
+            
+            // Mostrar modal imediatamente
+            criarModalCancelamento()
+            return
+          }
+
+          // Processamento normal do sync (posição, etc.)
+          if (syncData.fase) fase = syncData.fase
+          if (syncData.motorista) {
+            posMotorista = {
+              lat: parseFloat(syncData.motorista.lat),
+              lng: parseFloat(syncData.motorista.lng)
+            }
+            desenharMarcadores()
+          }
+
+        } catch (error) {
+          console.error("Erro ao processar sync:", error)
+        }
+      }, (error) => {
+        console.error("Erro no listener do sync:", error)
       })
 
-    startGeolocation()
+      // Salvar os listeners globalmente para limpeza posterior
+      window.cancelamentoListeners = {
+        unsubscribeCorreda,
+        unsubscribeSync
+      }
+
+      console.log("Iniciando geolocalização...")
+      startGeolocation()
+      
+      // Definir centro inicial do mapa em São Paulo se não houver dados ainda
+      if (!posMotorista) {
+        map.setView([-23.5505, -46.6333], 12)
+      }
+      
+    } catch (error) {
+      console.error("Erro na inicialização:", error)
+      alert("Erro ao inicializar o sistema: " + error.message)
+    }
   })
 
+  // Adicionar estilos CSS
   const style = document.createElement("style")
   style.innerHTML = `
-    @keyframes pulse { 0%{transform:scale(.9);opacity:.7} 50%{transform:scale(1.2);opacity:1} 100%{transform:scale(.9);opacity:.7} }
+    @keyframes pulse { 
+      0%{transform:scale(.9);opacity:.7} 
+      50%{transform:scale(1.2);opacity:1} 
+      100%{transform:scale(.9);opacity:.7} 
+    }
+    .marker-motorista, .marker-origem, .marker-destino {
+      background: transparent !important;
+      border: none !important;
+    }
+    .badge {
+      background: #f8f9fa;
+      color: #495057;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-left: 8px;
+    }
+    #route-instructions {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    #directionsList li {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
   `
   document.head.appendChild(style)
 })()
 
-//  Avaliação  
+// Sistema de Avaliação
 let ratingAtual = 0
+window.ratingAtual = 0
 
-window.ratingAtual = 0; 
-(() => {
-  const stars = document.querySelectorAll(".rating-stars .star");
-  if (!stars || stars.length === 0) return;
+;(() => {
+  const stars = document.querySelectorAll(".rating-stars .star")
+  if (!stars || stars.length === 0) return
 
-  const forEach = (list, cb) => Array.prototype.forEach.call(list, cb);
+  const forEach = (list, cb) => Array.prototype.forEach.call(list, cb)
 
   forEach(stars, (star, i) => {
     star.addEventListener("click", () => {
-      window.ratingAtual = i + 1;
+      window.ratingAtual = i + 1
+      ratingAtual = i + 1
       forEach(stars, (s, j) => {
-        if (j < window.ratingAtual) s.classList.add("active");
-        else s.classList.remove("active");
-      });
-    });
-  });
-})();
+        if (j < window.ratingAtual) s.classList.add("active")
+        else s.classList.remove("active")
+      })
+    })
+  })
+})()
 
-
-//  chat
-(() => {
-  const { firebase } = window;
-  if (!firebase || !firebase.apps.length) return;
-  const db = firebase.firestore();
+// Sistema de Chat
+;(() => {
+  const { firebase } = window
+  if (!firebase || !firebase.apps.length) return
+  const db = firebase.firestore()
 
   function ensureStyles() {
-    if (document.getElementById("mm-chat-styles")) return;
-    const s = document.createElement("style");
-    s.id = "mm-chat-styles";
+    if (document.getElementById("mm-chat-styles")) return
+    const s = document.createElement("style")
+    s.id = "mm-chat-styles"
     s.textContent = `
       #openChat{position:fixed;right:16px;bottom:18px;z-index:20000;background:#ff6c0c;color:#fff;
         border:0;border-radius:999px;padding:12px 18px;font-weight:700;box-shadow:0 8px 18px rgba(255,108,12,.35);cursor:pointer}
@@ -341,14 +1257,15 @@ window.ratingAtual = 0;
       .mm-ft{display:flex;gap:8px;padding:10px;border-top:1px solid #eee;background:#fff}
       .mm-inp{flex:1;resize:none;height:44px;padding:10px;border:1px solid #ddd;border-radius:10px;outline:none}
       .mm-send{background:#ff6c0c;color:#fff;border:0;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer}
-    `;
-    document.head.appendChild(s);
+    `
+    document.head.appendChild(s)
   }
+
   function ensureModal() {
-    if (document.getElementById("mm-chat-modal")) return;
-    const el = document.createElement("div");
-    el.className = "mm-chat-modal";
-    el.id = "mm-chat-modal";
+    if (document.getElementById("mm-chat-modal")) return
+    const el = document.createElement("div")
+    el.className = "mm-chat-modal"
+    el.id = "mm-chat-modal"
     el.innerHTML = `
       <div class="mm-chat-card">
         <div class="mm-chat-hd">
@@ -360,102 +1277,162 @@ window.ratingAtual = 0;
           <textarea id="mm-chat-text" class="mm-inp" placeholder="Escreva uma mensagem"></textarea>
           <button id="mm-chat-send" class="mm-send">Enviar</button>
         </div>
-      </div>`;
-    document.body.appendChild(el);
-  }
-  function ensureButton() {
-    let btn = document.getElementById("openChat");
-    if (!btn) {
-      btn = document.createElement("button");
-      btn.id = "openChat";
-      btn.textContent = "Chat";
-      document.body.appendChild(btn);
-    }
-    btn.onclick = (e) => { e.preventDefault(); window.CHAT?.open(); };
-    document.addEventListener("click", (e) => {
-      const t = e.target;
-      if (t?.id === "openChat" || t?.closest?.("#openChat")) {
-        e.preventDefault(); window.CHAT?.open();
-      }
-    });
+      </div>`
+    document.body.appendChild(el)
   }
 
-  const esc = (s) => (s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  function ensureButton() {
+    let btn = document.getElementById("openChat")
+    if (!btn) {
+      btn = document.createElement("button")
+      btn.id = "openChat"
+      btn.textContent = "Chat"
+      document.body.appendChild(btn)
+    }
+    btn.onclick = (e) => { e.preventDefault(); window.CHAT?.open() }
+    document.addEventListener("click", (e) => {
+      const t = e.target
+      if (t?.id === "openChat" || t?.closest?.("#openChat")) {
+        e.preventDefault()
+        window.CHAT?.open()
+      }
+    })
+  }
+
+  const esc = (s) => (s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))
   const fmtHora = (ts) => {
-    try { const d = ts?.toDate ? ts.toDate() : new Date(); return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}); }
-    catch { return ""; }
-  };
-  const getQS = (k) => new URLSearchParams(location.search).get(k);
+    try { 
+      const d = ts?.toDate ? ts.toDate() : new Date()
+      return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})
+    } catch { 
+      return "" 
+    }
+  }
+  const getQS = (k) => new URLSearchParams(location.search).get(k)
   const autodCorrida = () =>
     getQS("corrida") || getQS("corridaId") || getQS("id") ||
     localStorage.getItem("ultimaCorridaCliente") ||
     localStorage.getItem("ultimaCorridaMotorista") ||
-    localStorage.getItem("corridaSelecionada");
+    localStorage.getItem("corridaSelecionada")
 
   const CHAT = {
     _db: db, _uid: null, _role: "cliente", _corridaId: null, _unsub: () => {},
+    
     init(role) {
-      ensureStyles(); ensureModal(); ensureButton();
-      this._role = role || "cliente";
-      this._uid = firebase.auth().currentUser?.uid || null;
+      ensureStyles()
+      ensureModal()
+      ensureButton()
+      this._role = role || "cliente"
+      this._uid = firebase.auth().currentUser?.uid || null
 
-      document.getElementById("mm-chat-close").onclick = () => this.close();
-      document.getElementById("mm-chat-send").onclick  = () => this.send();
-      document.getElementById("mm-chat-text").onkeydown = (e) => {
-        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this.send(); }
-      };
+      const closeBtn = document.getElementById("mm-chat-close")
+      const sendBtn = document.getElementById("mm-chat-send")
+      const textArea = document.getElementById("mm-chat-text")
+      
+      if (closeBtn) closeBtn.onclick = () => this.close()
+      if (sendBtn) sendBtn.onclick = () => this.send()
+      if (textArea) {
+        textArea.onkeydown = (e) => {
+          if (e.key === "Enter" && !e.shiftKey) { 
+            e.preventDefault()
+            this.send()
+          }
+        }
+      }
     },
+    
     attach(id) {
-      if (!id || id === this._corridaId) return;
-      try { this._unsub(); } catch {}
-      this._corridaId = id;
+      if (!id || id === this._corridaId) return
+      try { 
+        this._unsub() 
+      } catch (e) { 
+        console.error("Erro ao remover listener anterior:", e) 
+      }
+      this._corridaId = id
 
-      const ttl = document.getElementById("mm-chat-title");
-      if (ttl) ttl.textContent = this._role === "motorista" ? "Chat com Cliente" : "Chat com Motorista";
+      const ttl = document.getElementById("mm-chat-title")
+      if (ttl) ttl.textContent = this._role === "motorista" ? "Chat com Cliente" : "Chat com Motorista"
 
-      const ref = this._db.collection("corridas").doc(id).collection("chat").orderBy("ts","asc").limit(500);
-      this._unsub = ref.onSnapshot((snap) => {
-        const list = document.getElementById("mm-chat-list"); if (!list) return;
-        list.innerHTML = "";
-        snap.forEach(d => {
-          const m = d.data() || {};
-          const mine = m?.role ? (m.role === this._role) : (m.senderId === this._uid);
-          const row = document.createElement("div");
-          row.className = "mm-row " + (mine ? "me" : "them");
-          row.innerHTML = `<div class="mm-bub ${mine ? "me" : "them"}">
-              <div>${esc(m.text || "")}</div>
-              <span class="time">${fmtHora(m.ts)}</span>
-            </div>`;
-          list.appendChild(row);
-        });
-        list.scrollTop = list.scrollHeight;
-      });
+      try {
+        const ref = this._db.collection("corridas").doc(id).collection("chat").orderBy("ts","asc").limit(500)
+        this._unsub = ref.onSnapshot((snap) => {
+          const list = document.getElementById("mm-chat-list") 
+          if (!list) return
+          list.innerHTML = ""
+          snap.forEach(d => {
+            try {
+              const m = d.data() || {}
+              const mine = m?.role ? (m.role === this._role) : (m.senderId === this._uid)
+              const row = document.createElement("div")
+              row.className = "mm-row " + (mine ? "me" : "them")
+              row.innerHTML = `<div class="mm-bub ${mine ? "me" : "them"}">
+                  <div>${esc(m.text || "")}</div>
+                  <span class="time">${fmtHora(m.ts)}</span>
+                </div>`
+              list.appendChild(row)
+            } catch (e) {
+              console.error("Erro ao processar mensagem:", e)
+            }
+          })
+          list.scrollTop = list.scrollHeight
+        }, (error) => {
+          console.error("Erro no listener do chat:", error)
+        })
+      } catch (error) {
+        console.error("Erro ao anexar chat:", error)
+      }
     },
+    
     open() {
-      ensureStyles(); ensureModal();
-      if (!this._corridaId) this.attach(autodCorrida());
-      document.getElementById("mm-chat-modal").style.display = "flex";
-      setTimeout(() => document.getElementById("mm-chat-text").focus(), 0);
+      ensureStyles()
+      ensureModal()
+      if (!this._corridaId) this.attach(autodCorrida())
+      const modal = document.getElementById("mm-chat-modal")
+      if (modal) modal.style.display = "flex"
+      setTimeout(() => {
+        const textArea = document.getElementById("mm-chat-text")
+        if (textArea) textArea.focus()
+      }, 0)
     },
-    close() { document.getElementById("mm-chat-modal").style.display = "none"; },
+    
+    close() { 
+      const modal = document.getElementById("mm-chat-modal")
+      if (modal) modal.style.display = "none"
+    },
+    
     async send() {
-      const txtEl = document.getElementById("mm-chat-text");
-      const text = (txtEl.value || "").trim();
-      if (!text || !this._corridaId) return;
-      txtEl.value = "";
-      await this._db.collection("corridas").doc(this._corridaId).collection("chat").add({
-        text, senderId: this._uid, role: this._role, ts: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      const txtEl = document.getElementById("mm-chat-text")
+      if (!txtEl) return
+      
+      const text = (txtEl.value || "").trim()
+      if (!text || !this._corridaId) return
+      
+      txtEl.value = ""
+      
+      try {
+        await this._db.collection("corridas").doc(this._corridaId).collection("chat").add({
+          text, 
+          senderId: this._uid, 
+          role: this._role, 
+          ts: firebase.firestore.FieldValue.serverTimestamp()
+        })
+      } catch (error) {
+        console.error("Erro ao enviar mensagem:", error)
+        txtEl.value = text
+      }
     }
-  };
+  }
 
-  window.CHAT = CHAT;
+  window.CHAT = CHAT
 
   firebase.auth().onAuthStateChanged(() => {
-    const isCliente = /statusC\.html/i.test(location.pathname);
-    CHAT.init(isCliente ? "cliente" : "motorista");
-    const id = autodCorrida(); if (id) CHAT.attach(id);
-  });
-})();
-
-
+    try {
+      const isCliente = /statusC\.html/i.test(location.pathname)
+      CHAT.init(isCliente ? "cliente" : "motorista")
+      const id = autodCorrida() 
+      if (id) CHAT.attach(id)
+    } catch (error) {
+      console.error("Erro na inicialização do chat:", error)
+    }
+  })
+})()

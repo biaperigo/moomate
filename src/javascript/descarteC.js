@@ -9,7 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
         measurementId: "G-62J7Q8CKP4"
     };
 
-    firebase.initializeApp(firebaseConfig);
+    // Evita re-inicializar o Firebase se já houver um app ativo
+    try {
+        if (!firebase.apps || firebase.apps.length === 0) {
+            firebase.initializeApp(firebaseConfig);
+        }
+    } catch (e) {
+        console.warn('Firebase já estava inicializado ou falhou ao iniciar:', e?.message || e);
+    }
     const db = firebase.firestore();
     const descarteForm = document.getElementById('descarteForm');
     const propostasContainer = document.getElementById('propostasContainer');
@@ -1119,6 +1126,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 endereco: ecoponto.endereco,
                 nome: ecoponto.nome,
                 cep: ecoponto.cep,
+                lat: ecoponto.lat,
+                lng: ecoponto.lng,
                 tipo: 'ecoponto'
             }));
 
@@ -1180,8 +1189,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById(campo);
         
         if (item.tipo === 'ecoponto') {
-            // Para ecopontos, usar o nome + endereço
+            // Para ecopontos, usar o nome + endereço e guardar coordenadas no dataset
             input.value = `${item.nome} - ${item.endereco}`;
+            input.dataset.nome = item.nome || '';
+            input.dataset.endereco = item.endereco || '';
+            if (typeof item.lat === 'number' && typeof item.lng === 'number') {
+                input.dataset.lat = String(item.lat);
+                input.dataset.lng = String(item.lng);
+            } else {
+                delete input.dataset.lat;
+                delete input.dataset.lng;
+            }
         } else {
             // Para endereços normais
             input.value = item.endereco;
@@ -1278,15 +1296,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Aguarda o Firebase Auth entregar o usuário (útil quando a página acabou de carregar)
+    const waitAuthUser = () => new Promise((resolve) => {
+        try {
+            const u = firebase.auth()?.currentUser || null;
+            if (u) return resolve(u);
+            const off = firebase.auth().onAuthStateChanged((usr) => {
+                try { off && off(); } catch {}
+                resolve(usr || null);
+            });
+            // Safety timeout
+            setTimeout(() => { try { off && off(); } catch {}; resolve(firebase.auth()?.currentUser || null); }, 2500);
+        } catch { resolve(null); }
+    });
+
     const enviarParaFirebase = async (dadosDescarte) => {
         try {
             console.log('Enviando dados para Firebase:', dadosDescarte);
-            const docRef = await db.collection('descartes').add({
+            // Capturar cliente autenticado e nome
+            const user = await waitAuthUser();
+            if (!user) {
+                console.warn('[descarteC] Sem usuário autenticado. Impedindo criação do descarte.');
+                alert('Faça login para solicitar um descarte.');
+                return null;
+            }
+            const clienteUid = user?.uid || null;
+            let clienteNome = user?.displayName || null;
+            if (clienteUid) {
+                try {
+                    const uSnap = await db.collection('usuarios').doc(clienteUid).get();
+                    const u = uSnap.exists ? (uSnap.data()||{}) : {};
+                    clienteNome = u.nome || u.dadosPessoais?.nome || clienteNome || null;
+                } catch (e) { console.warn('[descarteC] Falha ao obter nome do cliente:', e?.message||e); }
+            }
+
+            const payload = {
                 ...dadosDescarte,
                 status: 'pendente',
                 dataEnvio: firebase.firestore.FieldValue.serverTimestamp(),
-                tipo: 'descarte'
-            });
+                tipo: 'descarte',
+                clienteId: clienteUid || 'idCliente_descarte',
+                clienteNome: clienteNome || null,
+            };
+
+            const docRef = await db.collection('descartes').add(payload);
 
             currentDescarteId = docRef.id;
             console.log('Descarte salvo com ID:', currentDescarteId);
@@ -1298,8 +1351,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             return currentDescarteId;
         } catch (error) {
-            console.error('Erro ao salvar no Firebase:', error);
-            alert('Erro ao enviar solicitação. Tente novamente.');
+            console.error('Erro ao salvar no Firebase:', error?.message || error);
+            alert('Erro ao enviar solicitação. ' + (error?.message || 'Tente novamente.'));
         }
     };
 
@@ -1501,87 +1554,6 @@ function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
         }
     });
 }
-    function criarModalConfirmacao(propostaId, nomeMotorista, proposta) {
-        const modalExistente = document.getElementById('modal-confirmacao');
-        if (modalExistente) {
-            modalExistente.remove();
-        }
-
-        const modal = document.createElement('div');
-        modal.id = 'modal-confirmacao';
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Proposta Aceita!</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fa-solid fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="confirmacao-info">
-                        <div class="icone-sucesso">
-                            <i class="fa-solid fa-check-circle"></i>
-                        </div>
-                        <p>Você aceitou a proposta de <strong>${nomeMotorista}</strong></p>
-                        <p>Valor: <strong>R$ ${Number(proposta.preco || 0).toFixed(2)}</strong></p>
-                        <p>O motorista foi notificado e está a caminho!</p>
-                    </div>
-                    <div class="modal-actions">
-                        <button id="btn-iniciar-corrida" class="btn-iniciar">
-                            Aguardar Motorista
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        setTimeout(() => {
-            mostrarNotificacaoMotorista(nomeMotorista);
-        }, 2000);
-
-        const btnIniciar = modal.querySelector('#btn-iniciar-corrida');
-        btnIniciar.addEventListener('click', () => {
-            iniciarCorrida();
-        });
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-    }
-
-    function mostrarNotificacaoMotorista(nomeMotorista) {
-        const modal = document.getElementById('modal-confirmacao');
-        if (!modal) return;
-
-        const modalBody = modal.querySelector('.modal-body');
-        const notificacao = document.createElement('div');
-        notificacao.className = 'notificacao-motorista';
-        notificacao.innerHTML = `
-            <div class="notificacao-content">
-                <i class="fa-solid fa-truck"></i>
-                <p><strong>${nomeMotorista}</strong> confirmou e está a caminho!</p>
-            </div>
-        `;
-
-        modalBody.appendChild(notificacao);
-
-        const btnIniciar = modal.querySelector('#btn-iniciar-corrida');
-        btnIniciar.textContent = 'Iniciar Corrida';
-        btnIniciar.classList.add('ativo');
-    }
-
-    function iniciarCorrida() {
-        alert('Redirecionando para acompanhar o status da corrida...');
-        const modal = document.getElementById('modal-confirmacao');
-        if (modal) {
-            modal.remove();
-        }
-        console.log('Motorista redirecionado para rotaM.html');
-    }
 
     if (descarteForm) {
         descarteForm.addEventListener('submit', async (event) => {
@@ -1602,37 +1574,120 @@ function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
 
             const enderecoCompleto = `${localRetirada}${numero ? ', ' + numero : ''}${complemento ? ', ' + complemento : ''}`;
 
+            // Montar objetos origem/destino no formato esperado pelo rotaM.js
+            const origemObj = {
+                endereco: enderecoCompleto,
+                lat: null,
+                lng: null
+            };
+
+            // Tentar geocodificar a origem com timeout curto para não travar o envio
+            try {
+                // Usa instância única global para aproveitar cache interno do geocodificador
+                const geo = (window && window._geoEcopontos) ? window._geoEcopontos : (typeof GeocodificadorEcopontos !== 'undefined' ? (window._geoEcopontos = new GeocodificadorEcopontos()) : null);
+                const TIMEOUT_MS = 1000; // 1s de orçamento no submit
+                const geocodeWithTimeout = (promise, ms) => {
+                    return Promise.race([
+                        promise,
+                        new Promise(resolve => setTimeout(() => resolve(null), ms))
+                    ]);
+                };
+                if (geo && typeof geo.geocodificarEndereco === 'function') {
+                    const coords = await geocodeWithTimeout(geo.geocodificarEndereco(enderecoCompleto), TIMEOUT_MS);
+                    if (coords && geo.validarCoordenadas && geo.validarCoordenadas(coords.lat, coords.lng)) {
+                        origemObj.lat = parseFloat(coords.lat);
+                        origemObj.lng = parseFloat(coords.lng);
+                    }
+                }
+            } catch (e) {
+                console.warn('Geocodificação da origem falhou/expirou (seguindo com lat/lng nulos):', e?.message || e);
+            }
+
+            // Se o usuário selecionou um ecoponto do autocomplete com lat/lng, aproveitar
+            let destinoObj = { endereco: localEntrega, lat: null, lng: null };
+            const destLat = parseFloat(localEntregaInput?.dataset?.lat || '');
+            const destLng = parseFloat(localEntregaInput?.dataset?.lng || '');
+            if (!Number.isNaN(destLat) && !Number.isNaN(destLng)) {
+                destinoObj = { endereco: localEntrega, lat: destLat, lng: destLng };
+            }
+
+            // Obter UID do cliente de forma resiliente (suporta páginas sem Firebase Auth)
+            let uid = null;
+            try {
+                if (typeof firebase.auth === 'function') {
+                    uid = firebase.auth().currentUser?.uid || null;
+                } else if (firebase.auth && firebase.auth.currentUser) {
+                    // Alguns bundles expõem firebase.auth como objeto e currentUser diretamente
+                    uid = firebase.auth.currentUser?.uid || null;
+                }
+            } catch (e) {
+                console.warn('Não foi possível ler firebase.auth().currentUser:', e?.message || e);
+            }
+            // Fallbacks adicionais (ex.: salvo após login)
+            if (!uid) {
+                uid = localStorage.getItem('clienteUid') || localStorage.getItem('uid') || null;
+            }
+
             const dadosDescarte = {
                 localRetirada: enderecoCompleto,
                 cep,
                 localEntrega,
                 tipoCaminhao,
                 descricao,
-                clienteId: 'cliente_teste', 
-                origem: enderecoCompleto,
-                destino: localEntrega,
-                tipoVeiculo: tipoCaminhao
+                clienteId: uid,
+                origem: origemObj,
+                destino: destinoObj,
+                tipoVeiculo: tipoCaminhao,
+                tipo: 'descarte'
             };
             
-            const btnSubmit = event.target.querySelector('.btn-enviarsolicitação');
-            const textoOriginal = btnSubmit.textContent;
-            btnSubmit.textContent = 'Enviando...';
-            btnSubmit.disabled = true;
+            // Tornar busca do botão de submit mais robusta
+            const formEl = event.target;
+            const btnSubmit = event.submitter || formEl.querySelector('[type="submit"], .btn-enviarsolicitação, .btn-enviarsolicitacao, .btn-enviar');
+            const textoOriginal = btnSubmit?.textContent || '';
+            if (btnSubmit) {
+                btnSubmit.textContent = 'Enviando...';
+                btnSubmit.disabled = true;
+            }
 
             try {
                 await enviarParaFirebase(dadosDescarte);
                 
-                btnSubmit.textContent = 'Solicitação Enviada!';
-                btnSubmit.classList.add('enviado');
+                if (btnSubmit) {
+                    btnSubmit.textContent = 'Solicitação Enviada!';
+                    btnSubmit.classList.add('enviado');
+                }
+
+                // Atualização em background da origem caso não tenha conseguido lat/lng no submit
+                try {
+                    if ((!dadosDescarte.origem.lat || !dadosDescarte.origem.lng) && window && window._geoEcopontos) {
+                        const geoBg = window._geoEcopontos;
+                        const coordsBg = await geoBg.geocodificarEndereco(dadosDescarte.origem.endereco);
+                        if (coordsBg && geoBg.validarCoordenadas && geoBg.validarCoordenadas(coordsBg.lat, coordsBg.lng) && currentDescarteId) {
+                            const origemAtualizada = {
+                                ...dadosDescarte.origem,
+                                lat: parseFloat(coordsBg.lat),
+                                lng: parseFloat(coordsBg.lng)
+                            };
+                            await db.collection('descartes').doc(currentDescarteId).update({ origem: origemAtualizada });
+                        }
+                    }
+                } catch (bgErr) {
+                    console.warn('Falha ao atualizar origem em background:', bgErr?.message || bgErr);
+                }
                 
                 setTimeout(() => {
-                    btnSubmit.textContent = textoOriginal;
-                    btnSubmit.disabled = false;
-                    btnSubmit.classList.remove('enviado');
+                    if (btnSubmit) {
+                        btnSubmit.textContent = textoOriginal;
+                        btnSubmit.disabled = false;
+                        btnSubmit.classList.remove('enviado');
+                    }
                 }, 3000);
             } catch (error) {
-                btnSubmit.textContent = textoOriginal;
-                btnSubmit.disabled = false;
+                if (btnSubmit) {
+                    btnSubmit.textContent = textoOriginal;
+                    btnSubmit.disabled = false;
+                }
             }
         });
     }

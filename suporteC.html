@@ -16,31 +16,55 @@
     </div>
 
     <nav class="nav-links" id="navMenu">
-  <a href="homeC.html">Home</a>
-  <a href="pedidosC.html">Pedidos</a>
-  <a href="carteiraC.html">Carteira</a>
-  <a href="suporteC.html">Suporte</a>
-  <a href="chatC.html">CHAT</a>
-  <a href="ecopontosC.html">Pontos de coleta</a>
-</nav>
+      <a href="homeC.html">Home</a>
+      <a href="pedidosC.html">Pedidos</a>
+      <a href="carteiraC.html">Carteira</a>
+      <a href="suporteC.html">Suporte</a>
+      <a href="chatC.html">CHAT</a>
+      <a href="ecopontosC.html">Pontos de coleta</a>
+    </nav>
 
     <div class="header-icons">
-  <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
-  <a href="dadospessoaisC.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
-  <a href="configuraçõesC.html" title="Configurações"><i class="fa-solid fa-gear"></i></a> 
-  <button class="menu-toggle" id="menuToggle">
-    <i class="fa-solid fa-bars"></i>
-  </button>
+      <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisC.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesC.html" title="Configurações"><i class="fa-solid fa-gear"></i></a> 
+      <button class="menu-toggle" id="menuToggle">
+        <i class="fa-solid fa-bars"></i>
+      </button>
   </header>
 
   <main class="suporte-container">
     <h1 class="title">Tópicos</h1>
 
     <div class="topics">
-      <div class="topic"><span class="title-topic">Fazer pedido</span><p>Rastreamento, avaliação...</p></div>
-      <div class="topic"><span class="title-topic">Problemas no pedido</span><p>Mercadoria danificada, reclamações...</p></div>
-      <div class="topic"><span class="title-topic">Informações gerais</span><p>Tipos de serviço, seguro...</p></div>
-      <div class="topic" id="abrir-feedback"><span class="title-topic">Feedback</span><p>Conte o que acha do nosso aplicativo.</p></div>
+      <div class="topic" id="fazer-pedido">
+        <span class="title-topic">Fazer pedido</span>
+        <div class="topic-explanation" id="explanation-fazer-pedido" style="display: none;">
+          <p>Primeiro, acesse a home do Moomate e preencha os campos obrigatórios, como local de retirada e local de entrega, e não se esqueça de incluir o CEP para garantir que o pedido seja processado corretamente.
+<br>
+Em seguida, informe a quantidade de volumes que serão transportados. Isso ajudará o motorista a entender a carga e a se preparar adequadamente para a viagem.
+<br>
+Por fim, selecione o tipo de veículo necessário para o transporte, escolhendo entre pequeno, médio ou grande, conforme o tamanho e a quantidade de itens que serão transportados.
+<br>
+Após preencher todos os campos, clique no botão de "Ver motoristas disponíveis" para submeter seu pedido. Agora, basta aguardar as propostas dos caminhoneiros mais próximos de você. Assim que um motorista aceitar sua solicitação, você será notificado e o processo de transporte será iniciado.</p>
+        </div>
+      </div>
+      <div class="topic" id="problemas-pedido">
+        <span class="title-topic">Problemas no pedido</span>
+        <div class="topic-explanation" id="explanation-problemas-pedido" style="display: none;">
+          <p>No caso de problemas no seu processo de mudança contate-nos por e-mail: moomateoficial@gmail.com</p>
+        </div>
+      </div>
+      <div class="topic" id="informacoes-gerais">
+        <span class="title-topic">Informações gerais</span>
+        <div class="topic-explanation" id="explanation-informacoes-gerais" style="display: none;">
+          <p>A Moomate é uma startup focada na área de transporte, intermediando serviços de mudanças residenciais e móveis de forma ágil, prática e econômica.</p>
+        </div>
+      </div>
+      <div class="topic" id="abrir-feedback">
+        <span class="title-topic">Feedback</span>
+        <p>Conte o que acha do nosso aplicativo.</p>
+      </div>
     </div>
 
     <section id="sobre">
@@ -51,7 +75,7 @@
         <div class="team-member">
           <img src="src/images/Maria Eduarda Augusto.JPG" alt="Maria Eduarda Augusto" class="team-photo">
           <h3 class="team-name">Maria Eduarda Augusto</h3>
-          <p class="team-role">Analista de Projeto</p>
+          <p class="team-role">CEO e Analista de Projeto</p>
         </div>
         <div class="team-member">
           <img src="src/images/Gabriel Massao.JPG" alt="Gabriel Massao" class="team-photo">
@@ -76,8 +100,8 @@
     <div class="modal-content">
       <h2>Nos envie um feedback</h2>
       <p>Fale conosco por e-mail clicando no botão abaixo:</p>
-      <a class="btn-email" href="mailto:suporte@moomate.com?subject=Feedback%20sobre%20o%20app%20Moomate&body=Olá%2C%20gostaria%20de%20enviar%20o%20seguinte%20feedback%3A" target="_blank">
-        Enviar email para suporte@moomate.com
+      <a class="btn-email" href="mailto:moomateoficial@gmail.com?subject=Feedback%20sobre%20o%20app%20Moomate&body=Olá%2C%20gostaria%20de%20enviar%20o%20seguinte%20feedback%3A" target="_blank">
+        Enviar email para moomateoficial@gmail.com
       </a>
       <button id="fechar-modal">Fechar</button>
     </div>

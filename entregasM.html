@@ -36,51 +36,25 @@
   <h1 class="title-pedidos">Entregas</h1>
 
   <div class="tabs">
-    <div class="tab active">Em andamento</div>
-    <div class="tab">Completo</div>
+    <div class="tab active">Completo</div>
     <div class="tab">Cancelado</div>
   </div>
 
+  <!-- COMPLETOS -->
   <div class="tab-content active">
-    <div class="delivery-card">
-      <div class="delivery-left">
-        <h3><i class="fa-solid fa-box"></i>Entrega #4521 - Mudança Residencial</h3>
-        <p><i class="fa-solid fa-location-dot"></i>Retirar em: Rua das Acácias, SP</p>
-        <p><i class="fa-solid fa-location-arrow"></i>Entregar em: Av. Brasil, SP</p>
-      </div>
-      <div class="delivery-right">
-        <span class="entrega-agora">Em andamento</span>
-        <span class="tempo">Entrega prevista: 29/07/2025</span>
-      </div>
-    </div>
+    <div id="vazio-completos" style="display:none"></div>
+    <div id="lista-completos"></div>
+  </div>
+  <!-- CANCELADOS -->
+  <div class="tab-content">
+    <div id="vazio-cancelados" style="display:none"></div>
+    <div id="lista-cancelados"></div>
   </div>
 
-  <div class="tab-content">
-    <div class="delivery-card">
-      <div class="delivery-left">
-        <h3><i class="fa-solid fa-circle-check"></i>Entrega #4488 - Mudança Escritório</h3>
-        <p><i class="fa-solid fa-location-dot"></i>Retirar em: R. Augusta, SP</p>
-        <p><i class="fa-solid fa-location-arrow"></i>Entregar em: Av. Faria Lima, SP</p>
-      </div>
-      <div class="delivery-right">
-        <span class="entrega-agora status-concluido">Concluído</span>
-        <span class="tempo">Entregue em: 25/07/2025</span>
-      </div>
-    </div>
-  </div>
-  <div class="tab-content">
-    <div class="delivery-card">
-      <div class="delivery-left">
-        <h3><i class="fa-solid fa-circle-xmark"></i>Entrega #4431 - Mudança Rápida</h3>
-        <p><i class="fa-solid fa-location-dot"></i>Retirar em: R. das Orquídeas</p>
-        <p><i class="fa-solid fa-location-arrow"></i>Entregar em: R. dos Cravos</p>
-      </div>
-      <div class="delivery-right">
-        <span class="entrega-agora status-cancelado">Cancelado</span>
-        <span class="tempo">Cancelado em: 20/07/2025</span>
-      </div>
-    </div>
-  </div>
-<script src="src/javascript/entregasM.js"></script>
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="src/javascript/entregasM.js"></script>
 </body>
 </html>
