@@ -196,10 +196,10 @@ body {
 
 .delivery-section {
   background-color: #fff;
-  padding: 1.5rem 1rem;
+  padding: 1.2rem 1rem;
   margin: 2rem 1rem;
   border-radius: 16px;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
 }
 
 .delivery-section h3,
@@ -212,27 +212,18 @@ body {
 }
 
 .delivery-card {
-  background-color: #fff;
-  border: 1px solid #e0e0e0;
-  border-left: 4px solid #ff6c0c;
-  border-radius: 10px;
-  padding: 0.9rem 1rem 1rem 2.2rem;
+  background-color: transparent; /* deixa o invólucro transparente e usa ag-card interno */
+  border: none;
+  padding: 0;
   position: relative;
-  margin-bottom: 1.2rem;
+  margin-bottom: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.delivery-card:hover {
-  background-color: #fff9f4;
-  box-shadow: 0 0 0 2px #ff6c0c44;
-}
+.delivery-card:hover .ag-card { box-shadow: 0 0 0 2px #ff6c0c33; background:#fffefb }
 
-.delivery-card.selected {
-  border-color: #ff6c0c;
-  background-color: #fff3e5;
-  box-shadow: 0 0 0 3px #ff6c0c66;
-}
+.delivery-card.selected .ag-card { box-shadow: 0 0 0 3px #ff6c0c55; background:#fff7ef }
 
 .alert-icon {
   position: absolute;
@@ -262,6 +253,7 @@ body {
   color: #999;
   font-weight: 500;
 }
+
 .entrega-footer {
   display: flex;
   justify-content: flex-end;
@@ -623,7 +615,6 @@ footer {
   font-size: 12px;
 }
 
-
 .delivery-card .card-details {
   margin-top: 10px;
   padding-top: 10px;
@@ -746,3 +737,68 @@ footer {
 .mm-actions{ display:flex; gap:10px; justify-content:flex-end }
 .primario{ padding:10px 14px; background:#3DBE34; border:0; color:#fff; border-radius:8px; cursor:pointer }
 .secundario{ padding:10px 14px; background:#e7e7e7; border:0; color:#111; border-radius:8px; cursor:pointer }
+/* Cartões do Agendamento (melhoria de layout) */
+.ag-card {
+  position: relative;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px 16px 14px 16px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.02);
+}
+
+.ag-card + .ag-card {
+  margin-top: 12px;
+}
+
+.ag-card:hover {
+  background-color: #fff9f4;
+  box-shadow: 0 0 0 2px #ff6c0c22;
+}
+
+.ag-accent {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  background: #ff6c0c;
+  border-radius: 0 4px 4px 0;
+}
+
+.ag-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.ag-title {
+  font-weight: 700;
+  color: #333;
+}
+
+.ag-when {
+  color: #888;
+  font-size: .85rem;
+}
+
+.ag-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: .35rem 1rem;
+  align-items: start;
+}
+
+.ag-left div,
+.ag-mid div {
+  margin: .1rem 0;
+  color: #444;
+  font-size: .95rem;
+}
+
+@media (max-width: 640px) {
+  .ag-info {
+    grid-template-columns: 1fr;
+  }
+}

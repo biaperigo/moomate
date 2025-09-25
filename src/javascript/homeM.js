@@ -16,11 +16,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let motoristaUid = null;
   let nomeMotoristaReal = "Motorista";
-  const STORAGE_SEL_UID = 'motorista.uid.selecionado';
-  const STORAGE_SEL_NOME = 'motorista.nome.selecionado';
+  
+  // Estima a distância em km 
+  function estimarDistanciaKm(solicitacao){
+    try{
+      const distInformada = Number(solicitacao?.distancia);
+      if (Number.isFinite(distInformada) && distInformada > 0) return distInformada;
 
-  function salvarSelecaoMotorista(uid, nome){
-    try { localStorage.setItem(STORAGE_SEL_UID, uid||''); localStorage.setItem(STORAGE_SEL_NOME, nome||''); } catch{}
+      const toNum = (v)=> (v!=null && !Number.isNaN(Number(v)) ? Number(v) : null);
+      const oLat = toNum(solicitacao?.origem?.lat ?? solicitacao?.origem?.coordenadas?.lat);
+      const oLng = toNum(solicitacao?.origem?.lng ?? solicitacao?.origem?.coordenadas?.lng);
+      const dLat = toNum(solicitacao?.destino?.lat ?? solicitacao?.destino?.coordenadas?.lat);
+      const dLng = toNum(solicitacao?.destino?.lng ?? solicitacao?.destino?.coordenadas?.lng);
+
+      const R = 6371; const toRad = (deg)=>deg*Math.PI/180;
+      const calc = (lat1,lon1,lat2,lon2)=>{
+        const dPhi=toRad(lat2-lat1), dLam=toRad(lon2-lon1);
+        const a=Math.sin(dPhi/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLam/2)**2;
+        return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+      };
+
+      if ([oLat,oLng,dLat,dLng].every(Number.isFinite)) return calc(oLat,oLng,dLat,dLng);
+      if ([dLat,dLng].every(Number.isFinite)) return calc(CENTRO_SP_REF.lat,CENTRO_SP_REF.lng,dLat,dLng);
+      if ([oLat,oLng].every(Number.isFinite)) return calc(oLat,oLng,CENTRO_SP_REF.lat,CENTRO_SP_REF.lng);
+
+      return 1;
+    }catch{ return 1; }
   }
   function lerSelecaoMotorista(){
     try {
@@ -30,36 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch { return null; }
   }
 
-  async function buscarMotoristasPorNome(term){
-    try{
-      const out=[];
-      // Tenta ordenar por 'nome' (raiz), depois por 'dadosPessoais.nome', senão pega sem ordenação
-      const tryRoot = await db.collection('motoristas').orderBy('nome').limit(30).get().catch(()=>null);
-      const tryDP   = tryRoot?.docs?.length ? null : await db.collection('motoristas').orderBy('dadosPessoais.nome').limit(30).get().catch(()=>null);
-      const lista = tryRoot?.docs?.length ? tryRoot.docs : (tryDP?.docs?.length ? tryDP.docs : (await db.collection('motoristas').limit(30).get()).docs);
-      const low = (term||'').toLowerCase();
-      lista.forEach(d=>{
-        const data = d.data()||{};
-        const nome = data?.nome || data?.dadosPessoais?.nome || d.id;
-        const foto = data?.fotoPerfilUrl || data?.dadosPessoais?.fotoPerfilUrl || null;
-        if(!term || nome.toLowerCase().includes(low)) out.push({ uid:d.id, nome, foto });
-      });
-      return out;
-    }catch(e){ console.warn('[homeM] buscarMotoristasPorNome falhou:', e?.message||e); return []; }
-  }
-
-  async function selecionarMotoristaInterativo(){
-    const termo = prompt('Buscar motorista por nome (deixe vazio para listar alguns):') || '';
-    const itens = await buscarMotoristasPorNome(termo);
-    if(!itens.length){ alert('Nenhum motorista encontrado.'); return null; }
-    const texto = itens.map((m,i)=>`${i+1}) ${m.nome} — ${m.uid}`).join('\n');
-    const idxStr = prompt(`Escolha o número do motorista:\n\n${texto}`);
-    const idx = Number(idxStr)-1;
-    if(Number.isNaN(idx) || idx<0 || idx>=itens.length){ alert('Seleção inválida.'); return null; }
-    const escolhido = itens[idx];
-    salvarSelecaoMotorista(escolhido.uid, escolhido.nome);
-    return escolhido;
-  }
 
   auth.onAuthStateChanged(async (user) => {
     if (!user) return; 
@@ -75,30 +66,32 @@ document.addEventListener('DOMContentLoaded', () => {
     ouvirAceitacaoPropostas();
   });
 
-  const deliveryList = document.getElementById('delivery-list');
-  const loadingMessage = document.getElementById('loading-message');
-  const submitBtn = document.getElementById('submitBtn');
-  const proposalModal = document.getElementById('proposalModal');
-  const modalClose = document.getElementById('modalClose');
-  const sendProposalBtn = document.getElementById('sendProposalBtn');
-  const proposalPriceInput = document.getElementById('proposalPrice');
-  const proposalTimeInput = document.getElementById('proposalTime');
-  const proposalHelpersInput = document.getElementById('proposalHelpers');
-  const proposalVehicleInput = document.getElementById('proposalVehicle');
+  const listaEntregas = document.getElementById('delivery-list');
+  const mensagemCarregando = document.getElementById('loading-message');
+  const botaoEnviar = document.getElementById('submitBtn');
+  const modalProposta = document.getElementById('proposalModal');
+  const botaoFecharModal = document.getElementById('modalClose');
+  const botaoConfirmarProposta = document.getElementById('sendProposalBtn');
+  const inputPrecoProposta = document.getElementById('proposalPrice');
+  const inputTempoProposta = document.getElementById('proposalTime');
+  const inputAjudantesProposta = document.getElementById('proposalHelpers');
+  const inputVeiculoProposta = document.getElementById('proposalVehicle');
 
-  let selectedEntregaId = null;
+  let entregaSelecionadaId = null;
   const fallbackMotoristaId = `motorista_${Math.random().toString(36).substr(2, 9)}`;
   
   const todasSolicitacoes = new Map();
-  let currentBounds = null;
+  let limitesPrecoAtuais = null;
+  // Centro aproximado do Estado de São Paulo (para estimativas rápidas)
+  const CENTRO_SP_REF = { lat: -22.1900, lng: -48.7900 };
 
-  (function fillHelpers() {
-    proposalHelpersInput.innerHTML = "";
+  (function preencherAjudantes() {
+    inputAjudantesProposta.innerHTML = "";
     for (let i = 0; i <= 10; i++) {
       const opt = document.createElement("option");
       opt.value = String(i);
       opt.textContent = `${i} Ajudante${i === 1 ? "" : "s"}`;
-      proposalHelpersInput.appendChild(opt);
+      inputAjudantesProposta.appendChild(opt);
     }
   })();
 async function geocodificarEndereco(endereco) {
@@ -132,11 +125,16 @@ async function geocodificarEndereco(endereco) {
   
   return null;
 }
-  // Calcular preço 
-  function calcPriceBoundsFromDistance(distKm) {
-    const base = 24 * (Number(distKm) || 0); 
-    const min = Math.max(0, base - 150);
-    const max = base + 150;
+  // Calcular faixa de preço a partir da distância
+  function calcularLimitesPrecoPorDistancia(distKm) {
+    const dist = Number(distKm) || 0;
+    // preço base por km (mesma lógica para corrida normal e descarte)
+    let base = 24 * dist;
+    // Garantir preço mínimo quando a conta tender a 0
+    if (base < 24) base = 24;
+    // Faixa dinâmica com proteção de mínimo
+    let min = Math.max(24, Math.max(0, base - 150));
+    let max = base + 150;
     return {
       base: Math.round(base * 100) / 100,
       min: Math.round(min * 100) / 100,
@@ -144,7 +142,7 @@ async function geocodificarEndereco(endereco) {
     };
   }
 
-  function ensurePriceHintElement() {
+  function garantirElementoDicaPreco() {
     let hint = document.getElementById("priceRangeHint");
     if (!hint) {
       hint = document.createElement("small");
@@ -152,7 +150,7 @@ async function geocodificarEndereco(endereco) {
       hint.style.display = "block";
       hint.style.marginTop = "6px";
       hint.style.color = "#666";
-      proposalPriceInput.parentElement.appendChild(hint);
+      inputPrecoProposta.parentElement.appendChild(hint);
     }
     return hint;
   }
@@ -204,13 +202,13 @@ async function geocodificarEndereco(endereco) {
   }
 
   function atualizarInterface() {
-    loadingMessage.style.display = 'none';
-    deliveryList.innerHTML = '';
+    mensagemCarregando.style.display = 'none';
+    listaEntregas.innerHTML = '';
 
     if (todasSolicitacoes.size === 0) {
-      loadingMessage.textContent = 'Nenhum pedido disponível no momento.';
-      loadingMessage.style.display = 'block';
-      deliveryList.appendChild(loadingMessage);
+      mensagemCarregando.textContent = 'Nenhum pedido disponível no momento.';
+      mensagemCarregando.style.display = 'block';
+      listaEntregas.appendChild(mensagemCarregando);
       return;
     }
     const solicitacoesOrdenadas = Array.from(todasSolicitacoes.values())
@@ -218,7 +216,7 @@ async function geocodificarEndereco(endereco) {
 
     solicitacoesOrdenadas.forEach(solicitacao => {
       const card = criarCardEntrega(solicitacao);
-      deliveryList.appendChild(card);
+      listaEntregas.appendChild(card);
     });
 
     console.log(`📋 Interface atualizada: ${solicitacoesOrdenadas.length} solicitações`);
@@ -226,8 +224,8 @@ async function geocodificarEndereco(endereco) {
 
   function criarCardEntrega(solicitacao) {
     const isDescarte = solicitacao.tipo === 'descarte';
-    const iconClass = isDescarte ? 'fa-recycle' : 'fa-box-open';
-    const badgeClass = isDescarte ? 'recycle' : 'box';
+    const classeIcone = isDescarte ? 'fa-recycle' : 'fa-box-open';
+    const classeDistintivo = isDescarte ? 'recycle' : 'box';
     
     const card = document.createElement('div');
     card.className = 'delivery-card';
@@ -272,7 +270,7 @@ async function geocodificarEndereco(endereco) {
       };
 
       // Centro aproximado do Estado de São Paulo (lat/lng aproximados)
-      const SP_CENTER = { lat: -22.1900, lng: -48.7900 };
+      const CENTRO_SP = { lat: -22.1900, lng: -48.7900 };
 
       if (
         typeof oLat === 'number' && !Number.isNaN(oLat) &&
@@ -287,14 +285,14 @@ async function geocodificarEndereco(endereco) {
         typeof dLng === 'number' && !Number.isNaN(dLng)
       ) {
         // Sem origem: usar centro da cidade -> destino
-        const distKm = haversine(SP_CENTER.lat, SP_CENTER.lng, dLat, dLng);
+        const distKm = haversine(CENTRO_SP.lat, CENTRO_SP.lng, dLat, dLng);
         distancia = `${distKm.toFixed(2)} km (aprox.)`;
       } else if (
         typeof oLat === 'number' && !Number.isNaN(oLat) &&
         typeof oLng === 'number' && !Number.isNaN(oLng)
       ) {
         // Sem destino: usar origem -> centro da cidade
-        const distKm = haversine(oLat, oLng, SP_CENTER.lat, SP_CENTER.lng);
+        const distKm = haversine(oLat, oLng, CENTRO_SP.lat, CENTRO_SP.lng);
         distancia = `${distKm.toFixed(2)} km (aprox.)`;
       } else {
         // Sem nenhuma coord: distância aproximada média intra-SP
@@ -312,7 +310,7 @@ async function geocodificarEndereco(endereco) {
     }
       
     const tipoVeiculo = solicitacao.tipoVeiculo || solicitacao.tipoCaminhao || '---';    
-    const tempoPostagem = getTempoPostagem(solicitacao);
+    const tempoPostagem = obterTempoPostagem(solicitacao);
 
     card.innerHTML = `
       <strong>${isDescarte ? 'Descarte' : 'Entrega'} #${solicitacao.id.substring(0, 6)}</strong>
@@ -328,7 +326,7 @@ async function geocodificarEndereco(endereco) {
           <p><strong>Tipo de veículo:</strong> ${tipoVeiculo}</p>
         </div>
         <div class="info-direita">
-          <span class="icon-area ${badgeClass}"><i class="fa-solid ${iconClass}"></i></span>
+          <span class="icon-area ${classeDistintivo}"><i class="fa-solid ${classeIcone}"></i></span>
         </div>
       </div>
     `;
@@ -370,15 +368,15 @@ async function geocodificarEndereco(endereco) {
       const enderecoDestino = solicitacao.destino?.endereco || solicitacao.localEntrega || '';
 
       // Geocodificar faltantes com orçamento curto
-      const TIMEOUT_MS = 1200;
-      const withTimeout = (promise, ms) => Promise.race([
+      const TEMPO_LIMITE_MS = 1200;
+      const comTempoLimite = (promise, ms) => Promise.race([
         promise,
         new Promise(resolve => setTimeout(() => resolve(null), ms))
       ]);
 
       if (precisaOrigem && enderecoOrigem) {
         console.log('[homeM] Geocodificando origem…', enderecoOrigem);
-        const geoO = await withTimeout(geocodificarEndereco(enderecoOrigem), TIMEOUT_MS);
+        const geoO = await comTempoLimite(geocodificarEndereco(enderecoOrigem), TEMPO_LIMITE_MS);
         if (geoO && typeof geoO.lat === 'number' && typeof geoO.lng === 'number') {
           oLat = geoO.lat; oLng = geoO.lng;
           console.log('[homeM] Origem geocodificada', { oLat, oLng });
@@ -386,7 +384,7 @@ async function geocodificarEndereco(endereco) {
       }
       if (precisaDestino && enderecoDestino) {
         console.log('[homeM] Geocodificando destino…', enderecoDestino);
-        const geoD = await withTimeout(geocodificarEndereco(enderecoDestino), TIMEOUT_MS);
+        const geoD = await comTempoLimite(geocodificarEndereco(enderecoDestino), TEMPO_LIMITE_MS);
         if (geoD && typeof geoD.lat === 'number' && typeof geoD.lng === 'number') {
           dLat = geoD.lat; dLng = geoD.lng;
           console.log('[homeM] Destino geocodificado', { dLat, dLng });
@@ -419,7 +417,7 @@ async function geocodificarEndereco(endereco) {
     }
   }
 
-  function getTempoPostagem(solicitacao) {
+  function obterTempoPostagem(solicitacao) {
     try {
       const agora = new Date();
       const dataPostagem = new Date(solicitacao.dataOrdenacao);
@@ -440,50 +438,50 @@ async function geocodificarEndereco(endereco) {
   }
 
   function abrirModal() {
-    if (!selectedEntregaId) return alert("Selecione um pedido!");
-    const solicitacao = todasSolicitacoes.get(selectedEntregaId);
+    if (!entregaSelecionadaId) return alert("Selecione um pedido!");
+    const solicitacao = todasSolicitacoes.get(entregaSelecionadaId);
     if (!solicitacao) return alert("Dados da entrega não encontrados.");
 
-    const distKm = solicitacao.distancia || 0;
-    currentBounds = calcPriceBoundsFromDistance(distKm);
+    const distKm = estimarDistanciaKm(solicitacao);
+    limitesPrecoAtuais = calcularLimitesPrecoPorDistancia(distKm);
 
-    proposalPriceInput.value = "";
-    proposalPriceInput.min = currentBounds.min.toFixed(2);
-    proposalPriceInput.max = currentBounds.max.toFixed(2);
-    proposalPriceInput.step = "0.01";
-    proposalTimeInput.value = "";
-    proposalHelpersInput.value = "0";
-    proposalVehicleInput.value = "pequeno";
+    inputPrecoProposta.value = "";
+    inputPrecoProposta.min = limitesPrecoAtuais.min.toFixed(2);
+    inputPrecoProposta.max = limitesPrecoAtuais.max.toFixed(2);
+    inputPrecoProposta.step = "0.01";
+    inputTempoProposta.value = "";
+    inputAjudantesProposta.value = "0";
+    inputVeiculoProposta.value = "pequeno";
 
-    const hint = ensurePriceHintElement();
-    hint.textContent = `Faixa permitida: R$ ${currentBounds.min.toFixed(2)} a R$ ${currentBounds.max.toFixed(2)} (base: R$ ${currentBounds.base.toFixed(2)})`;
+    const hint = garantirElementoDicaPreco();
+    hint.textContent = `Faixa permitida: R$ ${limitesPrecoAtuais.min.toFixed(2)} a R$ ${limitesPrecoAtuais.max.toFixed(2)} (base: R$ ${limitesPrecoAtuais.base.toFixed(2)})`;
 
-    proposalModal.style.display = 'flex';
+    modalProposta.style.display = 'flex';
     setTimeout(() => {
-      proposalModal.style.opacity = '1';
-      proposalModal.querySelector('.modal-content').style.transform = 'scale(1)';
+      modalProposta.style.opacity = '1';
+      modalProposta.querySelector('.conteudo-modal, .modal-content').style.transform = 'scale(1)';
     }, 10);
   }
 
   function fecharModal() {
-    proposalModal.style.opacity = '0';
-    proposalModal.querySelector('.modal-content').style.transform = 'scale(0.9)';
+    modalProposta.style.opacity = '0';
+    modalProposta.querySelector('.conteudo-modal, .modal-content').style.transform = 'scale(0.9)';
     setTimeout(() => {
-      proposalModal.style.display = 'none';
+      modalProposta.style.display = 'none';
     }, 300);
   }
 
   async function enviarProposta() {
-    const precoBase = parseFloat((proposalPriceInput.value || "").replace(",", "."));
-    const tempoChegada = parseInt(proposalTimeInput.value, 10);
-    const numAjudantes = parseInt(proposalHelpersInput.value, 10);
-    const tipoVeiculo = proposalVehicleInput.value;
+    const precoBase = parseFloat((inputPrecoProposta.value || "").replace(",", "."));
+    const tempoChegada = parseInt(inputTempoProposta.value, 10);
+    const numAjudantes = parseInt(inputAjudantesProposta.value, 10);
+    const tipoVeiculo = inputVeiculoProposta.value;
 
-    if (!selectedEntregaId) return alert("Entrega não selecionada.");
-    if (!currentBounds) return alert("Não foi possível calcular a faixa de preço desta entrega.");
+    if (!entregaSelecionadaId) return alert("Entrega não selecionada.");
+    if (!limitesPrecoAtuais) return alert("Não foi possível calcular a faixa de preço desta entrega.");
     if (!precoBase || isNaN(precoBase)) return alert("Informe um valor base válido.");
-    if (precoBase < currentBounds.min || precoBase > currentBounds.max) {
-      return alert(`O valor deve estar entre R$ ${currentBounds.min.toFixed(2)} e R$ ${currentBounds.max.toFixed(2)}.`);
+    if (precoBase < limitesPrecoAtuais.min || precoBase > limitesPrecoAtuais.max) {
+      return alert(`O valor deve estar entre R$ ${limitesPrecoAtuais.min.toFixed(2)} e R$ ${limitesPrecoAtuais.max.toFixed(2)}.`);
     }
     if (!tempoChegada || tempoChegada <= 0) return alert("Informe o tempo até a retirada (minutos).");
     if (numAjudantes < 0 || numAjudantes > 10) return alert("Número de ajudantes inválido.");
@@ -510,7 +508,7 @@ async function geocodificarEndereco(endereco) {
       nomeMotoristaReal = mData?.nome || mData?.dadosPessoais?.nome || nomeMotoristaReal || 'Motorista';
     } catch(e){ console.warn('[homeM] validação motorista falhou:', e?.message||e); }
     // Carregar dados do cliente da entrega para anexar (somente leitura)
-    const solicitacao = todasSolicitacoes.get(selectedEntregaId);
+    const solicitacao = todasSolicitacoes.get(entregaSelecionadaId);
     const collectionName = solicitacao.tipo === 'descarte' ? 'descartes' : 'entregas';
 
     const propostaData = {
@@ -536,13 +534,13 @@ async function geocodificarEndereco(endereco) {
     } catch {}
 
     db.collection(collectionName)
-      .doc(selectedEntregaId)
+      .doc(entregaSelecionadaId)
       .collection('propostas')
       .doc(idParaUsar)
       .set(propostaData)
       .then(() => {
         return db.collection(collectionName)
-          .doc(selectedEntregaId)
+          .doc(entregaSelecionadaId)
           .update({
             [`propostas.${idParaUsar}`]: propostaData,
             ultimaPropostaEm: firebase.firestore.FieldValue.serverTimestamp()
@@ -551,9 +549,9 @@ async function geocodificarEndereco(endereco) {
       .then(() => {
         alert("Proposta enviada com sucesso!");
         fecharModal();
-        selectedEntregaId = null;
+        entregaSelecionadaId = null;
         document.querySelectorAll('.delivery-card').forEach(c => c.classList.remove('selected'));
-        submitBtn.disabled = true;
+        botaoEnviar.disabled = true;
       })
       .catch(err => {
         console.error("Erro ao enviar proposta:", err);
@@ -561,7 +559,7 @@ async function geocodificarEndereco(endereco) {
       });
   }
 
-  function ensureModalPropostaAceita(){
+  function garantirModalPropostaAceita(){
     let modal = document.getElementById('propostaAceitaModal');
     if (modal) return modal;
 
@@ -569,18 +567,18 @@ async function geocodificarEndereco(endereco) {
     modal.id = 'propostaAceitaModal';
     modal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999;opacity:0;transition:opacity .2s ease';
     modal.innerHTML = `
-      <div class="modal-content" style="width:min(520px,92vw);background:#fff;border-radius:12px;padding:20px;transform:scale(.96);transition:transform .2s ease">
-        <h3>Proposta aceita</h3>
-        <p id="mm-nome-cliente" style="margin:.25rem 0 .5rem 0">Cliente: —</p>
+      <div class="modal-content conteudo-modal" style="width:min(520px,92vw);background:#eeeeee;border:3px solid #ff6b35;border-radius:16px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,.35);transform:scale(.96);transition:transform .2s ease">
+        <h3 style="margin:0 0 8px 0;text-align:center;color:#1e1e1e;font-size:1.6rem;font-weight:700">Proposta aceita</h3>
+        <p id="mm-nome-cliente" style="margin:.25rem 0 .75rem 0;text-align:center;color:#6b6b6b">Cliente: —</p>
         <div class="mm-info" style="font-size:.95rem;line-height:1.45">
-          <div><strong>Origem:</strong> <span id="origem-info">—</span></div>
-          <div><strong>Destino:</strong> <span id="destino-info">—</span></div>
-          <div><strong>Valor:</strong> R$ <span id="valor-info">0,00</span></div>
-          <div><strong>Tempo de chegada:</strong> <span id="tempo-info">0</span> min</div>
+          <div><strong style=\"color:#ff6b35\">Origem:</strong> <span id="origem-info">—</span></div>
+          <div><strong style=\"color:#ff6b35\">Destino:</strong> <span id="destino-info">—</span></div>
+          <div><strong style=\"color:#ff6b35\">Valor:</strong> R$ <span id="valor-info">0,00</span></div>
+          <div><strong style=\"color:#ff6b35\">Tempo de chegada:</strong> <span id="tempo-info">0</span> min</div>
         </div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
-          <button id="btnIniciarCorrida" style="padding:10px 14px;background:#3DBE34;border:0;color:#fff;border-radius:8px;cursor:pointer">Iniciar corrida</button>
-          <button id="btnRecusarCorrida" style="padding:10px 14px;background:#e7e7e7;border:0;color:#111;border-radius:8px;cursor:pointer">Cancelar</button>
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:14px">
+          <button id="btnIniciarCorrida" style="padding:12px 18px;background:linear-gradient(180deg,#ff7a3f 0%,#ff6b35 100%);border:0;color:#fff;border-radius:10px;cursor:pointer;box-shadow:0 6px 16px rgba(255,107,53,.45);font-weight:600">Iniciar corrida</button>
+          <button id="btnRecusarCorrida" style="padding:12px 18px;background:#e7e7e7;border:0;color:#111;border-radius:10px;cursor:pointer;font-weight:600">Cancelar</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -589,11 +587,11 @@ async function geocodificarEndereco(endereco) {
   }
   
   function abrirModalPropostaAceita(){
-    const modal = ensureModalPropostaAceita();
+    const modal = garantirModalPropostaAceita();
     modal.style.display = 'flex';
     requestAnimationFrame(()=>{
       modal.style.opacity = '1';
-      modal.querySelector('.modal-content').style.transform = 'scale(1)';
+      modal.querySelector('.conteudo-modal, .modal-content').style.transform = 'scale(1)';
     });
   }
   
@@ -601,7 +599,7 @@ async function geocodificarEndereco(endereco) {
     const modal = document.getElementById('propostaAceitaModal');
     if (!modal) return;
     modal.style.opacity = '0';
-    modal.querySelector('.modal-content').style.transform = 'scale(.96)';
+    modal.querySelector('.conteudo-modal, .modal-content').style.transform = 'scale(.96)';
     setTimeout(()=>{ modal.style.display = 'none'; }, 200);
   }
 
@@ -665,22 +663,23 @@ function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
     modal.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999;opacity:1;';
     
     modal.innerHTML = `
-        <div class="modal-content proposta-aceita-style" style="width:min(520px,92vw);background:#fff;border-radius:12px;padding:20px;border:3px solid #ff6b35;">
-            <div class="modal-header" style="text-align:center;margin-bottom:20px;">
-                <h3 style="color:#ff6b35;margin:0;"><i class="fa-solid fa-check-circle" style="color:#28a745;margin-right:8px;"></i> Proposta Aceita</h3>
+        <div class="modal-content conteudo-modal proposta-aceita-style" style="width:min(520px,92vw);background:#eeeeee;border:3px solid #ff6b35;border-radius:16px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,.35);position:relative;">
+            <button aria-label="Fechar" style="position:absolute;top:12px;right:14px;background:transparent;border:0;font-size:20px;color:#888;cursor:pointer">&times;</button>
+            <div class="modal-header" style="text-align:center;margin-bottom:12px;">
+                <h3 style="color:#1e1e1e;margin:0;font-size:1.6rem;font-weight:700"><i class="fa-solid fa-check-circle" style="color:#3DBE34;margin-right:8px;"></i> Proposta Aceita</h3>
             </div>
             <div class="modal-body">
-                <div class="proposta-info" style="margin-bottom:20px;">
-                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Origem:</strong> <span style="color:#666;">${origem}</span></p>
-                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Destino:</strong> <span style="color:#666;">${destino}</span></p>
-                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Valor para o cliente:</strong> <span style="color:#333;font-weight:600;">R$ ${valor}</span></p>
-                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Tempo até a retirada:</strong> <span style="color:#333;">${tempo} min</span></p>
+                <div class="proposta-info" style="margin-bottom:14px;font-size:.95rem;line-height:1.45;">
+                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Origem:</strong> <span style="color:#333;">${origem}</span></p>
+                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Destino:</strong> <span style="color:#333;">${destino}</span></p>
+                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Valor para o cliente:</strong> <span style="color:#111;font-weight:700;">R$ ${valor}</span></p>
+                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Tempo até a retirada:</strong> <span style="color:#111;">${tempo} min</span></p>
                 </div>
-                <div class="modal-actions" style="display:flex;gap:12px;justify-content:center;">
-                    <button id="btnIniciarCorridaDescarte" style="padding:12px 20px;background:#ff6b35;border:0;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;flex:1;max-width:200px;">
+                <div class="modal-actions" style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;">
+                    <button id="btnIniciarCorridaDescarte" style="padding:12px 18px;background:linear-gradient(180deg,#ff7a3f 0%,#ff6b35 100%);border:0;color:#fff;border-radius:10px;cursor:pointer;font-weight:700;box-shadow:0 6px 16px rgba(255,107,53,.45);">
                         <i class="fa-solid fa-truck" style="margin-right:6px;"></i> Iniciar Corrida
                     </button>
-                    <button id="btnRecusarCorridaDescarte" style="padding:12px 20px;background:#6c757d;border:0;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;flex:1;max-width:200px;">
+                    <button id="btnRecusarCorridaDescarte" style="padding:12px 18px;background:#e7e7e7;border:0;color:#111;border-radius:10px;cursor:pointer;font-weight:700;">
                         <i class="fa-solid fa-times" style="margin-right:6px;"></i> Recusar Corrida
                     </button>
                 </div>
@@ -693,6 +692,7 @@ function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
     
     document.getElementById('btnIniciarCorridaDescarte').onclick = () => iniciarCorridaDescarte(descarteId, descarteData, nomeCliente);
     document.getElementById('btnRecusarCorridaDescarte').onclick = () => recusarCorridaDescarte(descarteId);
+    modal.querySelector('button[aria-label="Fechar"]').onclick = () => modal.remove();
     
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -856,7 +856,7 @@ async function recusarCorridaDescarte(descarteId) {
     const valor = Number(entregaData.propostaAceita?.preco || 0).toFixed(2);
     const tempo = entregaData.propostaAceita?.tempoChegada || 0;
 
-    ensureModalPropostaAceita();
+    garantirModalPropostaAceita();
     document.getElementById('mm-nome-cliente').textContent = `Cliente: ${nomeCliente}`;
     document.getElementById('origem-info').textContent = origem;
     document.getElementById('destino-info').textContent = destino;
@@ -1010,21 +1010,21 @@ async function recusarCorridaDescarte(descarteId) {
   }
 
   // Event listeners
-  deliveryList.addEventListener('click', e => {
+  listaEntregas.addEventListener('click', e => {
     const card = e.target.closest('.delivery-card');
     if (card) {
       document.querySelectorAll('.delivery-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
-      selectedEntregaId = card.dataset.entregaId;
-      submitBtn.disabled = false;
+      entregaSelecionadaId = card.dataset.entregaId;
+      botaoEnviar.disabled = false;
     }
   });
 
-  submitBtn.addEventListener('click', abrirModal);
-  modalClose.addEventListener('click', fecharModal);
-  sendProposalBtn.addEventListener('click', enviarProposta);
-  proposalModal.addEventListener('click', (e) => {
-    if (e.target === proposalModal) fecharModal();
+  botaoEnviar.addEventListener('click', abrirModal);
+  botaoFecharModal.addEventListener('click', fecharModal);
+  botaoConfirmarProposta.addEventListener('click', enviarProposta);
+  modalProposta.addEventListener('click', (e) => {
+    if (e.target === modalProposta) fecharModal();
   });
 
   // Atualizar quando a página volta ao foco

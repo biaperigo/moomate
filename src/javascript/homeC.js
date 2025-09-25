@@ -3,12 +3,12 @@ const SP_BOUNDS = L.latLngBounds(
   L.latLng(-25.30, -53.10), 
   L.latLng(-19.80, -44.20) 
 );
-function isWithinSaoPaulo(lat, lng) {
+function estaDentroDeSaoPaulo(lat, lng) {
   return SP_BOUNDS.contains([lat, lng]);
 }
 
 // Aguarda o Firebase Auth disponibilizar o usuário atual (com timeout)
-function getCurrentUserAsync(timeoutMs = 4000) {
+function obterUsuarioAtualAsync(timeoutMs = 4000) {
   try {
     const auth = firebase.auth && firebase.auth();
     const immediate = auth?.currentUser || null;
@@ -54,7 +54,7 @@ let markerOrigem, markerDestino, routeLine;
 let origemCoords = null;
 let destinoCoords = null;
 
-function initMap() {
+function iniciarMapa() {
   const defaultLatLng = [-23.5505, -46.6333]; 
 
   map = L.map("map", {
@@ -95,10 +95,10 @@ function initMap() {
 
   markerOrigem.on("dragend", () => {
     const { lat, lng } = markerOrigem.getLatLng();
-    if (isWithinSaoPaulo(lat, lng)) {
+    if (estaDentroDeSaoPaulo(lat, lng)) {
       origemCoords = [lat, lng];
-      reverseGeocode(lat, lng, "localRetirada", true);
-      updateRoute();
+      reverterGeocodificacao(lat, lng, "localRetirada", true);
+      atualizarRota();
     } else {
       alert("Origem fora do estado de São Paulo. Selecione um local dentro de SP.");
       markerOrigem.setLatLng(origemCoords || defaultLatLng);
@@ -107,10 +107,10 @@ function initMap() {
 
   markerDestino.on("dragend", () => {
     const { lat, lng } = markerDestino.getLatLng();
-    if (isWithinSaoPaulo(lat, lng)) {
+    if (estaDentroDeSaoPaulo(lat, lng)) {
       destinoCoords = [lat, lng];
-      reverseGeocode(lat, lng, "localEntrega", true);
-      updateRoute();
+      reverterGeocodificacao(lat, lng, "localEntrega", true);
+      atualizarRota();
     } else {
       alert("Destino fora do estado de São Paulo. Selecione um local dentro de SP.");
       markerDestino.setLatLng(destinoCoords || defaultLatLng);
@@ -121,24 +121,24 @@ function initMap() {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         const { latitude, longitude } = coords;
-        if (isWithinSaoPaulo(latitude, longitude)) {
+        if (estaDentroDeSaoPaulo(latitude, longitude)) {
           origemCoords = [latitude, longitude];
           map.setView(origemCoords, 15);
           markerOrigem.setLatLng(origemCoords);
-          reverseGeocode(latitude, longitude, "localRetirada", true);
+          reverterGeocodificacao(latitude, longitude, "localRetirada", true);
         } else {
           origemCoords = defaultLatLng;
-          reverseGeocode(defaultLatLng[0], defaultLatLng[1], "localRetirada", true);
+          reverterGeocodificacao(defaultLatLng[0], defaultLatLng[1], "localRetirada", true);
         }
       },
       () => {
         origemCoords = defaultLatLng;
-        reverseGeocode(defaultLatLng[0], defaultLatLng[1], "localRetirada", true);
+        reverterGeocodificacao(defaultLatLng[0], defaultLatLng[1], "localRetirada", true);
       }
     );
   } else {
     origemCoords = defaultLatLng;
-    reverseGeocode(defaultLatLng[0], defaultLatLng[1], "localRetirada", true);
+    reverterGeocodificacao(defaultLatLng[0], defaultLatLng[1], "localRetirada", true);
   }
 }
 
@@ -182,7 +182,7 @@ async function buscarEnderecoPorCEP(cep) {
     const lat = parseFloat(nominatimData[0].lat);
     const lon = parseFloat(nominatimData[0].lon);
 
-    if (!isWithinSaoPaulo(lat, lon)) {
+    if (!estaDentroDeSaoPaulo(lat, lon)) {
       alert("Por favor, selecione um endereço dentro do estado de São Paulo.");
       return;
     }
@@ -190,14 +190,14 @@ async function buscarEnderecoPorCEP(cep) {
     origemCoords = [lat, lon];
     map.setView(origemCoords, 15); // muda a visão do mapa
     markerOrigem.setLatLng(origemCoords).setOpacity(1); // muda a posição do marcador
-    reverseGeocode(lat, lon, "localRetirada", false); // muda o campo do endereço
-    updateRoute(); // Atualiza a rota
+    reverterGeocodificacao(lat, lon, "localRetirada", false); // muda o campo do endereço
+    atualizarRota(); // Atualiza a rota
   } catch {
     alert("Erro ao buscar o endereço pelo CEP.");
   }
 }
 // reverse geocode openstreetmap api
-async function reverseGeocode(lat, lon, campo, setCep) {
+async function reverterGeocodificacao(lat, lon, campo, setCep) {
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
     const data = await res.json();
@@ -205,7 +205,7 @@ async function reverseGeocode(lat, lon, campo, setCep) {
 
     const a = data.address;
     const state = (a.state || "").toLowerCase();
-    if (!isWithinSaoPaulo(lat, lon) || (!state.includes("são paulo") && !state.includes("sp"))) {
+    if (!estaDentroDeSaoPaulo(lat, lon) || (!state.includes("são paulo") && !state.includes("sp"))) {
       alert("Endereço localizado fora do estado de São Paulo.");
       return; 
     }
@@ -251,7 +251,7 @@ async function validarEnderecoSPPorTexto(fieldId) {
       lon = parseFloat(data[0].lon);
     const state = (data[0].address?.state || "").toLowerCase();
 
-    if (!isWithinSaoPaulo(lat, lon) || (!state.includes("são paulo") && !state.includes("sp"))) {
+    if (!estaDentroDeSaoPaulo(lat, lon) || (!state.includes("são paulo") && !state.includes("sp"))) {
       alert("Este endereço não pertence ao estado de São Paulo.");
       input.value = "";
       return false;
@@ -274,7 +274,7 @@ async function autocompleteEndereco(campo) {
   clearTimeout(timeoutAutocomplete);
   timeoutAutocomplete = setTimeout(async () => {
     const val = document.getElementById(campo).value.trim();
-    if (val.length < 3) return closeAutocomplete(campo);
+    if (val.length < 3) return fecharAutocomplete(campo);
 
     const searchQuery =
       val.includes("SP") || val.includes("São Paulo") ? val : val + ", São Paulo, Brasil";
@@ -288,18 +288,18 @@ async function autocompleteEndereco(campo) {
       const lat = parseFloat(item.lat);
       const lng = parseFloat(item.lon);
       return (
-        isWithinSaoPaulo(lat, lng) &&
+        estaDentroDeSaoPaulo(lat, lng) &&
         (item.address?.state?.toLowerCase().includes("são paulo") ||
           item.address?.state?.toLowerCase().includes("sp") ||
           item.display_name.toLowerCase().includes("são paulo"))
       );
     });
 
-    showAutocompleteList(campo, spResults);
+    mostrarListaAutocomplete(campo, spResults);
   }, 300);
 }
 
-function showAutocompleteList(campo, data) {
+function mostrarListaAutocomplete(campo, data) {
   let container = document.getElementById(`autocomplete-list-${campo}`);
   if (!container) {
     container = document.createElement("div");
@@ -314,25 +314,25 @@ function showAutocompleteList(campo, data) {
     const div = document.createElement("div");
     div.textContent = item.display_name;
     div.addEventListener("click", () => {
-      selectAutocompleteItem(campo, item);
-      closeAutocomplete(campo);
+      selecionarItemAutocomplete(campo, item);
+      fecharAutocomplete(campo);
     });
     container.appendChild(div);
   });
   container.style.display = "block";
 }
 
-function closeAutocomplete(campo) {
+function fecharAutocomplete(campo) {
   const c = document.getElementById(`autocomplete-list-${campo}`);
   if (c) c.style.display = "none";
 }
 
-async function selectAutocompleteItem(campo, item) {
+async function selecionarItemAutocomplete(campo, item) {
   document.getElementById(campo).value = item.display_name;
   const lat = parseFloat(item.lat);
   const lon = parseFloat(item.lon);
 
-  if (!isWithinSaoPaulo(lat, lon)) {
+  if (!estaDentroDeSaoPaulo(lat, lon)) {
     alert("Por favor, selecione um endereço dentro do estado de São Paulo.");
     return;
   }
@@ -351,11 +351,11 @@ async function selectAutocompleteItem(campo, item) {
     map.setView(destinoCoords, 15);
   }
 
-  updateRoute();
+  atualizarRota();
 }
 
 // rota
-function updateRoute() {
+function atualizarRota() {
   if (routeLine) map.removeLayer(routeLine);
   if (origemCoords && destinoCoords) {
     routeLine = L.polyline([origemCoords, destinoCoords], {
@@ -399,9 +399,15 @@ async function ouvirPropostas(entregaId) {
         return;
       }
       const cacheMotoristas = {};
+      // Buscar dados do pedido para preencher De/Para/Tipo
+      let pedido = {};
+      try {
+        const pedidoSnap = await db.collection('entregas').doc(entregaId).get();
+        pedido = pedidoSnap.exists ? (pedidoSnap.data()||{}) : {};
+      } catch {}
       async function getMotorista(uid) {
         console.log("Buscando motorista com ID:", uid); 
-        if (!uid) return { nome: "Motorista", foto: null };
+        if (!uid) return { nome: "Motorista", foto: null, nota: 0 };
 
         if (cacheMotoristas[uid]) return cacheMotoristas[uid];
 
@@ -409,19 +415,53 @@ async function ouvirPropostas(entregaId) {
           const snap = await db.collection("motoristas").doc(uid).get();
           if (!snap.exists) {
             console.log("Motorista não encontrado com ID:", uid); 
-            return { nome: "Motorista", foto: null };
+            return { nome: "Motorista", foto: null, nota: 0 };
           }
           const data = snap.data();
           const nome = data?.dadosPessoais?.nome || data?.nome || "Motorista";
           const foto = data?.dadosPessoais?.fotoPerfilUrl || data?.fotoPerfilUrl || null;
+          let nota = (
+            data?.avaliacaoMedia ??
+            data?.rating ??
+            data?.avaliacoes?.media ??
+            data?.dadosPessoais?.avaliacao ??
+            0
+          );
+
+          // Caso não haja campo agregado, calcular média das avaliações
+          async function calcularMediaAvaliacoes(uidAlvo){
+            try {
+              let soma = 0, qtd = 0;
+              // 1) subcoleção motoristas/{uid}/avaliacoes
+              const sub = await db.collection('motoristas').doc(uidAlvo).collection('avaliacoes').get().catch(()=>null);
+              if (sub && !sub.empty) {
+                sub.forEach(d=>{ const v = Number(d.data()?.estrelas ?? d.data()?.nota ?? d.data()?.rating); if (Number.isFinite(v)) { soma += v; qtd++; } });
+              }
+              // 2) coleção global 'avaliacoes' filtrando pelo uid do motorista
+              if (qtd === 0) {
+                const glob = await db.collection('avaliacoes')
+                  .where('motoristaUid','==', uidAlvo)
+                  .limit(50)
+                  .get().catch(()=>null);
+                if (glob && !glob.empty) {
+                  glob.forEach(d=>{ const v = Number(d.data()?.estrelas ?? d.data()?.nota ?? d.data()?.rating); if (Number.isFinite(v)) { soma += v; qtd++; } });
+                }
+              }
+              return qtd>0 ? (soma/qtd) : 0;
+            } catch { return 0; }
+          }
+
+          if (!(Number(nota) > 0)) {
+            nota = await calcularMediaAvaliacoes(uid);
+          }
 
           console.log("Foto do motorista (fotoPerfilUrl):", foto); 
 
-          cacheMotoristas[uid] = { nome, foto };
+          cacheMotoristas[uid] = { nome, foto, nota: Number(nota)||0 };
           return cacheMotoristas[uid];
         } catch (error) {
           console.error("Erro ao carregar dados do motorista:", error);
-          return { nome: "Motorista", foto: null };
+          return { nome: "Motorista", foto: null, nota: 0 };
         }
       }
       const fmtData = (v) => {
@@ -440,32 +480,43 @@ async function ouvirPropostas(entregaId) {
         console.log("[proposta] UID do motorista (resolvido):", uidMotorista, "|| bruto:", { motoristaUid: p.motoristaUid, motoristaId: p.motoristaId, uidMotorista: p.uidMotorista, uid: p.uid, userId: p.userId, authorId: p.authorId });
 
         // Buscar por cadastro; se não achar, usar o nome vindo da proposta como último recurso
-        const info = uidMotorista ? await getMotorista(uidMotorista) : { nome: null, foto: null };
+        const info = uidMotorista ? await getMotorista(uidMotorista) : { nome: null, foto: null, nota: 0 };
         let nomeMotorista = info?.nome || p.nomeMotorista || p.motoristaNome || p.nome || "Motorista";
         const fotoMotorista = info?.foto || p.fotoMotorista || null;
-        const avatarHtml = fotoMotorista
-          ? `<img src="${fotoMotorista}" alt="${nomeMotorista}" class="motorista-avatar">`
-          : ''; 
+        const notaMotorista = Number(info?.nota||0);
 
         const card = document.createElement("div");
-        card.className = "proposta-card inline";
+        card.className = "proposta-card";
+        const stars = '★'.repeat(Math.round(notaMotorista)) + '☆'.repeat(5-Math.round(notaMotorista));
+        const origemTxt = pedido?.origem?.endereco || document.getElementById('localRetirada')?.value || '-';
+        const destinoTxt = pedido?.destino?.endereco || document.getElementById('localEntrega')?.value || '-';
+        const tipoVeiculo = p.veiculo || pedido?.tipoVeiculo || '-';
+        const shortId = `#${String(entregaId).substring(0,6)}`;
         card.innerHTML = `
-          <div class="proposta-header">
-            <div class="motorista-avatar">${avatarHtml}</div>
-            <h4>${nomeMotorista}</h4>
-          </div>
-          <div class="proposta-body">
-            <p><strong>Preço:</strong> R$ ${Number(p.preco || 0).toFixed(2)}</p>
-            <p><strong>Tempo de chegada:</strong> ${p.tempoChegada || 0} min</p>
-            <p><strong>Ajudantes:</strong> ${p.ajudantes || 0}</p>
-            <p><strong>Tipo de veículo:</strong> ${p.veiculo || "-"}</p>
-            <p><em>Enviado em: ${fmtData(p.dataEnvio)}</em></p>
-          </div>
-          <div class="proposta-footer">
-            <button class="aceitar-btn"
-              onclick="aceitarProposta('${entregaId}', '${doc.id}', '${uidMotorista}')">
-              ✅ Aceitar Proposta
-            </button>
+          <div style="position:relative; background:#fff; border-radius:16px; box-shadow:0 10px 24px rgba(0,0,0,.08); padding:18px 18px 18px 0; display:flex; gap:16px; align-items:flex-start;">
+            <div style="position:absolute; left:0; top:14px; bottom:14px; width:6px; background:linear-gradient(180deg,#ff7a3f 0%,#ff6b35 100%); border-radius:0 6px 6px 0"></div>
+            <div style="margin-left:16px; width:52px; height:52px; border-radius:50%; background:#fff; box-shadow:0 6px 14px rgba(255,107,53,.35); border:2px solid #ff6b35; display:flex; align-items:center; justify-content:center; overflow:hidden; flex: 0 0 52px;">
+              ${fotoMotorista ? `<img src="${fotoMotorista}" alt="foto" style="width:100%;height:100%;object-fit:cover"/>` : `<i class=\"fa-solid fa-user\" style=\"color:#ff6b35;font-size:22px\"></i>`}
+            </div>
+            <div style="flex:1 1 auto; min-width:0;">
+              <div style="font-weight:700;color:#1e1e1e">${nomeMotorista}</div>
+              <div style="color:#f5a623;font-weight:700; display:flex; align-items:center; gap:6px; margin-top:2px">
+                <i class="fa-solid fa-star"></i> ${notaMotorista.toFixed(1)}
+              </div>
+              <div style="margin-top:10px; color:#333; line-height:1.35">
+                <div style="color:#7b7b7b; font-weight:700; margin-bottom:6px">Corrida ${shortId}</div>
+                <div><strong>De:</strong> <span style="color:#555">${origemTxt}</span></div>
+                <div><strong>Para:</strong> <span style="color:#555">${destinoTxt}</span></div>
+                <div style="margin-top:6px"><strong>Tipo de veículo:</strong> ${tipoVeiculo}</div>
+                <div><strong>Tempo de chegada:</strong> ${p.tempoChegada || 0} min</div>
+                <div><strong>Ajudantes:</strong> ${p.ajudantes || 0}</div>
+              </div>
+            </div>
+            <div style="text-align:right; min-width:180px; padding-left:8px;">
+              <div style="color:#ff6b35;font-size:1.9rem;font-weight:800">R$ ${Number(p.preco||0).toFixed(2)}</div>
+              <button class="aceitar-btn" style="margin-top:12px;background:#ff6b35;color:#fff;border:0;padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800"
+                onclick="aceitarProposta('${entregaId}', '${doc.id}', '${uidMotorista}')">ACEITAR PROPOSTA</button>
+            </div>
           </div>
         `;
         lista.appendChild(card);
@@ -473,6 +524,7 @@ async function ouvirPropostas(entregaId) {
     });
 }
 
+// ... restante do código ...
 
 function mostrarModalPropostas(entregaId, snapshot) {  }
 function fecharModalPropostas() {
@@ -539,37 +591,46 @@ async function aceitarProposta(entregaId, propostaId, motoristaId) {
 
     alert("Proposta aceita com sucesso!");
     fecharModalPropostas();
-    mostrarAguardandoMotorista(entregaId);
+    mostrarAguardandoMotorista(entregaId, { nomeMotorista: motoristaNome, valor: propostaData?.preco });
   } catch (error) {
     console.error("Erro ao aceitar proposta:", error);
     alert("Erro ao aceitar proposta. Tente novamente.");
   }
 }
 
-function mostrarAguardandoMotorista(entregaId) {
- 
-  let modal = document.getElementById('aguardandoMotoristaModal');
+function mostrarAguardandoMotorista(entregaId, dados = {}) {
+  let modal = document.getElementById('modalAguardandoMotorista');
   if (!modal) {
     modal = document.createElement('div');
-    modal.id = 'aguardandoMotoristaModal';
+    modal.id = 'modalAguardandoMotorista';
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-      <div class="modal-content">
-        <h2>⏳ Aguardando Motorista</h2>
-        <div class="aguardando-info">
-          <p><strong>Proposta aceita com sucesso!</strong></p>
-          <p>Aguardando o motorista confirmar o início da corrida...</p>
-          <div class="loading-spinner">🔄</div>
+      <div class="modal-content aguardando-card">
+        <div class="aguardando-header"><i class="fa-solid fa-hourglass-half"></i> Aguardando Motorista</div>
+        <div class="aguardando-sep"></div>
+        <div class="aguardando-body">
+          <div class="aguardando-icon"><i class="fa-solid fa-circle-check"></i></div>
+          <div class="aguardando-text">
+            <p><strong>Proposta aceita com sucesso!</strong></p>
+            <p>Motorista: <strong id="aguardando-motorista-nome">—</strong></p>
+            <p>Valor: <strong id="aguardando-valor">R$ 0,00</strong></p>
+            <p>Aguardando o motorista confirmar o início da corrida...</p>
+            <div class="aguardando-spinner"></div>
+          </div>
         </div>
-      </div>
-    `;
+      </div>`;
     document.body.appendChild(modal);
   }
 
+  if (dados?.nomeMotorista) document.getElementById('aguardando-motorista-nome').textContent = dados.nomeMotorista;
+  if (dados?.valor != null) document.getElementById('aguardando-valor').textContent = `R$ ${Number(dados.valor||0).toFixed(2)}`;
+
   modal.style.display = 'flex';
+  // animação de entrada (segue o padrão dos outros modais)
   setTimeout(() => {
     modal.style.opacity = '1';
-    modal.querySelector('.modal-content').style.transform = 'scale(1)';
+    const card = modal.querySelector('.modal-content');
+    if (card) card.style.transform = 'scale(1)';
   }, 10);
 
   const stopCorrida = db.collection('corridas').doc(entregaId)
@@ -598,8 +659,8 @@ async function verMotoristas() {
   if (!origemCoords || !destinoCoords) return alert("Defina origem e destino.");
 
   if (
-    !isWithinSaoPaulo(origemCoords[0], origemCoords[1]) ||
-    !isWithinSaoPaulo(destinoCoords[0], destinoCoords[1])
+    !estaDentroDeSaoPaulo(origemCoords[0], origemCoords[1]) ||
+    !estaDentroDeSaoPaulo(destinoCoords[0], destinoCoords[1])
   ) {
     return alert("Origem e destino devem estar dentro do estado de São Paulo.");
   }
@@ -608,7 +669,7 @@ async function verMotoristas() {
   if (!tipoVeiculo) return alert("Selecione um tipo de veículo.");
 
   // Garantir cliente autenticado (aguarda auth caso ainda não tenha carregado)
-  const user = await getCurrentUserAsync();
+  const user = await obterUsuarioAtualAsync();
   if (!user) {
     alert('Faça login para criar o pedido (ou aguarde alguns segundos e tente novamente).');
     return;
@@ -757,14 +818,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".input-box")) {
-      closeAutocomplete("localRetirada");
-      closeAutocomplete("localEntrega");
+      fecharAutocomplete("localRetirada");
+      fecharAutocomplete("localEntrega");
     }
   });
 });
 
 window.onload = function () {
-  initMap();
+  iniciarMapa();
 
   if (typeof firebase !== "undefined") {
     firebase.initializeApp(firebaseConfig);

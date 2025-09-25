@@ -37,8 +37,9 @@ body {
   object-fit: cover;
 }
 
+
 .proposta-card {
-  background-color: #fff;
+  background-color: #f9f9f9;
   border: 1px solid #ddd;
   border-left: 5px solid #ff6b35; 
   border-radius: 8px;
@@ -55,7 +56,6 @@ body {
     transform: translateY(-3px);
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
-
 .proposta-card {
   display: flex;
   justify-content: space-between;
@@ -502,33 +502,6 @@ footer {
   transition: transform 0.3s ease;
 }
 
-/* ===== Modal Aguardando Motorista (igual ao descarte) ===== */
-.aguardando-card{ padding:0; border-radius:20px; overflow:hidden; max-width:640px; width:min(640px,92vw) }
-.aguardando-header{
-  padding:16px 22px;
-  font-weight:700;
-  color:#ff6b35;
-  display:flex; align-items:center; gap:10px;
-  font-size:1.1rem;
-}
-.aguardando-sep{ height:1px; background:#ededed }
-.aguardando-body{
-  display:grid; grid-template-columns:auto 1fr; gap:16px;
-  padding:18px 22px 20px;
-}
-.aguardando-icon{ display:flex; align-items:flex-start; justify-content:center }
-.aguardando-icon i{ color:#3DBE34; font-size:28px }
-.aguardando-text p{ margin:4px 0; color:#333 }
-.aguardando-spinner{
-  margin-top:8px;
-  width:18px; height:18px;
-  border:2px dotted #111; /* bolinhas pretas formando um círculo */
-  border-radius:50%;
-  animation: aguardando-rotate 1.1s linear infinite;
-}
-
-@keyframes aguardando-rotate{ to { transform: rotate(360deg); } }
-
 .modal-close {
   position: absolute;
   top: 15px;
@@ -547,7 +520,7 @@ footer {
   border-radius: 10px;
   padding: 20px;
   margin-bottom: 15px;
-  background: #fff;
+  background: #f9f9f9;
 }
 
 .proposta-header h3 {
@@ -621,7 +594,7 @@ footer {
   display: none;
   margin-top: 20px;
   padding: 20px;
-  background: #f3f3f3;
+  background: #f0f8ff;
   border-radius: 10px;
   border: 2px solid #ff6c0c;
 }
@@ -905,35 +878,93 @@ footer {
 .modal-overlay {
   will-change: opacity;
   contain: layout style;
-}
-.lista-propostas {
+}/* Custom Styles for Vehicle Type Selection */
+.vehicle-types {
   display: flex;
-   flex-direction: column;
-    gap: 12px; 
-    }
-.proposta-card.inline {
-background: #fff;
-border: 1px solid #eee; 
-border-radius: 12px;
-padding: 12px;
-box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 10px;
 }
-.proposta-header h4 {
-margin: 0 0 6px; 
+
+.vehicle-option {
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: white;
 }
-.proposta-footer {
-margin-top: 10px; 
-display: flex; 
-justify-content: flex-end; 
+
+.vehicle-option:hover {
+  border-color: #ff6b35;
+  background: #fff5f2;
 }
-.aceitar-btn {
-background:#3DBE34; 
-color:#fff; 
-border:0; 
-padding:8px 12px;
- border-radius:8px; 
- cursor:pointer; 
+
+.vehicle-option.selected {
+  border-color: #ff6b35;
+  background: #ff6b35;
+  color: white;
 }
-.aceitar-btn:hover { 
-filter: brightness(.95);
+
+.input-box {
+  margin-bottom: 20px;
+}
+
+/* Styling for the form */
+.form-section {
+  background-color: #ffffff;
+  max-width: 1000px;
+  margin: 3rem auto;
+  padding: 2rem 2rem 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.input-box label,
+.input-group label {
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+  color: #1e1e1e;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.input-box input,
+.input-group input {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  font-size: 1rem;
+  background-color: #f9f9f9;
+  color: #333;
+  transition: border-color 0.3s ease;
+}
+
+.input-box input:focus,
+.input-group input:focus {
+  outline: none;
+  border-color: #ff6b35;
+}
+
+.btn-cta {
+  background: #ff6b35;
+  color: white;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-top: 20px;
+}
+
+.btn-cta:hover {
+  background: #e55a2b;
 }

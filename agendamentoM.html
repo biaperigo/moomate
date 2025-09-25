@@ -8,7 +8,7 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
-  <link rel="stylesheet" href="src/styles/homeM.css"/>
+  <link rel="stylesheet" href="src/styles/agendamentoM.css"/>
 </head>
 <body>
 
@@ -41,6 +41,14 @@
     <h2>Ganhe dinheiro com seu veículo fazendo mudanças.</h2>
   </div>
 </section>
+
+<!-- Tabs Agendamento -->
+<nav class="tabs" style="max-width:1100px;margin:10px auto 0 auto;padding:0 8px;">
+  <ul style="display:flex;gap:24px;list-style:none;justify-content:center;">
+    <li><a href="agendamentoM.html" style="display:inline-block;padding:10px 4px;color:#ff6c0c;font-weight:700;text-decoration:none;">Solicitações</a></li>
+    <li><a href="agendadosM.html" style="display:inline-block;padding:10px 4px;color:#444;text-decoration:none;">Agendados</a></li>
+  </ul>
+  </nav>
 
 <section class="delivery-section">
   <h3>Propostas de entregas</h3>
@@ -143,9 +151,10 @@ const firebaseConfig = {
   appId: "1:637968714747:web:ad15dc3571c22f046b595e",
   measurementId: "G-62J7Q8CKP4"
 };
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 </script>
 
-<script src="src/javascript/homeM.js"></script>
+<script src="src/javascript/agendamentoM.js"></script>
 <div id="modal-proposta-motorista" class="mm-modal hidden">
   <div class="mm-card">
     <h3>Proposta aceita</h3>
@@ -159,6 +168,6 @@ const firebaseConfig = {
     </div>
   </div>
 </div>
-<script type="module"></script>
+</div>
 </body>
 </html>

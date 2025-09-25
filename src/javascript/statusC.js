@@ -14,7 +14,7 @@ let unsubSync = () => {};
 
   const $ = (id)=>document.getElementById(id);
   const pegarEl = (...ids) => ids.map(id=>document.getElementById(id)).find(Boolean) || null;
-  // Nunca deixar 'null' ou 'undefined' aparecerem na UI
+
   const definirTexto = (ids, txt) => { 
     const el = pegarEl(...ids); 
     if (el) {
@@ -25,12 +25,46 @@ let unsubSync = () => {};
   const km  = (m)=> (m/1000).toFixed(2)+" km";
   const min = (s)=> Math.max(1, Math.round(s/60))+" min";
   const dadosDoSnap = (s) => (s && s.exists ? s.data()||{} : {});
-  // Aliases para compatibilidade
+
   const getEl = pegarEl;
   const setText = definirTexto;
   const snapToData = dadosDoSnap;
 
-  // Preferir IDs em português; manter fallback para compatibilidade
+  let docRefGlobal = null;
+  let motoristaUidAtual = null;
+  async function salvarAvaliacaoMotorista(motoristaUid, nota, comentario = "", corridaIdOverride = null, clienteUidOverride = null){
+    const uidMot = motoristaUid || motoristaUidAtual;
+    if (!uidMot) throw new Error('motoristaUid inválido');
+    const n = Number(nota);
+    if (!Number.isFinite(n) || n < 1 || n > 5) throw new Error('nota deve ser 1..5');
+    const clienteUid = clienteUidOverride || (firebase.auth && firebase.auth().currentUser?.uid) || null;
+    const when = firebase.firestore.FieldValue.serverTimestamp();
+    const corridaId = corridaIdOverride || currentCorridaId || null;
+    const avId = `${corridaId||'sem'}_${clienteUid||'anon'}`;
+
+    // 1) Subcoleção do motorista
+    await db.collection('motoristas').doc(uidMot)
+      .collection('avaliacoes').doc(avId)
+      .set({ nota: n, estrelas: n, comentario: comentario||"", corridaId, clienteUid, criadoEm: when }, { merge: true });
+
+    // 2) Coleção global
+    await db.collection('avaliacoes').doc(avId)
+      .set({ nota: n, estrelas: n, comentario: comentario||"", corridaId, clienteUid, motoristaUid: uidMot, criadoEm: when }, { merge: true });
+
+    const motRef = db.collection('motoristas').doc(uidMot);
+    await db.runTransaction(async (tx)=>{
+      const motSnap = await tx.get(motRef);
+      const d = motSnap.exists ? (motSnap.data()||{}) : {};
+      const soma = Number(d.avaliacaoSoma||0) + n;
+      const count = Number(d.avaliacaoCount||0) + 1;
+      const media = soma / count;
+      tx.set(motRef, { avaliacaoSoma: soma, avaliacaoCount: count, avaliacaoMedia: media }, { merge: true });
+    });
+  
+    try { if (docRefGlobal) await docRefGlobal.set({ avaliacaoRegistrada: true }, { merge: true }); } catch {}
+  }
+  window.salvarAvaliacaoMotorista = salvarAvaliacaoMotorista;
+
   const nomeMotoristaEl = getEl("nomeMotorista","motorista-nome","motoristaInfo","driver-name","driverName");
   const carroEl         = getEl("veiculoInfo","motorista-carro","carroInfo","vehicle-info","vehicleInfo");
 
@@ -40,17 +74,16 @@ let unsubSync = () => {};
   const confirmCancelBtn = $("confirm-cancel");
   const keepRideBtn = $("keep-ride");
 
-  // Handlers para cancelamento (mostrar modal, confirmar, manter)
   function configurarHandlersCancelamento(){
     try{
-      if (window.__cancel_handlers_bound__) return; // evita registrar duas vezes
+      if (window.__cancel_handlers_bound__) return; 
       window.__cancel_handlers_bound__ = true;
       if (cancelModal) cancelModal.style.display = "none";
       if (cancelBtn) cancelBtn.onclick = (e)=>{ 
         if (e && e.preventDefault) e.preventDefault();
         if (e && e.stopPropagation) e.stopPropagation();
         if (!cancelModal) return false;
-        if (cancelModal.style.display === 'flex') return false; // já aberto
+        if (cancelModal.style.display === 'flex') return false; 
         cancelModal.style.display = "flex"; 
         return false; 
       };
@@ -85,9 +118,9 @@ let unsubSync = () => {};
   let colecaoAtual = 'corridas';
   let unsubSyncExtra = () => {};
   let lastRouteDrawTs = 0;
-  let lastRouteKey = null; // evita ficar alternando rotas quando múltiplos listeners disparam
+  let lastRouteKey = null; 
 
-  // Função para validar coordenadas (igual ao rotaM)
+  // Função p validar coordenadas 
   function validarCoordenadas(lat, lng) {
     if (lat === null || lng === null || lat === undefined || lng === undefined) {
       return false;
@@ -107,7 +140,6 @@ let unsubSync = () => {};
     return true;
   }
 
-  // Geocode de fallback: tenta resolver endereço em coordenadas (BR, com timeout)
   async function geocodificarEndereco(endereco) {
     if (!endereco || typeof endereco !== 'string') return null;
     const controller = new AbortController();
@@ -125,7 +157,7 @@ let unsubSync = () => {};
       return { lat, lng };
     } catch { clearTimeout(id); return null; }
   }
-  // Alias
+  
   const geocodeEndereco = geocodificarEndereco;
 
   // Resolve e posiciona pinos quando faltarem coordenadas usando endereço do doc ou do sync
@@ -152,7 +184,7 @@ let unsubSync = () => {};
     }
   }
 
-  // Função para cancelar corrida/descarte
+  
   async function cancelarCorrida() {
     if (!corridaId) return;
 
@@ -255,10 +287,9 @@ let unsubSync = () => {};
     if (!mkM) mkM = L.marker([p.lat, p.lng], { icon }).addTo(map); 
     else mkM.setLatLng([p.lat, p.lng]);
 
-    // Desenhar a rota imediatamente quando houver contexto suficiente
     try {
       const now = Date.now();
-      if (now - lastRouteDrawTs > 3000) { // throttle básico 3s
+      if (now - lastRouteDrawTs > 3000) { 
         if (S.fase === 'indo_retirar' && S.origem && validarCoordenadas(S.origem.lat, S.origem.lng)) {
           lastRouteDrawTs = now;
           drawIfNew(S.motorista, S.origem, 'M->O');
@@ -273,12 +304,10 @@ let unsubSync = () => {};
     }
   }
 
-  // Wrapper para desenhar rota somente quando o par from→to (key) mudar
   function desenharSeNovo(from, to, key){
     try {
       if (!from || !to) return;
       if (lastRouteKey === key) {
-        // mesma rota, não redesenhar
         return;
       }
       lastRouteKey = key;
@@ -320,7 +349,7 @@ let unsubSync = () => {};
     S.destino = coords;
     console.log("✅ Destino definido:", coords);
     
-    // Para descartes, usar marcador redondo laranja com símbolo de reciclagem
+    // p descartes, usar marcador redondo laranja com símbolo de reciclagem
     const iconHtml = isDescarteDoc ?
       `<div style="width:24px;height:24px;background:#FF6C0C;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;">
         <i class="fa-solid fa-recycle" style="font-size:13px;color:#fff;"></i>
@@ -447,7 +476,6 @@ let unsubSync = () => {};
   function redesenhar(){
     console.log(" Redesenho - Fase:", S.fase, "Motorista:", S.motorista, "Origem:", S.origem, "Destino:", S.destino);
     
-    // Preferência: na fase indo_retirar desenhar motorista → origem
     if (S.fase==="indo_retirar" && S.motorista && S.origem) { 
       console.log(" Desenhando rota: motorista → origem");
       drawIfNew(S.motorista, S.origem, 'M->O'); 
@@ -460,8 +488,6 @@ let unsubSync = () => {};
       return; 
     }
     
-    // Plano provisório: se ainda não temos motorista (ex.: o navegador não liberou localização)
-    // e já possuímos origem e destino válidos, desenhar origem → destino para não ficar sem rota.
     if (S.fase === 'indo_retirar' && S.origem && S.destino &&
         validarCoordenadas(S.origem.lat, S.origem.lng) && validarCoordenadas(S.destino.lat, S.destino.lng)) {
       console.log(" Sem posição do motorista na fase 'indo_retirar': desenhando provisoriamente origem → destino até receber a posição do motorista.");
@@ -474,10 +500,10 @@ let unsubSync = () => {};
   }
   const redraw = redesenhar;
 
-  // Garante que alguma rota plausível seja desenhada já no carregamento
+  
   function garantirRotaInicial() {
     try {
-      // FUNCIONAR IGUAL ÀS CORRIDAS NORMAIS
+     
       if (S.fase === 'indo_retirar' && S.motorista && S.origem && validarCoordenadas(S.origem.lat, S.origem.lng)) {
         drawIfNew(S.motorista, S.origem, 'M->O');
         return;
@@ -489,15 +515,13 @@ let unsubSync = () => {};
         return;
       }
       
-      // Caso 3: Sem motorista, mas já temos origem e destino → desenhar para não ficar sem rota
       if (S.origem && S.destino && validarCoordenadas(S.origem.lat, S.origem.lng) && validarCoordenadas(S.destino.lat, S.destino.lng)) {
-        // Se motorista ainda não chegou e estamos indo_retirar, usamos fallback temporário
+
         console.log(" Rota inicial: usando desenho provisório origem → destino (motorista ainda indisponível)");
         drawIfNew(S.origem, S.destino, 'F:O->D');
         return;
       }
-      
-      // fallback: só ajustar mapa aos pinos existentes
+    
       ajustarMapa();
     } catch (e) {
       console.warn('ensureInitialRoute falhou:', e?.message || e);
@@ -515,7 +539,6 @@ let unsubSync = () => {};
   
   const isDescarteDoc = tipoAtual === 'descarte';
   
-  // DEBUG: Vamos ver exatamente o que tem no objeto origem
   console.log(" DEBUG - Objeto origem completo:", docData.origem);
   if (docData.origem) {
     console.log(" DEBUG - origem.lat:", docData.origem.lat, "tipo:", typeof docData.origem.lat);
@@ -524,7 +547,6 @@ let unsubSync = () => {};
     console.log(" DEBUG - Validação coordenadas:", validarCoordenadas(docData.origem.lat, docData.origem.lng));
   }
   
-  // DEBUG: Vamos ver exatamente o que tem no objeto destino
   console.log(" DEBUG - Objeto destino completo:", docData.destino);
   if (docData.destino) {
     console.log(" DEBUG - destino.lat:", docData.destino.lat, "tipo:", typeof docData.destino.lat);
@@ -533,40 +555,33 @@ let unsubSync = () => {};
     console.log(" DEBUG - Validação coordenadas:", validarCoordenadas(docData.destino.lat, docData.destino.lng));
   }
   
-  // PROCESSAR ORIGEM - apenas ler os dados salvos pelo rotaM
   if (docData.origem && validarCoordenadas(docData.origem.lat, docData.origem.lng)) {
     console.log(" Origem com coordenadas válidas:", docData.origem);
     setPinoOrigem(docData.origem, isDescarteDoc);
     setText(["origem-address","origemInfo"], docData.origem.endereco || "—");
   } else {
     console.warn(" Origem sem coordenadas válidas, aguardando rotaM processar...");
-    // Mostrar endereço em texto enquanto não tem coordenadas
     const enderecoOrigem = isDescarteDoc ? 
       (docData.localRetirada || docData.origem?.endereco || "—") :
       (docData.origem?.endereco || "—");
     setText(["origem-address","origemInfo"], enderecoOrigem);
   }
   
-  // PROCESSAR DESTINO - apenas ler os dados salvos pelo rotaM
   if (docData.destino && validarCoordenadas(docData.destino.lat, docData.destino.lng)) {
     console.log(" Destino com coordenadas válidas:", docData.destino);
     setPinoDestino(docData.destino, isDescarteDoc);
     setText(["destino-address","destinoInfo"], docData.destino.endereco || "—");
   } else {
     console.warn(" Destino sem coordenadas válidas, aguardando rotaM processar...");
-    // Mostrar endereço em texto enquanto não tem coordenadas
     const enderecoDestino = isDescarteDoc ? 
       (docData.localEntrega || docData.destino?.endereco || "—") :
       (docData.destino?.endereco || "—");
     setText(["destino-address","destinoInfo"], enderecoDestino);
   }
   
-  // Fallback: se faltarem coordenadas, tentar geocodificar endereços
   if (!S.origem || !S.destino) {
     await resolveAndSetPinos(docData, null, isDescarteDoc);
   }
-
-  // DESCARTE: se estamos anexados na coleção 'corridas' e ainda faltam coords, buscar no espelho 'descartes/{id}'
   try {
     if (tipoAtual === 'descarte' && (!S.origem || !S.destino)) {
       const outraColecao = colecaoAtual === 'descartes' ? 'corridas' : 'descartes';
@@ -588,7 +603,6 @@ let unsubSync = () => {};
 
   console.log(" Estado após processamento:", {origem: S.origem, destino: S.destino, motorista: S.motorista});
   
-  // Para DESCARTE: quando o documento ativo for de 'corridas' e faltar lat/lng em origem/destino, buscar o espelho em 'descartes/{id}' e usar suas coordenadas
   if (tipoAtual === 'descarte' && colecaoAtual === 'corridas' && (!S.origem || !S.destino)) {
     try {
       const ref = db.collection('descartes').doc(corridaId);
@@ -607,10 +621,9 @@ let unsubSync = () => {};
     }
   }
 
-  // Redesenhar após processar todos os dados
+  // Redesenhar dps d processar todos os dados
   redraw();
 }
-
 
   // Buscar corrida ativa
 async function pickCorridaId(uid){
@@ -636,7 +649,7 @@ async function pickCorridaId(uid){
     console.warn(' Erro ao buscar corridas do cliente:', error);
   }
   
-  // BUSCAR NA COLEÇÃO DESCARTES (NOVO!)
+  // BUSCAR NA COLEÇÃO DESCARTES 
   try{ 
     const q2=await db.collection("descartes")
       .where("clienteId","==",uid)
@@ -756,28 +769,27 @@ async function pickCorridaId(uid){
   fitted = false;
   if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
 
-  // USAR A COLEÇÃO CORRETA
   const colecao = corridaData.colecao || (corridaData.tipo === 'descarte' ? 'descartes' : 'corridas');
   colecaoAtual = colecao;
   console.log(` Usando coleção: ${colecao}`);
 
   const docRef = db.collection(colecao).doc(corridaId);
+  docRefGlobal = docRef;
   const syncRef = db.collection(colecao).doc(corridaId).collection("sync").doc("estado");
 
   console.log(" Carregando dados iniciais...");
   const [docSnap, sSnap] = await Promise.all([docRef.get(), syncRef.get()]);
   
-  // PROCESSAR DOCUMENTO INICIAL
   if(docSnap.exists){
     const docData = docSnap.data() || {};
     console.log(" Dados iniciais do documento:", docData);
-    // Se faltar clienteId, preencher com o usuário atual (cliente)
+    
     try {
       if ((!docData.clienteId || typeof docData.clienteId !== 'string' || !docData.clienteId.trim()) && currentUser?.uid) {
         await docRef.set({ clienteId: currentUser.uid }, { merge: true });
         console.log(" clienteId ausente: preenchido com UID do usuário atual");
       }
-      // Corrigir motoristaId trocado: se motoristaId == UID do cliente, mas existe propostaAceita.motoristaUid, use-o
+      
       const motoristaUidDoc = docData.propostaAceita?.motoristaUid || docData.motoristaUid || null;
       if (currentUser?.uid && docData.motoristaId === currentUser.uid && motoristaUidDoc && motoristaUidDoc !== currentUser.uid) {
         await docRef.set({ motoristaId: motoristaUidDoc }, { merge: true });
@@ -841,7 +853,7 @@ async function pickCorridaId(uid){
     redraw();
   });
 
-  // LISTENER DO SYNC (CRÍTICO PARA TEMPO REAL)
+  // LISTENER DO SYNC TEMPO REAL
   console.log(" Configurando listener do sync (tempo real)...");
   unsubSync = syncRef.onSnapshot(s=>{
     const d=s.data()||{};
@@ -856,7 +868,7 @@ async function pickCorridaId(uid){
       needsRedraw = true;
     }
     
-      // Em descarte, aceitar origem/destino vindos do sync (se presentes), independentemente da coleção anexada
+      // aceitar origem/destino vindos do sync no descarte
     if (tipoAtual === 'descarte') {
       if (d.origem && validarCoordenadas(d.origem.lat, d.origem.lng)) {
         setPinoOrigem(d.origem, true);
@@ -872,7 +884,7 @@ async function pickCorridaId(uid){
       }
     }
 
-    // Atualizar posição do motorista (CRÍTICO!)
+    // Atualizar posição do motorista 
     if(d.motorista && validarCoordenadas(d.motorista.lat, d.motorista.lng)) {
       const newLat = parseFloat(d.motorista.lat);
       const newLng = parseFloat(d.motorista.lng);
@@ -887,7 +899,6 @@ async function pickCorridaId(uid){
     if (typeof d.etaMin === "number") setText(["estimated-time","tempoInfo","tempoPrevisto","tempo"], `${Math.max(1, Math.round(d.etaMin))} min`);
     if (typeof d.distanciaM === "number") setText(["distanciaInfo","estimated-distance","distPrevista","distancia"], km(d.distanciaM));
     
-    // Verificar cancelamento
     if (d.fase === "cancelada" || d.cancelamento) {
       console.log(" Corrida cancelada detectada!");
       alert(`${tipoAtual === 'descarte' ? 'Descarte' : 'Corrida'} foi cancelado!`);
@@ -906,7 +917,7 @@ async function pickCorridaId(uid){
 
   console.log(" Listeners configurados com sucesso!");
 
-  // Listener extra no sync da coleção espelho (apenas para DESCARTE)
+  // Listener extra no sync de DESCARTE
   try {
     if (tipoAtual === 'descarte') {
       const outraColecao = colecao === 'descartes' ? 'corridas' : 'descartes';
@@ -1090,7 +1101,7 @@ async function pickCorridaId(uid){
     }
   }
 
-  // Injetar CSS
+  //CSS
   (function injetarCss(){
     if (document.getElementById("css-destaque-chegada")) return;
     const st=document.createElement("style"); 
@@ -1105,7 +1116,7 @@ async function pickCorridaId(uid){
     document.head.appendChild(st);
   })();
 
-// Sistema de Chat
+// Chat
 (() => {
   const { firebase } = window;
   if (!firebase || !firebase.apps.length) return;

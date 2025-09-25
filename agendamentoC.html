@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agendamento - Moomate</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+  <link rel="stylesheet" href="src/styles/agendamentoC.css"/>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="top-bar">
+    <div class="logo-area">
+      <img src="src/images/favicon.png" alt="Logo Moomate" />
+    </div>
+
+    <nav class="nav-links" id="navMenu">
+      <a href="homeC.html">Home</a>
+      <a href="pedidosC.html">Pedidos</a>
+      <a href="carteiraC.html">Carteira</a>
+      <a href="suporteC.html">Suporte</a>
+      <a href="ecopontosC.html">Pontos de coleta</a>
+    </nav>
+
+    <div class="header-icons">
+      <a href="notificaçõesC.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
+      <a href="dadospessoaisC.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
+      <a href="configuraçõesC.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
+      <button class="menu-toggle" id="menuToggle">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Banner -->
+  <section class="banner">
+    <img src="src/images/bannerhome2.png" alt="Banner agendamento" />
+    <div class="banner-text">
+      <h2>Agende sua mudança ou entrega.</h2>
+    </div>
+  </section>
+
+  <!-- Agendamento Form -->
+  <section class="form-section">
+    <div class="form-fields">
+      <!-- Data de Agendamento -->
+      <div class="input-box">
+        <label for="dataAgendamento"><i class="fa-solid fa-calendar-day"></i> Data de Agendamento</label>
+        <input type="date" id="dataAgendamento" placeholder="Escolha a data" class="date-input" required>
+      </div>
+
+      <!-- Hora de Agendamento -->
+      <div class="input-box">
+        <label for="horaAgendamento"><i class="fa-solid fa-clock"></i> Hora de Agendamento</label>
+        <input type="time" id="horaAgendamento" required>
+      </div>
+
+      <!-- Local de Retirada -->
+      <div class="input-box">
+        <label for="cep"><i class="fa-solid fa-map-pin"></i> CEP</label>
+        <input type="text" id="cep" placeholder="Digite o CEP" maxlength="9" required>
+      </div>
+
+      <div class="input-box">
+        <label for="localRetirada"><i class="fa-solid fa-location-dot"></i> Local de Retirada</label>
+        <input type="text" id="localRetirada" placeholder="Digite o endereço completo" required>
+      </div>
+
+      <!-- Número e Complemento de Retirada -->
+      <div class="input-group">
+        <input type="text" id="numeroRetirada" placeholder="Número" required>
+        <input type="text" id="complementoRetirada" placeholder="Complemento (opcional)">
+      </div>
+
+      <!-- Local de Entrega -->
+      <div class="input-box">
+        <label for="localEntrega"><i class="fa-solid fa-location-dot"></i> Local de Entrega</label>
+        <input type="text" id="localEntrega" placeholder="Digite o endereço completo" required>
+      </div>
+
+      <!-- Número e Complemento de Entrega -->
+      <div class="input-group">
+        <input type="text" id="numeroEntrega" placeholder="Número" required>
+        <input type="text" id="complementoEntrega" placeholder="Complemento (opcional)">
+      </div>
+
+      <!-- Número de Volumes -->
+      <div class="input-box">
+        <label for="volumes"><i class="fa-solid fa-boxes-stacked"></i> Número de Volumes</label>
+        <input type="number" id="volumes" class="volumes-input" placeholder="Quantos itens serão transportados?" min="1" required>
+      </div>
+
+      <!-- Tipo de Veículo (Tamanho do Caminhão) -->
+      <div class="input-box">
+        <label><i class="fa-solid fa-truck"></i> Tipo de Veículo</label>
+        <div class="vehicle-types">
+          <div class="vehicle-option" data-type="pequeno">
+            <strong>Pequeno:</strong> ideal para pequenas mudanças ou poucos móveis
+          </div>
+          <div class="vehicle-option" data-type="medio">
+            <strong>Médio:</strong> bom para apartamentos com 2 a 3 cômodos
+          </div>
+          <div class="vehicle-option" data-type="grande">
+            <strong>Grande:</strong> recomendado para casas grandes ou mudanças completas
+          </div>
+        </div>
+        <input type="hidden" id="tipoVeiculo">
+      </div>
+
+      <button id="confirmarAgendamento" class="btn-cta">Enviar solicitação de agendamento</button>
+    </div>
+  </section>
+
+  <!-- Propostas Recebidas (renderiza aqui mesmo) -->
+  <section class="form-section" id="propostasSection" style="display:none;">
+    <div id="propostasContainer" class="propostas-section">
+      <h3>Propostas Recebidas</h3>
+      <div id="lista-propostas" class="lista-propostas"></div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div id="footer_content">
+      <div class="footer-left">
+        <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
+      </div>
+      <div class="footer-social">
+        <span class="social-text">Acompanhe-nos</span>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a>
+        </div>
+      </div>
+    </div>
+    <div id="footer_items">
+      <span> 2025 Moomate. Todos os direitos reservados.</span>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script>
+    // Inicialização do Firebase
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Inicializando Firebase...');
+      const firebaseConfig = {
+        apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
+        authDomain: "moomate-39239.firebaseapp.com",
+        projectId: "moomate-39239",
+        storageBucket: "moomate-39239.appspot.com",
+        messagingSenderId: "637968714747",
+        appId: "1:637968714747:web:ad15dc3571c22f046b595e",
+        measurementId: "G-62J7Q8CKP4"
+      };
+      
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+          console.log('Firebase inicializado com sucesso!');
+        } else {
+          console.log('Firebase já está inicializado.');
+        }
+      } catch (error) {
+        console.error('Erro ao inicializar o Firebase:', error);
+      }
+      
+      // Lógica de seleção de veículo
+      const vehicleOptions = document.querySelectorAll('.vehicle-option');
+      vehicleOptions.forEach(option => {
+        option.addEventListener('click', () => {
+          // Remove a classe 'selected' de todas as opções
+          vehicleOptions.forEach(item => item.classList.remove('selected'));
+          
+          // Adiciona a classe 'selected' ao tipo de veículo clicado
+          option.classList.add('selected');
+          
+          // Armazena o tipo de veículo selecionado no campo hidden
+          document.getElementById('tipoVeiculo').value = option.getAttribute('data-type');
+        });
+      });
+    });
+  </script>
+  <!-- Carrega o script principal após o Firebase estar pronto -->
+  <script src="src/javascript/agendamentoC.js" defer></script>
+
+</body>
+</html>
