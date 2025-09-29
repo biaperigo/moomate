@@ -24,12 +24,37 @@ body {
   top: 0;
   z-index: 100;
 }
+/* Modal centralizado (overlay) */
+.mm-modal { position: fixed; inset: 0; display: none; z-index: 9999; align-items: center; justify-content: center; }
+.mm-modal.show { display: flex !important; }
+.mm-modal .mm-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); }
+.mm-modal .mm-modal-dialog { position: relative; background: #fff; width: min(520px, 92%); border-radius: 16px; overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.28); border: 1px solid #ffe4cc; z-index: 1; transform: translateY(8px) scale(.98); animation: mm-pop 260ms ease-out forwards; }
+.mm-modal .mm-modal-header { padding: 16px 20px; border-bottom: 1px solid #ffe4cc; background: linear-gradient(180deg, #fff7f0 0%, #fff 100%); }
+.mm-modal .mm-modal-header h3 { margin: 0; color: #ff6c0c; font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 10px; }
+.mm-modal .mm-modal-header h3 i { color: #ff6c0c; font-size: 1.2rem; }
+.mm-modal .mm-modal-body { padding: 18px 20px; color: #333; font-size: .98rem; line-height: 1.4; }
+@keyframes mm-pop { to { transform: translateY(0) scale(1); } }
 
-.propostas-section {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
+/* Cards empilhados com espaçamento agradável */
+.cards-container > div { display: flex; flex-direction: column; gap: 18px; }
+/* Centraliza os cards nas páginas de cliente e motorista */
+.cards-container { max-width: 760px; margin: 0 auto; }
+#scheduled-list { max-width: 760px; margin: 0 auto; }
+
+/* Botão de cancelar com rótulo e cor de alerta */
+.btn-cancel { background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: #fff; border: none; border-radius: 20px; padding: 8px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 8px rgba(244,67,54,.35); cursor: pointer; }
+.btn-cancel i { font-size: .95rem; }
+.btn-cancel::after { content: 'Cancelar'; font-weight: 700; font-size: .9rem; }
+.btn-cancel:hover { filter: brightness(.95); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(244,67,54,.45); }
+
+.propostas-section p {
+  color: #666;
+  font-size: 1rem;
+  text-align: center;
+  margin: 0;
+  padding: 10px 0;
 }
+
 .motorista-avatar {
   width: 40px;
   height: 40px;
@@ -590,31 +615,28 @@ footer {
   letter-spacing:0.5px; text-transform:uppercase;
 }
 
+/* Em seu arquivo agendamentoC.css ou similar */
+
 #propostasContainer {
-  display: none;
+  /* REMOVA a linha "display: none;" daqui */
   margin-top: 20px;
   padding: 20px;
-  background: #f0f8ff;
+  background: #f0f8ff; /* Você pode mudar isso se quiser */
   border-radius: 10px;
   border: 2px solid #ff6c0c;
 }
 
-@media (max-width: 768px) {
-  .form-map-container {
-    grid-template-columns: 1fr;
-    gap: 20px;
-    padding: 20px;
-  }
- 
-  .input-group {
-    flex-direction: column;
-  }
+
+/* Esconde completamente a seção quando não há itens dentro da lista de propostas */
+#propostasSection:not(:has(#lista-propostas > *:not(.header))) {
+  display: none !important;
+}
 
   .modal-content {
     width: 95%;
     padding: 20px;
   }
-}
+
 .delivery-card {
   position: relative;
   transition: all 0.3s ease;
@@ -967,4 +989,555 @@ footer {
 
 .btn-cta:hover {
   background: #e55a2b;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  padding: 0 1rem;
+}
+
+.tab {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.8rem 0;
+  cursor: pointer;
+  color: #555;
+  border-bottom: 3px solid transparent;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.tab.active {
+  color: #ff6c0c;
+  border-color: #ff6c0c;
+}
+
+.tab-content {
+  display: none;
+  padding: 0 1rem 2rem;
+}
+
+.tab-content.active {
+  display: block;
+}
+.agendados-section {
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.agendados-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.btn-back {
+  background: linear-gradient(135deg, #ff6c0c 0%, #e55a00 100%);
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 108, 12, 0.3);
+}
+
+.btn-back:hover {
+  background: linear-gradient(135deg, #e55a00 0%, #cc5100 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 108, 12, 0.4);
+}
+
+.agendados-title {
+  color: #ff6c0c;
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.empty-message {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #1e1e1e;
+  background: #fff7f0;
+  border-radius: 15px;
+  border: 2px dashed #ffb88a;
+}
+
+.empty-message i {
+  font-size: 3rem;
+  color: #ff6c0c;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+.empty-message h3 {
+  color: #ff6c0c;
+  margin-bottom: 0.5rem;
+}
+
+.cards-container {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.viagem-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fff7f0 100%);
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(255, 108, 12, 0.15);
+  padding: 1.5rem;
+  border: 1px solid #ffe4cc;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  max-width: 500px;
+  width: 100%;
+}
+
+.viagem-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #ff6c0c 0%, #e55a00 100%);
+}
+
+.viagem-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(255, 108, 12, 0.25);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #ffe4cc;
+}
+.card-info h3 {
+  margin: 0;
+  color: #ff6c0c;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.card-info .status {
+  align-self: flex-start; /* alinha à esquerda */
+}
+
+.status {
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-confirmed { 
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); 
+  color: white;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.status-pending { 
+  background: linear-gradient(135deg, #FF9800 0%, #f57c00 100%); 
+  color: white;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.status-progress { 
+  background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%); 
+  color: white;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.status-completed { 
+  background: linear-gradient(135deg, #9C27B0 0%, #7b1fa2 100%); 
+  color: white;
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
+}
+
+.status-cancelled { 
+  background: linear-gradient(135deg, #F44336 0%, #d32f2f 100%); 
+  color: white;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-details, .btn-cancel {
+  border: none;
+  padding: 0.6rem;
+  border-radius: 50%;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.btn-details {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  color: #1976d2;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+}
+
+.btn-details:hover {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(25, 118, 210, 0.4);
+}
+
+.btn-cancel {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  color: #d32f2f;
+  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.2);
+}
+
+.btn-cancel:hover {
+  background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+}
+
+.datetime-info {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.date, .time {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ff6c0c;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.date i, .time i {
+  color: #ff9c5a;
+}
+
+.route-info {
+  margin: 1.5rem 0;
+  background: #fff7f0;
+  padding: 1rem;
+  border-radius: 15px;
+  border-left: 4px solid #ff6c0c;
+}
+
+.route-point {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0.8rem 0;
+  font-size: 0.9rem;
+  color: #1e1e1e;
+}
+
+.route-point.origin i {
+  color: #4caf50;
+  font-size: 1.1rem;
+}
+
+.route-point.destination i {
+  color: #f44336;
+  font-size: 1.1rem;
+}
+
+.route-line {
+  width: 3px;
+  height: 20px;
+  background: linear-gradient(to bottom, #4caf50, #f44336);
+  margin: 0.3rem 0 0.3rem 0.6rem;
+  border-radius: 2px;
+}
+
+.trip-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+  padding: 1.2rem;
+  background: linear-gradient(135deg, #fff7f0 0%, #ffede0 100%);
+  border-radius: 15px;
+  border: 1px solid #ffe4cc;
+}
+
+.detail {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #1e1e1e;
+  font-weight: 500;
+}
+
+.detail i {
+  color: #ff6c0c;
+  width: 16px;
+}
+
+.detail.price {
+  grid-column: 1 / -1;
+  font-weight: 700;
+  color: #ff6c0c;
+  font-size: 1.1rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 10px;
+  border: 2px solid #ffe4cc;
+  justify-content: center;
+}
+
+.driver-info {
+  border-top: 2px solid #ffe4cc;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  background: linear-gradient(135deg, #fff 0%, #fff7f0 100%);
+  border-radius: 15px;
+  padding: 1rem;
+}
+
+.driver-details, .driver-contact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #1e1e1e;
+  font-weight: 500;
+}
+
+.driver-details i, .driver-contact i {
+  color: #ff6c0c;
+  width: 16px;
+}
+
+@media (max-width: 768px) {
+  .agendados-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .agendados-title {
+    text-align: center;
+    width: 100%;
+  }
+  
+  .trip-details {
+    grid-template-columns: 1fr;
+  }
+  
+  .datetime-info {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+}/* =============================================== */
+/* ESTILOS FINAIS E ESPECÍFICOS PARA O CARD DE PROPOSTA */
+/* =============================================== */
+
+.card-proposta-motorista {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+  margin-bottom: 20px;
+  overflow: hidden; /* Garante que nada saia dos cantos arredondados */
+}
+
+.card-proposta-motorista-content {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.card-proposta-motorista-accent {
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 6px;
+  background: linear-gradient(180deg, #ff7a3f 0%, #ff6b35 100%);
+  border-radius: 0 6px 6px 0;
+}
+
+.card-proposta-motorista-perfil {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+  padding-left: 15px; /* Espaço para a barra laranja */
+}
+
+.card-proposta-motorista-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #eee;
+  border: 2px solid #ff6b35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-proposta-motorista-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-proposta-motorista-avatar-inicial {
+  font-weight: 800;
+  color: #555;
+  font-size: 1.5rem;
+}
+
+.card-proposta-motorista-info .nome {
+  font-weight: 800;
+  color: #111;
+  font-size: 1.1rem;
+}
+
+.card-proposta-motorista-info .rating {
+  font-size: 0.9rem;
+  color: #8a8a8a;
+}
+
+.card-proposta-motorista-info .rating .fa-star {
+  color: #FFB703;
+}
+
+.card-proposta-motorista-detalhes {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.card-proposta-motorista-detalhes .corrida-id {
+  font-weight: 700;
+  color: #1e1e1e;
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+}
+
+.card-proposta-motorista-detalhes .rota {
+  margin: 6px 0;
+}
+
+.card-proposta-motorista-detalhes .rota strong {
+  color: #555;
+}
+
+.card-proposta-motorista-detalhes .specs {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.card-proposta-motorista-valor {
+  text-align: right;
+  min-width: 180px;
+}
+
+.card-proposta-motorista-valor .preco {
+  color: #ff6b35;
+  font-size: 2rem;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.card-proposta-motorista-valor .aceitar-btn {
+  background: #ff6b35;
+  color: #fff;
+  border: 0;
+  padding: 12px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.card-proposta-motorista-valor .aceitar-btn:hover {
+  background: #e65c2e;
+}
+/* Seção de propostas ocupa toda a área branca */
+.propostas-section {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  min-height: 400px; /* Garante altura mínima */
+}
+
+#propostasContainer {
+  width: 100%;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+#propostasContainer h3 {
+  font-size: 1.4rem;
+  color: #ff6b35;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-align: center;
+  padding: 0;
+  border: none;
+}
+
+/* Estilo para a mensagem "Aguardando..." igual ao homeC */
+#propostasContainer p {
+  text-align: center;
+  color: #666;
+  padding: 40px 20px;
+  font-size: 1.1rem;
+  background-color: transparent;
+  border: none;
+  margin: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

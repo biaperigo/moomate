@@ -25,7 +25,8 @@
   const vazioCompletos = document.getElementById('vazio-completos');
   const listaCancelados = document.getElementById('lista-cancelados');
   const vazioCancelados = document.getElementById('vazio-cancelados');
-
+  const listaAgendados = document.getElementById('lista-agendados');
+  const vazioAgendados = document.getElementById('vazio-agendados');
   // Helpers
   const txt = (v) => {
     if (v === null || v === undefined) return '—';

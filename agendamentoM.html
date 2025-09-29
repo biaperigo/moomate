@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Home - Moomate</title>
-
+  <title>Agendamento - Moomate</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
   <link rel="stylesheet" href="src/styles/agendamentoM.css"/>
+  <link rel="stylesheet" href="src/styles/agendamentoC.css"/>
 </head>
 <body>
 
@@ -19,6 +19,7 @@
 
   <nav class="nav-links" id="navMenu">
     <a href="homeM.html">Home</a>
+    <a href="agendamentoM.html">Agendamento</a>
     <a href="entregasM.html">Entregas</a>
     <a href="carteiraM.html">Carteira</a>
     <a href="suporteM.html">Suporte</a>
@@ -26,7 +27,6 @@
   </nav>
 
   <div class="header-icons">
-    <a href="notificaçõesM.html" title="Notificações"><i class="fa-solid fa-bell"></i></a>
     <a href="dadospessoaisM.html" title="Perfil"><i class="fa-solid fa-user-circle"></i></a>
     <a href="configuraçõesM.html" title="Configurações"><i class="fa-solid fa-gear"></i></a>
     
@@ -35,82 +35,91 @@
     </button>
   </div>
 </header>
+
 <section class="banner">
-  <img src="src/images/bannerhomemotorista2.png" alt="Banner mudança" />
+  <img src="src/images/bannermotorista.png" alt="banner motorista">
   <div class="banner-text">
     <h2>Ganhe dinheiro com seu veículo fazendo mudanças.</h2>
   </div>
 </section>
 
 <!-- Tabs Agendamento -->
-<nav class="tabs" style="max-width:1100px;margin:10px auto 0 auto;padding:0 8px;">
-  <ul style="display:flex;gap:24px;list-style:none;justify-content:center;">
-    <li><a href="agendamentoM.html" style="display:inline-block;padding:10px 4px;color:#ff6c0c;font-weight:700;text-decoration:none;">Solicitações</a></li>
-    <li><a href="agendadosM.html" style="display:inline-block;padding:10px 4px;color:#444;text-decoration:none;">Agendados</a></li>
+<nav class="tabs">
+  <ul>
+    <li><a href="#" class="tab-link active" data-tab="solicitacoes">Solicitações</a></li>
+    <li><a href="#" class="tab-link" data-tab="agendados">Agendados</a></li>
   </ul>
-  </nav>
+</nav>
 
+<!-- Conteúdo da Tab Solicitações -->
 <section class="delivery-section">
-  <h3>Propostas de entregas</h3>
-  <div id="delivery-list">
-    <p id="loading-message">Buscando novos pedidos...</p>
+  <div id="solicitacoes" class="tab-content active">
+    <h3>Propostas de entregas</h3>
+    <div id="delivery-list">
+      <p id="loading-message">Buscando novos pedidos...</p>
+    </div>
+    <button class="btn-cta" id="submitBtn">MANDAR PROPOSTA DE VALOR</button>
   </div>
-  <button class="btn-cta full-width" id="submitBtn" disabled>MANDAR PROPOSTA DE VALOR</button>
+
+  <!-- Conteúdo da Tab Agendados -->
+  <div id="agendados" class="tab-content">
+    <h3>Serviços agendados</h3>
+    <div id="scheduled-list">
+      <!-- Conteúdo preenchido pelo JS -->
+    </div>
+  </div>
 </section>
 
-<div id="proposalModal" class="modal-overlay" style="display: none;">
-  <div class="modal-content">
-    <span class="modal-close" id="modalClose">&times;</span>
-    <h2>Enviar Proposta</h2>
-    <p>Preencha os detalhes da sua oferta para o cliente.</p>
+<!-- Modal de Envio de Proposta -->
+<div id="proposalModal" class="modal-overlay" style="display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45 );position:fixed;inset:0;z-index:9999;opacity:0;transition:opacity .2s ease;">
+  <div class="modal-content conteudo-modal" style="width:min(520px,92vw);background:#ffffff;border:3px solid #ff6b35;border-radius:16px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,.35);transform:scale(.96);transition:transform .2s ease;position:relative;">
+    <button id="modalClose" aria-label="Fechar" style="position:absolute;top:10px;right:12px;background:transparent;border:0;font-size:22px;color:#888;cursor:pointer">&times;</button>
+    <h2 style="margin:0 0 6px 0;color:#1e1e1e;font-size:1.6rem;font-weight:800;">Enviar Proposta</h2>
+    <p style="margin:0 0 12px 0;color:#6b6b6b">Preencha os detalhes da sua oferta para o cliente.</p>
     
-    <div class="modal-input-group">
-      <label for="proposalPrice"><i class="fa-solid fa-dollar-sign"></i> Seu Valor Base (R$)</label>
-      <input type="number" id="proposalPrice" placeholder="Ex: 80.00" min="0">
-    </div>
-    
-    <div class="modal-input-group">
-      <label for="proposalTime"><i class="fa-solid fa-clock"></i> Tempo até a retirada (minutos)</label>
-      <input type="number" id="proposalTime" placeholder="Ex: 15" min="1">
+    <div class="modal-input-group" style="margin:10px 0 8px 0;display:flex;flex-direction:column;gap:6px;">
+      <label for="proposalPrice" style="font-weight:700;color:#333"><i class="fa-solid fa-dollar-sign"></i> Seu Valor Base (R$)</label>
+      <input type="number" id="proposalPrice" placeholder="Ex: 80.00" min="0" style="padding:12px;border:1px solid #ddd;border-radius:10px;outline:none;">
+      <small id="priceRangeHint" style="display:block;margin-top:6px;color:#666"></small>
     </div>
 
-    <div class="modal-input-group">
-      <label for="proposalHelpers"><i class="fa-solid fa-users"></i> Número de Ajudantes (além de você)</label>
-      <select id="proposalHelpers">
+    <div class="modal-input-group" style="margin:8px 0;display:flex;flex-direction:column;gap:6px;">
+      <label for="proposalTime" style="font-weight:700;color:#333"><i class="fa-solid fa-clock"></i> Tempo até a retirada (minutos)</label>
+      <input type="number" id="proposalTime" placeholder="Ex: 15" min="1" style="padding:12px;border:1px solid #ddd;border-radius:10px;outline:none;">
+    </div>
+
+    <div class="modal-input-group" style="margin:8px 0;display:flex;flex-direction:column;gap:6px;">
+      <label for="proposalHelpers" style="font-weight:700;color:#333"><i class="fa-solid fa-users"></i> Número de Ajudantes (além de você)</label>
+      <select id="proposalHelpers" style="padding:12px;border:1px solid #ddd;border-radius:10px;outline:none;">
         <option value="0">0 Ajudantes</option>
         <option value="1">1 Ajudante</option>
         <option value="2">2 Ajudantes</option>
-        <option value="3">3 Ajudantes</option>
       </select>
     </div>
 
-    <div class="modal-input-group">
-      <label for="proposalVehicle"><i class="fa-solid fa-truck"></i> Tamanho do seu Veículo</label>
-      <select id="proposalVehicle">
+    <div class="modal-input-group" style="margin:8px 0;display:flex;flex-direction:column;gap:6px;">
+      <label for="proposalVehicle" style="font-weight:700;color:#333"><i class="fa-solid fa-truck"></i> Tamanho do seu Veículo</label>
+      <select id="proposalVehicle" style="padding:12px;border:1px solid #ddd;border-radius:10px;outline:none;">
         <option value="pequeno">Pequeno</option>
         <option value="medio">Médio</option>
         <option value="grande">Grande</option>
       </select>
     </div>
 
-    <small class="price-summary">O cliente verá um valor final com base nas suas escolhas + taxa da plataforma.</small>
-    <button class="btn-cta" id="sendProposalBtn">Confirmar e Enviar Proposta</button>
+    <small class="price-summary" style="display:block;margin:6px 0 14px 0;color:#666">O cliente verá um valor final com base nas suas escolhas + taxa da plataforma.</small>
+    <button class="btn-cta" id="sendProposalBtn" style="width:100%;padding:14px 16px;background:linear-gradient(180deg,#ff7a3f 0%,#ff6b35 100%);border:0;color:#fff;border-radius:12px;cursor:pointer;box-shadow:0 6px 16px rgba(255,107,53,.45);font-weight:900;">Confirmar e Enviar Proposta</button>
   </div>
 </div>
 
-<div id="propostaAceitaModal" class="modal-overlay" style="display: none;">
-  <div class="modal-content">
-    <span class="modal-close" onclick="fecharModalPropostaAceita()">&times;</span>
-    <h2>✅ Proposta Aceita</h2>
-    <div class="proposta-aceita-info">
-      <p><strong>Origem:</strong> <span id="origem-info"></span></p>
-      <p><strong>Destino:</strong> <span id="destino-info"></span></p>
-      <p><strong>Valor para o cliente:</strong> R$ <span id="valor-info"></span></p>
-      <p><strong>Tempo até a retirada:</strong> <span id="tempo-info"></span> min</p>
+<!-- Modal de confirmação (mesmo padrão do cliente) -->
+<div id="modalPropostaAceita" class="mm-modal" style="display:none;">
+  <div class="mm-modal-backdrop"></div>
+  <div class="mm-modal-dialog" role="dialog" aria-labelledby="modalPropostaAceitaTitulo" aria-modal="true">
+    <div class="mm-modal-header">
+      <h3 id="modalPropostaAceitaTitulo"><i class="fa-solid fa-bell"></i> Proposta Aceita!</h3>
     </div>
-    <div class="modal-buttons">
-      <button id="btnIniciarCorrida" class="btn-iniciar">🚚 Iniciar Corrida</button>
-      <button id="btnRecusarCorrida" class="btn-cancelar">❌ Recusar Corrida</button>
+    <div class="mm-modal-body">
+      Um cliente aceitou sua proposta! Redirecionando para "Agendados"...
     </div>
   </div>
 </div>
@@ -121,14 +130,10 @@
       <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
     </div>
     <div class="footer-social">
-      <span class="social-text">Acompanhe nós</span>
+      <span class="social-text">Acompanhe-nos</span>
       <div class="social-icons">
-        <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
-          <i class="fa-brands fa-instagram"></i>
-        </a>
-        <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank">
-          <i class="fa-brands fa-linkedin-in"></i>
-        </a>
+        <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a>
       </div>
     </div>
   </div>
@@ -137,37 +142,25 @@
   </div>
 </footer>
 
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
-  authDomain: "moomate-39239.firebaseapp.com",
-  projectId: "moomate-39239",
-  storageBucket: "moomate-39239.appspot.com",
-  messagingSenderId: "637968714747",
-  appId: "1:637968714747:web:ad15dc3571c22f046b595e",
-  measurementId: "G-62J7Q8CKP4"
-};
-if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  (function( ){
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
+      authDomain: "moomate-39239.firebaseapp.com",
+      projectId: "moomate-39239",
+      storageBucket: "moomate-39239.appspot.com",
+      messagingSenderId: "637968714747",
+      appId: "1:637968714747:web:ad15dc3571c22f046b595e",
+      measurementId: "G-62J7Q8CKP4"
+    };
+    try{ if (!window.firebase?.apps?.length) firebase.initializeApp(firebaseConfig); }catch(e){ console.error('Firebase init failed:', e); }
+  })();
 </script>
+<script src="src/javascript/agendamentoM.js" defer></script>
 
-<script src="src/javascript/agendamentoM.js"></script>
-<div id="modal-proposta-motorista" class="mm-modal hidden">
-  <div class="mm-card">
-    <h3>Proposta aceita</h3>
-    <p id="mm-nome-cliente">Cliente: —</p>
-    <div id="mm-info-corrida" class="mm-info">
-    </div>
-
-    <div class="mm-actions">
-      <button id="mm-iniciar" class="primario">Iniciar corrida</button>
-      <button id="mm-cancelar" class="secundario">Cancelar</button>
-    </div>
-  </div>
-</div>
-</div>
 </body>
 </html>

@@ -1008,6 +1008,7 @@ async function pickCorridaId(uid){
         }
         
         try {
+          // 1. Salvar avaliação (como antes)
           await salvarAvaliacao({
             corridaId,
             motoristaId: C?.motoristaId || C?.propostaAceita?.motoristaUid,
@@ -1018,8 +1019,17 @@ async function pickCorridaId(uid){
           
           modal.style.display="none";
           
-          setTimeout(() => {
-            window.location.href = `pagamentoC.html?corrida=${encodeURIComponent(corridaId)}`;
+          // 2. NOVA LÓGICA: Processar pagamento (SUBSTITUIR A LINHA ANTIGA)
+          setTimeout(async () => {
+            try {
+              const dadosPagamento = await buscarDadosPagamento(corridaId);
+              await criarPagamentoMercadoPago(dadosPagamento);
+            } catch (error) {
+              console.error('Erro ao processar pagamento:', error);
+              alert('Erro ao processar pagamento. Redirecionando...');
+              // Fallback para página antiga
+              window.location.href = `pagamentoC.html?corrida=${encodeURIComponent(corridaId)}`;
+            }
           }, 500);
           
         } catch (error) {
@@ -1100,6 +1110,84 @@ async function pickCorridaId(uid){
       console.error("Erro ao salvar avaliação:", error);
     }
   }
+  const USE_CHECKOUT_PRO = true; // true = Mercado Pago, false = checkout transparente
+
+// FUNÇÕES DO MERCADO PAGO - Adicionar antes da inicialização principal
+async function buscarDadosPagamento(corridaId) {
+  try {
+    const docSnap = await db.collection(colecaoAtual).doc(corridaId).get();
+    const data = docSnap.data() || {};
+    
+    return {
+      corridaId,
+      valor: data.precoFinal || data.valor || data.preco || 50.00, // valor padrão
+      clienteId: data.clienteId || currentUser?.uid,
+      motoristaId: data.motoristaId || data.propostaAceita?.motoristaUid,
+      tipo: tipoAtual,
+      descricao: `${tipoAtual === 'descarte' ? 'Serviço de Descarte' : 'Corrida de Mudança'} - ${corridaId.substring(0, 8)}`
+    };
+  } catch (error) {
+    console.error('Erro ao buscar dados do pagamento:', error);
+    throw error;
+  }
+}
+
+async function criarPagamentoMercadoPago(dadosPagamento) {
+  const { corridaId, valor, clienteId, descricao } = dadosPagamento;
+  
+  try {
+    // SUBSTITUA ESTA URL PELA URL DO SEU BACKEND
+    const response = await fetch('https://seu-backend.com/api/mercadopago/create-preference', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${await firebase.auth().currentUser.getIdToken()}`
+      },
+      body: JSON.stringify({
+        corridaId,
+        valor: Number(valor),
+        clienteId,
+        items: [{
+          title: descricao,
+          quantity: 1,
+          unit_price: Number(valor),
+          currency_id: 'BRL'
+        }],
+        back_urls: {
+          success: `${window.location.origin}/pagamento-sucesso.html?corrida=${corridaId}`,
+          failure: `${window.location.origin}/pagamento-erro.html?corrida=${corridaId}`,
+          pending: `${window.location.origin}/pagamento-pendente.html?corrida=${corridaId}`
+        },
+        auto_return: 'approved'
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erro HTTP: ${response.status}`);
+    }
+    
+    const { init_point, preference_id } = await response.json();
+    
+    // Salvar dados do pagamento no Firebase
+    await db.collection(colecaoAtual).doc(corridaId).update({
+      pagamento: {
+        preferenceId: preference_id,
+        valor: Number(valor),
+        status: 'pendente',
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      },
+      status: 'pagamento_pendente'
+    });
+    
+    // Redirecionar para Mercado Pago
+    console.log('Redirecionando para pagamento:', init_point);
+    window.location.href = init_point;
+    
+  } catch (error) {
+    console.error('Erro ao criar pagamento:', error);
+    throw error;
+  }
+}
 
   //CSS
   (function injetarCss(){

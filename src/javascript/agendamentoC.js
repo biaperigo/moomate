@@ -1,786 +1,976 @@
-// agendamentoC.js - Cliente
-// Fornece funções globais para criar pedidos AGENDADOS e aceitar proposta marcando status 'agendado'.
-// Compatível com Firebase v8 (mesmo padrão do projeto)
-console.log('Script agendamentoC.js carregado');
-
-// Função para verificar e logar elementos do DOM
-function verificarElementos() {
-  try {
-    const cepInput = document.getElementById('cep');
-    const localRetiradaInput = document.getElementById('localRetirada');
-    const localEntregaInput = document.getElementById('localEntrega');
-    
-    console.log('Verificando elementos do formulário:', {
-      cepInput: cepInput ? 'Encontrado' : 'Não encontrado',
-      localRetiradaInput: localRetiradaInput ? 'Encontrado' : 'Não encontrado',
-      localEntregaInput: localEntregaInput ? 'Encontrado' : 'Não encontrado',
-      documentReadyState: document.readyState,
-      firebaseCarregado: !!window.firebase,
-      documentBody: document.body ? 'Pronto' : 'Não pronto'
-    });
-    
-    return cepInput && localRetiradaInput && localEntregaInput;
-  } catch (error) {
-    console.error('Erro ao verificar elementos:', error);
-    return false;
-  }
-}
-
-// Inicialização segura do módulo
-(function(){
-  console.log('Iniciando módulo agendamentoC.js');
+// Sistema de Tabs para Agendamento Moomate
+document.addEventListener('DOMContentLoaded', function() {
   
-  // Verifica se o Firebase está disponível
-  if (!window.firebase) {
-    console.error('Firebase não está disponível. Verifique se o script do Firebase foi carregado corretamente.');
-    return;
-  }
+  // Elementos das tabs
+  const tabSolicitar = document.getElementById('tab-solicitar');
+  const tabAgendados = document.getElementById('tab-agendados');
+  const formSection = document.querySelector('.form-section');
   
-  // Tenta inicializar imediatamente se o DOM estiver pronto
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    console.log('DOM já está pronto, iniciando verificação...');
-    verificarElementos();
-  } else {
-    console.log('Aguardando DOM carregar...');
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('DOM completamente carregado');
-      verificarElementos();
-    });
-  }
-  const { firebase } = window;
-  if (!firebase) return;
-  const db = (firebase.apps && firebase.apps.length) ? firebase.firestore() : null;
+  // Controle de estado atual
+  let currentTab = 'solicitar';
+  
+  // Lista em memória (preenchida via Firestore)
+  let viagensAgendadas = [];
 
-  // Função para buscar endereço pelo CEP
-  async function buscarEnderecoPorCEP(cep) {
+  // Função para alternar entre as tabs
+  function switchTab(activeTab, tabName) {
+    // Remove a classe 'active' de todas as abas
+    tabSolicitar.classList.remove('active');
+    tabAgendados.classList.remove('active');
+    
+    // Adiciona a classe 'active' na aba clicada
+    activeTab.classList.add('active');
+    
+    // Atualiza o estado atual
+    currentTab = tabName;
+
+    // Pega a referência da seção de propostas
+    const propostasSection = document.getElementById('propostasSection');
+    
+    // Mostra/esconde conteúdo baseado na aba ativa
+    if (tabName === 'solicitar') {
+      // Mostra o formulário e esconde a lista de agendados
+      showSolicitarContent(); 
+
+      // Verifica se a seção de propostas já foi ativada anteriormente.
+      // Se sim, ela deve continuar visível na aba "Solicitar".
+      if (propostasSection && propostasSection.dataset.active === 'true') {
+        propostasSection.style.display = 'block';
+        // Mantém o formulário visível (não esconder .form-section)
+      }
+
+    } else if (tabName === 'agendados') {
+      // Mostra a lista de agendados
+      showAgendadosContent(); 
+      
+      // Esconde a seção de propostas e o formulário principal.
+      // Isso garante que as propostas NUNCA apareçam na aba "Agendados".
+      if (propostasSection) {
+        propostasSection.style.display = 'none';
+      }
+      document.querySelector('.form-section').style.display = 'none';
+    }
+  }
+
+  // Função para mostrar o conteúdo da aba "Solicitar"
+  function showSolicitarContent() {
+    formSection.style.display = 'block';
+    hideAgendadosContent();
+    // Se existir um agendamento em aberto (não aceito), manter a seção de propostas visível
     try {
-      // Remove caracteres não numéricos
-      cep = cep.replace(/\D/g, '');
-      
-      // Verifica se o CEP tem 8 dígitos
-      if (cep.length !== 8) return null;
-      
-      // Faz a requisição para a API ViaCEP
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await response.json();
-      
-      // Verifica se o CEP é válido e se o estado é SP
-      if (data.erro || data.uf !== 'SP') {
-        throw new Error('CEP não encontrado ou fora do estado de São Paulo');
-      }
-      
-      return {
-        logradouro: data.logradouro || '',
-        bairro: data.bairro || '',
-        localidade: data.localidade || '',
-        uf: data.uf || '',
-        cep: data.cep || ''
-      };
-    } catch (error) {
-      console.error('Erro ao buscar CEP:', error);
-      throw new Error('Não foi possível buscar o endereço. Verifique o CEP e tente novamente.');
-    }
-  }
-
-  // Função para formatar CEP
-  function formatarCEP(cep) {
-    if (!cep) return '';
-    cep = cep.replace(/\D/g, '');
-    if (cep.length > 5) {
-      cep = cep.replace(/^(\d{5})(\d{1,3})/, '$1-$2');
-    }
-    return cep;
-  }
-
-  // Função para buscar sugestões de endereço via CEP
-  async function buscarSugestoesEndereco(termo) {
-    const cepLimpo = termo.replace(/\D/g, '');
-    
-    // Só busca se tiver pelo menos 5 dígitos (CEP parcial)
-    if (cepLimpo.length < 5) return [];
-    
-    try {
-      // Busca o endereço completo pelo CEP
-      const endereco = await buscarEnderecoPorCEP(cepLimpo);
-      
-      if (endereco) {
-        return [{
-          logradouro: endereco.logradouro,
-          bairro: endereco.bairro,
-          localidade: endereco.localidade,
-          uf: endereco.uf,
-          cep: endereco.cep
-        }];
-      }
-      
-      return [];
-    } catch (error) {
-      console.error('Erro ao buscar sugestões de endereço:', error);
-      return [];
-    }
-  }
-
-  // Cria o dropdown de sugestões
-  function criarDropdownSugestoes(inputElement, sugestoes, onSelect) {
-    // Remove dropdowns existentes
-    removerDropdown();
-    
-    if (sugestoes.length === 0) return;
-    
-    const dropdown = document.createElement('div');
-    dropdown.className = 'sugestoes-dropdown';
-    dropdown.style.position = 'absolute';
-    dropdown.style.width = '100%';
-    dropdown.style.maxHeight = '200px';
-    dropdown.style.overflowY = 'auto';
-    dropdown.style.background = 'white';
-    dropdown.style.border = '1px solid #ddd';
-    dropdown.style.borderRadius = '4px';
-    dropdown.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-    dropdown.style.zIndex = '1000';
-    
-    // Filtra sugestões únicas baseadas no logradouro e bairro
-    const sugestoesUnicas = [];
-    const chavesVistas = new Set();
-    
-    sugestoes.forEach(sugestao => {
-      const chave = `${sugestao.logradouro}-${sugestao.bairro}`;
-      if (!chavesVistas.has(chave)) {
-        chavesVistas.add(chave);
-        sugestoesUnicas.push(sugestao);
-      }
-    });
-    
-    // Limita a 5 sugestões para não sobrecarregar a tela
-    sugestoesUnicas.slice(0, 5).forEach((sugestao, index) => {
-      const item = document.createElement('div');
-      item.textContent = `${sugestao.logradouro}, ${sugestao.bairro} - ${sugestao.localidade}/${sugestao.uf}`;
-      item.style.padding = '10px 12px';
-      item.style.cursor = 'pointer';
-      item.style.borderBottom = '1px solid #f0f0f0';
-      item.style.fontSize = '14px';
-      item.style.color = '#333';
-      
-      item.addEventListener('mouseover', () => {
-        item.style.backgroundColor = '#fff9f4';
-        item.style.color = '#ff6c0c';
-      });
-      
-      item.addEventListener('mouseout', () => {
-        item.style.backgroundColor = 'white';
-        item.style.color = '#333';
-      });
-      
-      item.addEventListener('click', () => {
-        if (typeof onSelect === 'function') {
-          onSelect(sugestao);
-        } else {
-          inputElement.value = formatarEndereco(sugestao);
+      const abertoId = localStorage.getItem('agendamentoEmAberto');
+      if (abertoId) {
+        const propostasSection = document.getElementById('propostasSection');
+        if (propostasSection) propostasSection.style.display = 'block';
+        // Mantém o formulário visível: não esconder '.form-fields'
+        // Reassina listener se necessário
+        if (window.ouvirPropostasAgendamento && typeof window.ouvirPropostasAgendamento === 'function') {
+          if (!window.__agendamentoListenId || window.__agendamentoListenId !== abertoId) {
+            try { if (window.__propostasUnsub) { window.__propostasUnsub(); } } catch {}
+            window.__propostasUnsub = window.ouvirPropostasAgendamento(abertoId);
+            window.__agendamentoListenId = abertoId;
+          }
         }
-        removerDropdown();
-      });
-      
-      dropdown.appendChild(item);
-    });
-    
-    // Posiciona o dropdown abaixo do input
-    const rect = inputElement.getBoundingClientRect();
-    dropdown.style.position = 'absolute';
-    dropdown.style.top = `${rect.bottom + window.scrollY}px`;
-    dropdown.style.left = `${rect.left + window.scrollX}px`;
-    dropdown.style.width = `${rect.width}px`;
-    dropdown.style.zIndex = '1000';
-    
-    document.body.appendChild(dropdown);
+      }
+    } catch {}
+  }
+
+  // Função para mostrar o conteúdo da aba "Agendados"
+  function showAgendadosContent() {
+    formSection.style.display = 'none';
+    renderAgendados();
   }
   
-  function removerDropdown() {
-    const dropdown = document.querySelector('.sugestoes-dropdown');
-    if (dropdown) {
-      document.body.removeChild(dropdown);
-      document.removeEventListener('click', fecharDropdownAoClicarFora);
+  // Função para voltar para a aba anterior
+  function goBackToSolicitar() {
+    switchTab(tabSolicitar, 'solicitar');
+  }
+
+  // Função para esconder o conteúdo da aba "Agendados"
+  function hideAgendadosContent() {
+    const agendadosContainer = document.getElementById('agendados-container');
+    if (agendadosContainer) {
+      agendadosContainer.remove();
     }
   }
-  
-  function fecharDropdownAoClicarFora(event) {
-    const dropdown = document.querySelector('.sugestoes-dropdown');
-    if (dropdown && !dropdown.contains(event.target)) {
-      removerDropdown();
-    }
-  }
 
-  // Função para formatar endereço completo
-  function formatarEndereco(endereco) {
-    return [
-      endereco.logradouro,
-      endereco.bairro,
-      `${endereco.localidade} - ${endereco.uf}`
-    ].filter(Boolean).join(', ');
-  }
+  // Função para renderizar as viagens agendadas
+  async function renderAgendados() {
+    // Remove container existente se houver
+    hideAgendadosContent();
 
-  // Inicializa o autocomplete de CEP e endereço
-  function inicializarAutoCompleteCEP() {
-    const cepInput = document.getElementById('cep');
-    const localRetiradaInput = document.getElementById('localRetirada');
-    const localEntregaInput = document.getElementById('localEntrega');
-    const numeroRetirada = document.getElementById('numeroRetirada');
-    const complementoRetirada = document.getElementById('complementoRetirada');
-    
-    if (!cepInput || !localRetiradaInput || !localEntregaInput) return;
+    const agendadosContainer = document.createElement('section');
+    agendadosContainer.id = 'agendados-container';
+    agendadosContainer.className = 'agendados-section';
 
-    // Formata o CEP enquanto digita
-    cepInput.addEventListener('input', (e) => {
-      e.target.value = formatarCEP(e.target.value);
-    });
+    const loading = document.createElement('div');
+    loading.className = 'delivery-list-loading';
+    loading.textContent = 'Carregando agendamentos...';
+    agendadosContainer.appendChild(loading);
 
-    // Busca o endereço quando o CEP perde o foco
-    cepInput.addEventListener('blur', async () => {
-      const cep = cepInput.value.replace(/\D/g, '');
-      if (cep.length === 8) {
-        try {
-          const endereco = await buscarEnderecoPorCEP(cep);
-          if (endereco) {
-            localRetiradaInput.value = formatarEndereco(endereco);
-            // Foca no campo de número após preencher o endereço
-            numeroRetirada.focus();
-          }
-        } catch (error) {
-          alert(error.message);
-          cepInput.value = '';
-          cepInput.focus();
-        }
-      }
-    });
-
-    // Autocomplete para o campo de retirada (quando o usuário digita o endereço manualmente)
-    let timeoutRetirada;
-    localRetiradaInput.addEventListener('input', async (e) => {
-      const termo = e.target.value.trim();
-      
-      // Limpa o timeout anterior
-      if (timeoutRetirada) {
-        clearTimeout(timeoutRetirada);
-      }
-      
-      // Se o campo estiver vazio, remove o dropdown
-      if (termo.length < 5) {
-        removerDropdown();
-        return;
-      }
-      
-      // Aguarda o usuário parar de digitar (300ms)
-      timeoutRetirada = setTimeout(async () => {
-        try {
-          // Tenta buscar por logradouro
-          const response = await fetch(`https://viacep.com.br/ws/SP/${encodeURIComponent(termo)}/json/`);
-          const data = await response.json();
-          
-          if (data && !data.erro) {
-            const resultados = Array.isArray(data) ? data : [data];
-            const sugestoes = resultados
-              .filter(end => end.uf === 'SP' && end.logradouro)
-              .map(end => ({
-                logradouro: end.logradouro,
-                bairro: end.bairro,
-                localidade: end.localidade,
-                uf: end.uf,
-                cep: end.cep
-              }));
-              
-            if (sugestoes.length > 0) {
-              criarDropdownSugestoes(localRetiradaInput, sugestoes, (enderecoSelecionado) => {
-                localRetiradaInput.value = formatarEndereco(enderecoSelecionado);
-                cepInput.value = enderecoSelecionado.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2');
-                numeroRetirada.focus();
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Erro ao buscar endereço:', error);
-        }
-      }, 300);
-    });
-    
-    // Autocomplete para o campo de entrega
-    let timeoutEntrega;
-    localEntregaInput.addEventListener('input', async (e) => {
-      const termo = e.target.value.trim();
-      
-      // Limpa o timeout anterior
-      if (timeoutEntrega) {
-        clearTimeout(timeoutEntrega);
-      }
-      
-      // Se o campo estiver vazio, remove o dropdown
-      if (termo.length < 3) {
-        removerDropdown();
-        return;
-      }
-      
-      // Aguarda o usuário parar de digitar (300ms)
-      timeoutEntrega = setTimeout(async () => {
-        try {
-          // Busca por logradouro no estado de SP
-          const response = await fetch(`https://viacep.com.br/ws/SP/${encodeURIComponent(termo)}/json/`);
-          const data = await response.json();
-          
-          if (data && !data.erro) {
-            const resultados = Array.isArray(data) ? data : [data];
-            const sugestoes = resultados
-              .filter(end => end.uf === 'SP' && end.logradouro)
-              .map(end => ({
-                logradouro: end.logradouro,
-                bairro: end.bairro,
-                localidade: end.localidade,
-                uf: end.uf,
-                cep: end.cep
-              }));
-              
-            if (sugestoes.length > 0) {
-              criarDropdownSugestoes(localEntregaInput, sugestoes, (enderecoSelecionado) => {
-                localEntregaInput.value = formatarEndereco(enderecoSelecionado);
-                document.getElementById('numeroEntrega').focus();
-              });
-            } else {
-              removerDropdown();
-            }
-          } else {
-            removerDropdown();
-          }
-        } catch (error) {
-          console.error('Erro ao buscar sugestões de endereço:', error);
-          removerDropdown();
-        }
-      }, 300);
-    });
-    
-    // Fecha os dropdowns ao pressionar Enter ou Tab
-    [localRetiradaInput, localEntregaInput].forEach(input => {
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === 'Tab') {
-          removerDropdown();
-        }
-      });
-    });
-    
-    // Fecha os dropdowns ao clicar fora
-    document.addEventListener('click', (e) => {
-      if (!localRetiradaInput.contains(e.target) && !localEntregaInput.contains(e.target)) {
-        removerDropdown();
-      }
-    });
-  }
-
-  // Função para inicializar o autocomplete
-  function tentarInicializarAutoComplete() {
-    console.log('Tentando inicializar o autocomplete...');
-    
-    const cepInput = document.getElementById('cep');
-    const localRetiradaInput = document.getElementById('localRetirada');
-    const localEntregaInput = document.getElementById('localEntrega');
-    
-    console.log('Elementos encontrados:', {
-      cepInput: !!cepInput,
-      localRetiradaInput: !!localRetiradaInput,
-      localEntregaInput: !!localEntregaInput
-    });
-    
-    if (cepInput && localRetiradaInput && localEntregaInput) {
-      console.log('Inicializando autocomplete...');
-      try {
-        inicializarAutoCompleteCEP();
-        console.log('Autocomplete inicializado com sucesso!');
-      } catch (error) {
-        console.error('Erro ao inicializar autocomplete:', error);
-      }
+    // Inserção robusta no DOM
+    const tabsElement = document.querySelector('.tabs');
+    const mainEl = document.getElementById('main-content');
+    const agendadosEl = document.getElementById('agendados') || document.querySelector('#agendados-content');
+    if (tabsElement && tabsElement.insertAdjacentElement) {
+      tabsElement.insertAdjacentElement('afterend', agendadosContainer);
+    } else if (agendadosEl && agendadosEl.appendChild) {
+      agendadosEl.innerHTML = '';
+      agendadosEl.appendChild(agendadosContainer);
+    } else if (mainEl && mainEl.appendChild) {
+      mainEl.appendChild(agendadosContainer);
     } else {
-      console.log('Aguardando elementos do formulário...');
-      // Tenta novamente após um curto atraso
-      setTimeout(tentarInicializarAutoComplete, 1000);
+      document.body.appendChild(agendadosContainer);
     }
-  }
-  
-  // Inicializa quando o DOM estiver pronto
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tentarInicializarAutoComplete);
-  } else {
-    // DOM já está pronto
-    tentarInicializarAutoComplete();
-  }
 
-  function tsFrom(dateOrMillis){
     try{
-      if (typeof dateOrMillis === 'number') return firebase.firestore.Timestamp.fromMillis(dateOrMillis);
-      if (dateOrMillis instanceof Date) return firebase.firestore.Timestamp.fromDate(dateOrMillis);
-      // ISO string
-      const dt = new Date(dateOrMillis);
-      return firebase.firestore.Timestamp.fromDate(dt);
-    }catch{ return null; }
+      const { firebase } = window;
+      const db = (firebase && firebase.apps && firebase.apps.length) ? firebase.firestore() : null;
+      const user = firebase?.auth()?.currentUser || null;
+      if (!db || !user){
+        agendadosContainer.innerHTML = `<div class="empty-message"><i class="fa-solid fa-calendar-xmark"></i><h3>Nenhuma viagem agendada</h3><p>Entre para ver seus agendamentos.</p></div>`;
+        return;
+      }
+      // Consulta simples por clienteId para evitar índice composto obrigatório
+      const qSnap = await db.collection('agendamentos')
+        .where('clienteId', '==', user.uid)
+        .limit(25)
+        .get();
+
+      viagensAgendadas = [];
+      qSnap.forEach(doc=>{
+        const d = doc.data()||{};
+        // Filtra apenas confirmados
+        if (!['agendamento_confirmado','corrida_agendamento_confirmado'].includes(d.status)) return;
+        const dt = d.dataHoraAgendada?.toDate ? d.dataHoraAgendada.toDate() : null;
+        const confDt = d.confirmadoEm?.toDate ? d.confirmadoEm.toDate() : null;
+        const data = dt ? `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}` : '';
+        const hora = dt ? `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : '';
+        const origem = d?.origem?.endereco || '-';
+        const destino = d?.destino?.endereco || '-';
+        const veiculo = d?.tipoVeiculo ? (String(d.tipoVeiculo).charAt(0).toUpperCase()+String(d.tipoVeiculo).slice(1)) : '-';
+        const volumes = d?.volumes || '-';
+        const motoristaUid = d?.propostaAceita?.motoristaUid || d?.motoristaId || null;
+        const motorista = d?.propostaAceita?.nomeMotorista || '—';
+        const telefone = d?.propostaAceita?.telefoneMotorista || '—';
+        const preco = typeof d?.propostaAceita?.preco === 'number' ? `R$ ${d.propostaAceita.preco.toFixed(2).replace('.',',')}` : '—';
+        viagensAgendadas.push({ id: doc.id, data, hora, origem, destino, veiculo, volumes, status: 'Confirmado', motorista, telefone, preco, motoristaUid, __confMs: confDt ? confDt.getTime() : 0 });
+      });
+
+      // Render
+      agendadosContainer.innerHTML = '';
+      if (!viagensAgendadas.length){
+        agendadosContainer.innerHTML = `<div class=\"empty-message\"><h3>Sem agendamentos no momento</h3></div>`;
+        return;
+      }
+      // Ordena por confirmação mais recente primeiro
+      viagensAgendadas.sort((a,b)=> (b.__confMs||0) - (a.__confMs||0));
+      const cardsContainer = document.createElement('div');
+      cardsContainer.className = 'cards-container';
+      const list = document.createElement('div');
+      list.style.display = 'flex';
+      list.style.flexDirection = 'column';
+      list.style.gap = '16px';
+      viagensAgendadas.forEach(v=>{ 
+        const card = createViagemCard(v); 
+        list.appendChild(card);
+        // Fallback: buscar nome/telefone do motorista se vierem vazios
+        if ((v.motorista==='—' || v.telefone==='—') && v.motoristaUid){
+          try{ preencherContatoMotorista(card, v.motoristaUid); }catch{}
+        }
+      });
+      cardsContainer.appendChild(list);
+      agendadosContainer.appendChild(cardsContainer);
+    }catch(e){
+      console.error('Falha ao carregar agendados', e);
+      agendadosContainer.innerHTML = `<div class=\"empty-message\"><h3>Sem agendamentos no momento</h3></div>`;
+    }
   }
 
-  async function getUser(){
+  // Função para criar card de viagem
+  function createViagemCard(viagem) {
+    const card = document.createElement('div');
+    card.className = 'viagem-card';
+    
+    // Determina a classe do status
+    const statusClass = getStatusClass(viagem.status);
+    
+    card.innerHTML = `
+      <div class="card-header">
+  <div class="card-info">
+    <h3><i class="fa-solid fa-truck"></i> Viagem #${viagem.id}</h3>
+    <div class="card-status">
+      <span class="status ${statusClass}">${viagem.status}</span>
+    </div>
+  </div>
+  <div class="card-actions">
+    <button class="btn-cancel" title="Cancelar agendamento" onclick="cancelViagem('${viagem.id}')"><i class="fa-solid fa-times"></i></button>
+  </div>
+</div>
+
+      
+      <div class="card-body">
+        <div class="datetime-info">
+          <div class="date">
+            <i class="fa-solid fa-calendar"></i>
+            <span>${formatDate(viagem.data)}</span>
+          </div>
+          <div class="time">
+            <i class="fa-solid fa-clock"></i>
+            <span>${viagem.hora}</span>
+          </div>
+        </div>
+        
+        <div class="route-info">
+          <div class="route-point origin">
+            <i class="fa-solid fa-circle-dot"></i>
+            <span>${viagem.origem}</span>
+          </div>
+          <div class="route-line"></div>
+          <div class="route-point destination">
+            <i class="fa-solid fa-location-dot"></i>
+            <span>${viagem.destino}</span>
+          </div>
+        </div>
+        
+        <div class="trip-details">
+          <div class="detail">
+            <i class="fa-solid fa-truck"></i>
+            <span>Veículo: ${viagem.veiculo}</span>
+          </div>
+          <div class="detail">
+            <i class="fa-solid fa-boxes-stacked"></i>
+            <span>Volumes: ${viagem.volumes}</span>
+          </div>
+          <div class="detail price">
+            <i class="fa-solid fa-money-bill"></i>
+            <span>${viagem.preco}</span>
+          </div>
+        </div>
+        
+        ${viagem.motorista ? `
+        <div class="driver-info">
+          <div class="driver-details">
+            <i class="fa-solid fa-user"></i>
+            <span>Motorista: ${viagem.motorista}</span>
+          </div>
+          <div class="driver-contact">
+            <i class="fa-solid fa-phone"></i>
+            <span>${viagem.telefone}</span>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+    `;
+    
+    return card;
+  }
+
+  // Busca nome e telefone do motorista no Firestore e atualiza o card
+  async function preencherContatoMotorista(cardEl, motoristaUid){
     try{
-      const auth = firebase.auth();
-      return auth.currentUser || null;
-    }catch{ return null; }
+      const { firebase } = window; if (!firebase?.apps?.length) return;
+      const db = firebase.firestore();
+      const snap = await db.collection('motoristas').doc(String(motoristaUid)).get();
+      if (!snap.exists) return;
+      const d = snap.data()||{};
+      const nome = d?.dadosPessoais?.nome || d?.nome || null;
+      const tel = d?.dadosPessoais?.telefone || d?.telefone || null;
+      if (nome){ const el = cardEl.querySelector('.driver-details span'); if (el) el.textContent = `Motorista: ${nome}`; }
+      if (tel){ const el2 = cardEl.querySelector('.driver-contact span'); if (el2) el2.textContent = tel; }
+    }catch{}
   }
 
-  function validarEstadoSP(cep) {
-    const cepNum = parseInt(cep.replace(/\D/g, ''), 10);
-    return cepNum >= 1000000 && cepNum <= 19999999;
+  // Função para determinar a classe CSS do status
+  function getStatusClass(status) {
+    switch (status.toLowerCase()) {
+      case 'confirmado':
+        return 'status-confirmed';
+      case 'aguardando':
+        return 'status-pending';
+      case 'em andamento':
+        return 'status-progress';
+      case 'finalizado':
+        return 'status-completed';
+      case 'cancelado':
+        return 'status-cancelled';
+      default:
+        return 'status-default';
+    }
   }
 
-  async function criarMudancaAgendada({
-    origem, // { endereco, numero?, complemento?, cep?, coordenadas? {lat,lng} }
-    destino, // { endereco, numero?, complemento?, cep?, coordenadas? {lat,lng} }
-    volumes = 0,
-    tipoVeiculo = 'pequeno',
-    dataHoraAgendada, // Date | millis | ISO
-  }) {
-    if (!db) throw new Error('Firebase não inicializado');
-
-    const user = await getUser();
-    if (!user) throw new Error('Usuário não autenticado');
-
-    // Validações
-    if (!origem?.endereco || !destino?.endereco) {
-      throw new Error('Origem e destino são obrigatórios');
-    }
-
-    if (!validarEstadoSP(origem.cep || '')) {
-      throw new Error('CEP de origem deve ser do estado de São Paulo');
-    }
-
-    if (!validarEstadoSP(destino.cep || '')) {
-      throw new Error('CEP de destino deve ser do estado de São Paulo');
-    }
-
-    const dados = {
-      tipo: 'mudanca',
-      origem,
-      destino,
-      volumes,
-      tipoVeiculo,
-      dataHoraAgendada: tsFrom(dataHoraAgendada),
-      status: 'agendado',
-      clienteId: user.uid,
-      criadoEm: tsFrom(new Date())
-    };
-
-    const docRef = await db.collection('agendamentos').add(dados);
-    return docRef.id;
+  // Função para formatar data
+  function formatDate(dateString) {
+    try{
+      // Se vier como 'YYYY-MM-DD', converte por string para evitar fuso UTC
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateString||''))){
+        const [y,m,d] = String(dateString).split('-');
+        return `${d}/${m}/${y}`;
+      }
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }catch{ return String(dateString||''); }
   }
 
-  async function criarDescarteAgendado({
-    origem, // { endereco, numero?, complemento?, cep?, coordenadas? {lat,lng} }
-    destino, // { endereco, numero?, complemento?, cep?, coordenadas? {lat,lng} }
-    tipoCaminhao = 'pequeno',
-    descricao = '',
-    dataHoraAgendada,
-  }) {
-    if (!db) throw new Error('Firebase não inicializado');
-
-    const user = await getUser();
-    if (!user) throw new Error('Usuário não autenticado');
-
-    // Validações
-    if (!origem?.endereco || !destino?.endereco) {
-      throw new Error('Origem e destino são obrigatórios');
-    }
-
-    if (!validarEstadoSP(origem.cep || '')) {
-      throw new Error('CEP de origem deve ser do estado de São Paulo');
-    }
-
-    if (!validarEstadoSP(destino.cep || '')) {
-      throw new Error('CEP de destino deve ser do estado de São Paulo');
-    }
-
-    const dados = {
-      tipo: 'descarte',
-      origem,
-      destino,
-      tipoCaminhao,
-      descricao,
-      dataHoraAgendada: tsFrom(dataHoraAgendada),
-      status: 'agendado',
-      clienteId: user.uid,
-      criadoEm: tsFrom(new Date())
-    };
-
-    const docRef = await db.collection('agendamentos').add(dados);
-    return docRef.id;
-  }
-
-  async function aceitarPropostaAgendada(colecao, docId, propostaId, motoristaUid) {
-    if (!db) throw new Error('Firebase não inicializado');
-
-    const user = await getUser();
-    if (!user) throw new Error('Usuário não autenticado');
-
-    const docRef = db.collection(colecao).doc(docId);
-    const docSnap = await docRef.get();
-
-    if (!docSnap.exists) {
-      throw new Error('Documento não encontrado');
-    }
-
-    const dados = docSnap.data();
-    const proposta = dados.propostas?.[propostaId];
-
-    if (!proposta) {
-      throw new Error('Proposta não encontrada');
-    }
-
-    await docRef.update({
-      status: 'agendado',
-      propostaAceita: {
-        id: propostaId,
-        motoristaUid,
-        ...proposta
-      },
-      aceitoEm: tsFrom(new Date())
-    });
-
-    return true;
-  }
-
-  // API pública
-  window.agendamentoC = {
-    criarMudancaAgendada,
-    criarDescarteAgendado,
-    aceitarPropostaAgendada,
-    validarEstadoSP,
-    getUser
+  // Cancelamento de agendamento (Firestore)
+  window.cancelViagem = async function(agendamentoId) {
+    try{
+      if (!window.firebase || !firebase.apps.length) return alert('Serviço indisponível.');
+      const db = firebase.firestore();
+      if (!confirm('Deseja realmente cancelar este agendamento?')) return;
+      await db.collection('agendamentos').doc(String(agendamentoId)).set({ status: 'corrida_agendamento_cancelado', canceladoEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      // Atualiza a lista após cancelar
+      await renderAgendados();
+      alert('Agendamento cancelado.');
+    }catch(e){ console.error('Falha ao cancelar', e); alert('Erro ao cancelar agendamento.'); }
   };
 
-  // Ouvir propostas para o doc criado e renderizar na própria página
-  async function ouvirPropostasAgendamento(colecao, entregaId) {
-    if (!db || !entregaId) return;
+  // Event listeners para as tabs
+  tabSolicitar.addEventListener('click', () => switchTab(tabSolicitar, 'solicitar'));
+  tabAgendados.addEventListener('click', () => switchTab(tabAgendados, 'agendados'));
 
-    const container = document.getElementById('propostasContainer');
-    if (!container) return;
+  // Funcionalidade do menu mobile
+  const menuToggle = document.getElementById('menuToggle');
+  const navMenu = document.getElementById('navMenu');
 
-    container.innerHTML = `
-      <h3>Propostas Recebidas</h3>
-      <div id="lista-propostas" class="lista-propostas"></div>
-    `;
+  if (menuToggle && navMenu) {
+    menuToggle.addEventListener('click', () => {
+      navMenu.classList.toggle('show');
+    });
+  }
 
-    const lista = document.getElementById('lista-propostas');
-    if (!lista) return;
+  // Máscara para CEP
+  const cepInput = document.getElementById('cep');
+  if (cepInput) {
+    cepInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      value = value.replace(/(\d{5})(\d)/, '$1-$2');
+      e.target.value = value;
+    });
+  }
 
-    db.collection(colecao)
-      .doc(entregaId)
-      .collection('propostas')
-      .orderBy('dataEnvio', 'asc')
-      .onSnapshot(async (snapshot) => {
-        if (snapshot.empty) {
-          lista.innerHTML = `<p>Aguardando propostas dos motoristas...</p>`;
-          return;
+  // Consulta CEP via ViaCEP
+  if (cepInput) {
+    cepInput.addEventListener('blur', function() {
+      const cep = this.value.replace(/\D/g, '');
+      if (cep.length === 8) {
+        consultarCEP(cep);
+      }
+    });
+  }
+
+  function consultarCEP(cep) {
+    fetch(`https://viacep.com.br/ws/${cep}/json/` )
+      .then(response => response.json())
+      .then(data => {
+        if (!data.erro) {
+          const localRetirada = document.getElementById('localRetirada');
+          if (localRetirada) {
+            localRetirada.value = `${data.logradouro}, ${data.bairro} - ${data.localidade}, ${data.uf}`;
+          }
         }
-
-        lista.innerHTML = '';
-
-        for (const doc of snapshot.docs) {
-          const proposta = doc.data();
-          const card = document.createElement('div');
-          card.className = 'proposta-card';
-          card.innerHTML = `
-            <div style="background:#fff; border-radius:16px; box-shadow:0 10px 24px rgba(0,0,0,.08); padding:18px; display:flex; gap:16px; align-items:flex-start;">
-              <div style="position:absolute; left:0; top:14px; bottom:14px; width:6px; background:linear-gradient(180deg,#ff7a3f 0%,#ff6b35 100%); border-radius:0 6px 6px 0"></div>
-              <div style="margin-left:16px; width:52px; height:52px; border-radius:50%; background:#fff; box-shadow:0 6px 14px rgba(255,107,53,.35); border:2px solid #ff6b35; display:flex; align-items:center; justify-content:center; overflow:hidden; flex: 0 0 52px;">
-                <i class="fa-solid fa-user" style="color:#ff6b35;font-size:22px"></i>
-              </div>
-              <div style="flex:1 1 auto; min-width:0;">
-                <div style="font-weight:700;color:#1e1e1e">Motorista</div>
-                <div style="color:#f5a623;font-weight:700; display:flex; align-items:center; gap:6px; margin-top:2px">
-                  <i class="fa-solid fa-star"></i> 5.0
-                </div>
-                <div style="margin-top:10px; color:#333; line-height:1.35">
-                  <div><strong>Tempo de chegada:</strong> ${proposta.tempoChegada || 0} min</div>
-                  <div><strong>Ajudantes:</strong> ${proposta.ajudantes || 0}</div>
-                </div>
-              </div>
-              <div style="text-align:right; min-width:180px; padding-left:8px;">
-                <div style="color:#ff6b35;font-size:1.9rem;font-weight:800">R$ ${Number(proposta.preco||0).toFixed(2)}</div>
-                <button class="aceitar-btn" style="margin-top:12px;background:#ff6b35;color:#fff;border:0;padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800"
-                  onclick="agendamentoC.aceitarPropostaAgendada('${colecao}', '${entregaId}', '${doc.id}', '${proposta.motoristaUid || ''}')">ACEITAR PROPOSTA</button>
-              </div>
-            </div>
-          `;
-          lista.appendChild(card);
-        }
+      })
+      .catch(error => {
+        console.error('Erro ao consultar CEP:', error);
       });
   }
 
-  window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
+  // Inicialização: mostra a aba "Solicitar" por padrão
+  showSolicitarContent();
 
-  // Inicialização dos eventos do formulário
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando eventos do formulário de agendamento...');
+  console.log('Sistema de tabs inicializado com sucesso!');
+  
+  // Função global para testar
+  window.testarPropostas = function() {
+    document.getElementById('propostasSection').style.display = 'block';
+    console.log('Seção de propostas mostrada!');
+  };
+});
 
-    // Configurar CEP
-    const cepField = document.getElementById('cep');
-    if (cepField) {
-      cepField.addEventListener('input', (e) => {
-        e.target.value = formatarCEP(e.target.value);
-      });
+// Enhancements for AgendamentoC: SP-only validation, CEP/address sync, autocomplete, date/time limits, Firestore submit and proposals
+(function(){
+  document.addEventListener('DOMContentLoaded', function(){
+    const { firebase } = window;
+    const db = (firebase && firebase.apps && firebase.apps.length) ? firebase.firestore() : null;
 
-      // Busca endereço quando CEP perde foco
-      cepField.addEventListener('blur', async () => {
-        const cep = cepField.value.replace(/\D/g, '');
-        if (cep.length === 8) {
-          try {
-            const endereco = await buscarEnderecoPorCEP(cep);
-            if (endereco) {
-              const localRetiradaInput = document.getElementById('localRetirada');
-              if (localRetiradaInput) {
-                localRetiradaInput.value = formatarEndereco(endereco);
-                document.getElementById('numeroRetirada')?.focus();
-              }
-            }
-          } catch (error) {
-            alert(error.message);
-            cepField.value = '';
-            cepField.focus();
-          }
-        }
-      });
-    }
-
-    // Configurar autocomplete para endereços
-    const localRetiradaField = document.getElementById('localRetirada');
-    const localEntregaField = document.getElementById('localEntrega');
-
-    if (localRetiradaField) {
-      localRetiradaField.addEventListener('input', async (e) => {
-        const termo = e.target.value.trim();
-        if (termo.length < 5) {
-          removerDropdown();
-          return;
-        }
-
-        clearTimeout(window.timeoutRetirada);
-        window.timeoutRetirada = setTimeout(async () => {
-          try {
-            const response = await fetch(`https://viacep.com.br/ws/SP/${encodeURIComponent(termo)}/json/`);
-            const data = await response.json();
-
-            if (data && !data.erro) {
-              const resultados = Array.isArray(data) ? data : [data];
-              const sugestoes = resultados
-                .filter(end => end.uf === 'SP' && end.logradouro)
-                .map(end => ({
-                  logradouro: end.logradouro,
-                  bairro: end.bairro,
-                  localidade: end.localidade,
-                  uf: end.uf,
-                  cep: end.cep
-                }));
-
-              if (sugestoes.length > 0) {
-                criarDropdownSugestoes(localRetiradaField, sugestoes, (enderecoSelecionado) => {
-                  localRetiradaField.value = formatarEndereco(enderecoSelecionado);
-                  if (cepField) {
-                    cepField.value = enderecoSelecionado.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2');
-                  }
-                  document.getElementById('numeroRetirada')?.focus();
-                });
-              }
-            }
-          } catch (error) {
-            console.error('Erro ao buscar endereço:', error);
-          }
-        }, 300);
-      });
-    }
-
-    if (localEntregaField) {
-      localEntregaField.addEventListener('input', async (e) => {
-        const termo = e.target.value.trim();
-        if (termo.length < 3) {
-          removerDropdown();
-          return;
-        }
-
-        clearTimeout(window.timeoutEntrega);
-        window.timeoutEntrega = setTimeout(async () => {
-          try {
-            const response = await fetch(`https://viacep.com.br/ws/SP/${encodeURIComponent(termo)}/json/`);
-            const data = await response.json();
-
-            if (data && !data.erro) {
-              const resultados = Array.isArray(data) ? data : [data];
-              const sugestoes = resultados
-                .filter(end => end.uf === 'SP' && end.logradouro)
-                .map(end => ({
-                  logradouro: end.logradouro,
-                  bairro: end.bairro,
-                  localidade: end.localidade,
-                  uf: end.uf,
-                  cep: end.cep
-                }));
-
-              if (sugestoes.length > 0) {
-                criarDropdownSugestoes(localEntregaField, sugestoes);
-              }
-            }
-          } catch (error) {
-            console.error('Erro ao buscar sugestões de entrega:', error);
-          }
-        }, 300);
-      });
-    }
-
-    // Configurar botão de confirmar agendamento
+    // Elements
+    const cepInput = document.getElementById('cep');
+    const localRetirada = document.getElementById('localRetirada');
+    const localEntrega = document.getElementById('localEntrega');
+    const dataAgendamento = document.getElementById('dataAgendamento');
+    const horaAgendamento = document.getElementById('horaAgendamento');
     const btnConfirmar = document.getElementById('confirmarAgendamento');
-    if (btnConfirmar) {
-      btnConfirmar.addEventListener('click', async () => {
-        try {
-          // Coletar dados do formulário
-          const data = (document.getElementById('dataAgendamento')?.value || '').trim();
-          const hora = (document.getElementById('horaAgendamento')?.value || '').trim();
-          const cep = (document.getElementById('cep')?.value || '').trim();
-          const localRet = (document.getElementById('localRetirada')?.value || '').trim();
-          const numRet = (document.getElementById('numeroRetirada')?.value || '').trim();
-          const compRet = (document.getElementById('complementoRetirada')?.value || '').trim();
-          const localEnt = (document.getElementById('localEntrega')?.value || '').trim();
-          const numEnt = (document.getElementById('numeroEntrega')?.value || '').trim();
-          const compEnt = (document.getElementById('complementoEntrega')?.value || '').trim();
-          const volumes = Number(document.getElementById('volumes')?.value || 0);
-          const tipoVeiculo = (document.getElementById('tipoVeiculo')?.value || '').trim() || 'pequeno';
 
-          if (!data || !hora) return alert('Informe data e hora do agendamento.');
-          if (!localRet || !localEnt) return alert('Informe origem e destino.');
-          if (!volumes || volumes <= 0) return alert('Informe o número de volumes.');
-
-          const dataHoraAgendada = new Date(`${data}T${hora}:00`);
-
-          const origem = { endereco: localRet, numero: numRet, complemento: compRet, cep: cep };
-          const destino = { endereco: localEnt, numero: numEnt, complemento: compEnt };
-
-          const id = await criarMudancaAgendada({ origem, destino, volumes, tipoVeiculo, dataHoraAgendada });
-
-          alert('Agendamento criado com sucesso! Aguardando propostas dos motoristas...');
-          const propSec = document.getElementById('propostasSection');
-          if (propSec) propSec.style.display = 'block';
-          ouvirPropostasAgendamento('agendamentos', id);
-        } catch (e) {
-          console.error('Falha ao criar agendamento:', e);
-          alert('Não foi possível criar o agendamento. Faça login e tente novamente.');
+    // SP bounds util
+    const SP_BOUNDS = { north: -19.80, south: -25.30, east: -44.20, west: -53.10 };
+    function estaDentroDeSaoPaulo(lat, lng){
+      return lat <= SP_BOUNDS.north && lat >= SP_BOUNDS.south && lng <= SP_BOUNDS.east && lng >= SP_BOUNDS.west;
+    }
+    function isCEPSaoPaulo(cep){
+      const n = parseInt(String(cep||'').replace(/\D/g,''),10);
+      return Number.isFinite(n) && n >= 1000000 && n <= 19999999; // 01000-000 a 19999-999
+    }
+    function formatarCEP(cep){
+      cep = String(cep||'').replace(/\D/g,'');
+      return cep.length===8 ? `${cep.substring(0,5)}-${cep.substring(5)}` : cep;
+    }
+    // Helper robusto: aceita endereço em qualquer cidade do estado de SP
+    function isEnderecoSP(addressObj, lat, lon){
+      try{
+        // 1) Dentro do bounding box do estado
+        if (Number.isFinite(lat) && Number.isFinite(lon) && estaDentroDeSaoPaulo(lat, lon)) return true;
+        const addr = addressObj || {};
+        const state = (addr.state||'').toLowerCase();
+        const stateCode = (addr.state_code||'').toLowerCase();
+        // 2) State textual
+        if (state.includes('são paulo') || state === 'sp') return true;
+        if (stateCode === 'sp') return true;
+        // 3) ISO codes (Nominatim costuma trazer ISO3166-2 em diferentes níveis)
+        for (const k of Object.keys(addr)){
+          if (k.toLowerCase().startsWith('iso3166-2') && String(addr[k]).toUpperCase() === 'BR-SP') return true;
         }
+      }catch{}
+      return false;
+    }
+    // Fallback textual quando geocodificação falhar/oscilar
+    function textoIndicaSP(texto, cepPossivel){
+      try{
+        const t = String(texto||'').toLowerCase();
+        if (t.includes(' são paulo') || t.includes('são paulo') || /\bsp\b/.test(t)) return true;
+        const cepMatch = String(texto||'').match(/\b\d{5}-?\d{3}\b/);
+        if (cepMatch && isCEPSaoPaulo(cepMatch[0])) return true;
+        if (cepPossivel && isCEPSaoPaulo(cepPossivel)) return true;
+      }catch{}
+      return false;
+    }
+
+    // CEP mask already set by original; add SP validation and sync to retirada
+    if (cepInput){
+      cepInput.addEventListener('blur', async function(){
+        const cep = this.value.replace(/\D/g,'');
+        if (cep.length !== 8) return;
+        if (!isCEPSaoPaulo(cep)) { alert('Por favor, informe um CEP do estado de São Paulo.'); this.value=''; return; }
+        try{
+          const res = await fetch(`https://viacep.com.br/ws/${cep}/json/` );
+          const data = await res.json();
+          if (data.erro || data.uf !== 'SP') { alert('CEP não pertence ao estado de São Paulo.'); this.value=''; return; }
+          if (localRetirada){
+            localRetirada.value = `${data.logradouro}, ${data.bairro} - ${data.localidade}, ${data.uf}`;
+            try{ if (data.uf === 'SP') setSpHint('localRetirada', true); }catch{}
+          }
+        }catch(e){ console.error('Erro ao consultar CEP:', e); }
       });
     }
 
-    // Fechar dropdowns ao clicar fora
-    document.addEventListener('click', (e) => {
-      const localRetiradaField = document.getElementById('localRetirada');
-      const localEntregaField = document.getElementById('localEntrega');
-      if (!localRetiradaField?.contains(e.target) && !localEntregaField?.contains(e.target)) {
-        removerDropdown();
+    // Autocomplete SP using Nominatim
+    let autocompleteTimers = {};
+    // Inject styles to match descarte dropdown look
+    (function injectAutocompleteStyles(){
+      const styleId = 'autocomplete-style-agendamento';
+      if (document.getElementById(styleId)) return;
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        .autocomplete-items {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: #fff;
+          border: 1px solid #ddd;
+          border-top: none;
+          z-index: 1000;
+          max-height: 220px;
+          overflow-y: auto;
+          border-radius: 0 0 8px 8px;
+          box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+        }
+        .autocomplete-items div {
+          padding: 10px 12px;
+          cursor: pointer;
+          border-bottom: 1px solid #f3f3f3;
+          font-size: 0.95rem;
+          color: #333;
+        }
+        .autocomplete-items div:hover {
+          background: #fff5ef;
+        }
+        .autocomplete-items::-webkit-scrollbar { width: 6px; }
+        .autocomplete-items::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .autocomplete-items::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        .autocomplete-items::-webkit-scrollbar-thumb:hover { background: #999; }
+        .input-box { position: relative; }
+        .autocomplete-items { animation: slideDown 0.2s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-4px);} to { opacity: 1; transform: translateY(0);} }
+      `;
+      document.head.appendChild(style);
+    })();
+    function fecharAutocomplete(campo){ const c = document.getElementById(`autocomplete-list-${campo}`); if (c) c.style.display='none'; }
+    function mostrarListaAutocomplete(campo, data){
+      let container = document.getElementById(`autocomplete-list-${campo}`);
+      if (!container){
+        container = document.createElement('div');
+        container.id = `autocomplete-list-${campo}`;
+        container.className = 'autocomplete-items';
+        const parent = document.getElementById(campo)?.parentNode; if (parent) parent.appendChild(container);
       }
-    });
+      container.innerHTML = '';
+      if (!data.length){ container.style.display='none'; return; }
+      data.forEach(item=>{
+        const div = document.createElement('div');
+        div.textContent = item.display_name;
+        div.addEventListener('click', ()=>{ selecionarItemAutocomplete(campo, item); fecharAutocomplete(campo); });
+        container.appendChild(div);
+      });
+      container.style.display='block';
+    }
+    // UI helper: mostra/oculta um hint de validação SP abaixo do campo
+    function setSpHint(fieldId, ok){
+      const input = document.getElementById(fieldId);
+      if (!input) return;
+      let hint = input.parentElement.querySelector('.sp-hint');
+      if (!hint){
+        hint = document.createElement('small');
+        hint.className = 'sp-hint';
+        hint.style.display = 'block';
+        hint.style.marginTop = '6px';
+        hint.style.fontSize = '12px';
+        input.parentElement.appendChild(hint);
+      }
+      if (ok){
+        hint.textContent = 'Endereço válido no estado de São Paulo';
+        hint.style.color = '#2e7d32';
+      } else {
+        hint.textContent = 'Verifique se o endereço é do estado de São Paulo';
+        hint.style.color = '#a66a00';
+      }
+    }
+    async function selecionarItemAutocomplete(campo, item){
+      const input = document.getElementById(campo);
+      if (!input) return;
+      input.value = item.display_name;
+      const lat = parseFloat(item.lat), lon = parseFloat(item.lon);
+      if (!estaDentroDeSaoPaulo(lat, lon)) { alert('Selecione um endereço dentro do estado de São Paulo.'); return; }
+      if (campo === 'localRetirada' && cepInput){
+        const pc = (item.address?.postcode||'').replace(/\D/g,'');
+        cepInput.value = isCEPSaoPaulo(pc) ? formatarCEP(pc) : '';
+      }
+      // marca visualmente como válido em SP
+      setSpHint(campo, true);
+    }
+    async function autocompleteEndereco(campo){
+      clearTimeout(autocompleteTimers[campo]);
+      autocompleteTimers[campo] = setTimeout(async ()=>{
+        const val = (document.getElementById(campo)?.value||'').trim();
+        if (val.length < 3) return fecharAutocomplete(campo);
+        const q = (val.toLowerCase().includes('são paulo') || val.includes('SP')) ? val : `${val}, São Paulo, Brasil`;
+        try{
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q )}&addressdetails=1&limit=10&countrycodes=br`;
+          const res = await fetch(url);
+          const data = await res.json();
+          const spOnly = data.filter(item=>{
+            const lat = parseFloat(item.lat), lon = parseFloat(item.lon);
+            const st = (item.address?.state||'').toLowerCase();
+            return estaDentroDeSaoPaulo(lat, lon) && (st.includes('são paulo') || st.includes('sp') || item.display_name.toLowerCase().includes('são paulo'));
+          });
+          mostrarListaAutocomplete(campo, spOnly);
+        }catch(e){ console.error('Autocomplete falhou', e); }
+      }, 300);
+    }
 
-    console.log('Eventos do formulário inicializados com sucesso!');
+    if (localRetirada){
+      localRetirada.addEventListener('input', ()=> autocompleteEndereco('localRetirada'));
+      localRetirada.addEventListener('blur', async ()=>{
+        const val = localRetirada.value.trim(); if (!val) return;
+        try{
+          const q = val.toLowerCase().includes('são paulo') || val.includes('SP') ? val : `${val}, São Paulo, Brasil`;
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&countrycodes=br
+&q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+          if (!data[0]) { alert('Endereço inválido. Use um endereço de São Paulo.'); setSpHint('localRetirada', false); return; }
+          const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+          if (!isEnderecoSP(data[0].address, lat, lon)) {
+            // fallback textual: não bloquear o usuário
+            const cepVal = (document.getElementById('cep')?.value||'').replace(/\D/g,'');
+            if (!textoIndicaSP(val, cepVal)) {
+              alert('Este endereço não aparenta ser do estado de São Paulo.');
+            }
+            setSpHint('localRetirada', false);
+          } else { setSpHint('localRetirada', true); }
+          const pc = (data[0].address?.postcode||'').replace(/\D/g,'');
+          if (cepInput && pc && isCEPSaoPaulo(pc)) cepInput.value = formatarCEP(pc);
+        }catch(e){ console.warn('Falha ao validar endereço de retirada', e); }
+      });
+    }
+    if (localEntrega){
+      localEntrega.addEventListener('input', ()=> autocompleteEndereco('localEntrega'));
+      localEntrega.addEventListener('blur', async ()=>{
+        const val = localEntrega.value.trim(); if (!val) return;
+        try{
+          const q = val.toLowerCase().includes('são paulo') || val.includes('SP') ? val : `${val}, São Paulo, Brasil`;
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&countrycodes=br&q=${encodeURIComponent(q )}`);
+          const data = await res.json();
+          if (!data[0]) { alert('Endereço inválido. Use um endereço de São Paulo.'); setSpHint('localEntrega', false); return; }
+          const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+          if (!isEnderecoSP(data[0].address, lat, lon)) {
+            const cepVal = (document.getElementById('cep')?.value||'').replace(/\D/g,'');
+            if (!textoIndicaSP(val, cepVal)) {
+              alert('Este endereço não aparenta ser do estado de São Paulo.');
+            }
+            setSpHint('localEntrega', false);
+          } else { setSpHint('localEntrega', true); }
+        }catch(e){ console.warn('Falha ao validar endereço de entrega', e); }
+      });
+    }
+
+    // Agrupa Data e Hora na mesma linha (sem alterar HTML), apenas layout
+    try{
+      const dataBox = document.getElementById('dataAgendamento')?.closest('.input-box');
+      const horaBox = document.getElementById('horaAgendamento')?.closest('.input-box');
+      if (dataBox && horaBox && dataBox.parentElement === horaBox.parentElement){
+        const row = document.createElement('div');
+        row.className = 'row-two-cols';
+        row.style.display = 'grid';
+        row.style.gridTemplateColumns = '1fr 1fr';
+        row.style.gap = '12px';
+        // insere acima do primeiro e move os dois
+        dataBox.parentElement.insertBefore(row, dataBox);
+        row.appendChild(dataBox);
+        row.appendChild(horaBox);
+      }
+    }catch{}
+
+    // Date/time constraints
+    if (dataAgendamento){
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth()+1).padStart(2,'0');
+      const dd = String(now.getDate()).padStart(2,'0');
+      dataAgendamento.min = `${yyyy}-${mm}-${dd}`;
+      const atualizarMinHora = ()=>{
+        if (!horaAgendamento) return;
+        const sel = dataAgendamento.value; if (!sel) return;
+        const hoje = new Date();
+        const selDate = new Date(sel+'T00:00:00');
+        if (selDate.toDateString() === hoje.toDateString()){
+          const hh = String(hoje.getHours()).padStart(2,'0');
+          const mi = String(hoje.getMinutes()).padStart(2,'0');
+          horaAgendamento.min = `${hh}:${mi}`;
+        } else {
+          horaAgendamento.removeAttribute('min');
+        }
+      };
+      dataAgendamento.addEventListener('change', atualizarMinHora);
+      atualizarMinHora();
+    }
+
+    // Firestore submit and proposals listener
+    async function obterUsuarioAtualAsync(timeoutMs = 4000){
+      try{
+        const auth = firebase?.auth();
+        const immediate = auth?.currentUser || null;
+        if (immediate) return immediate;
+        return await new Promise(resolve=>{
+          let done=false; const to=setTimeout(()=>{ if(!done){done=true; resolve(null);} }, timeoutMs);
+          auth.onAuthStateChanged(u=>{ if(!done){done=true; clearTimeout(to); resolve(u||null);} });
+        });
+      }catch{ return null; }
+    }
+    async function getClienteNome(uid){
+      if (!uid || !db) return 'Cliente';
+      try{
+        let s = await db.collection('usuarios').doc(uid).get();
+        if (!s.exists) s = await db.collection('clientes').doc(uid).get();
+        const d = s.exists ? (s.data()||{}) : {};
+        return d?.dadosPessoais?.nome || d?.nome || 'Cliente';
+      }catch{ return 'Cliente'; }
+    }
+
+      // No seu arquivo agendamentoC.js
+
+function ouvirPropostasAgendamento(id){
+  if (!db || !id) return;
+  const agRef = db.collection('agendamentos').doc(id);
+  let origemTxt = '—', destinoTxt = '—';
+  
+  agRef.get().then(snap=>{
+    const ag = snap.exists ? (snap.data()||{}) : {};
+    origemTxt = ag?.origem?.endereco || ag?.localRetirada || origemTxt;
+    destinoTxt = ag?.destino?.endereco || ag?.localEntrega || destinoTxt;
+  }).catch(()=>{});
+
+  const unsub = agRef.collection('propostas').orderBy('dataEnvio','asc')
+    .onSnapshot(async snap=>{
+      const container = document.getElementById('propostasContainer');
+      if (!container) return;
+      
+      if (snap.empty){
+        container.innerHTML = `
+          <h3>Propostas Recebidas</h3>
+          <p>Aguardando propostas dos motoristas...</p>
+        `;
+        return;
+      }
+      
+      container.innerHTML = `<h3>Propostas Recebidas</h3><div id="lista-propostas"></div>`;
+      const lista = document.getElementById('lista-propostas');
+      
+      snap.docs.forEach(d=>{
+        const p = d.data()||{};
+        const uidM = p.motoristaUid || d.id;
+        const nome = p.nomeMotorista || 'Motorista';
+        const foto = p.fotoMotoristaUrl || '';
+        const preco = Number(p.preco||0).toFixed(2).replace('.', ',');
+        const tempo = p.tempoChegada || 0;
+        const ajud = p.ajudantes || 0;
+        const veic = p.veiculo || '-';
+
+        const card = document.createElement('div');
+        // Usando a nova classe específica
+        card.className = 'card-proposta-motorista'; 
+        
+        // Gerando o HTML com as novas classes específicas
+        card.innerHTML = `
+          <div class="card-proposta-motorista-content">
+            <div class="card-proposta-motorista-accent"></div>
+            
+            <div class="card-proposta-motorista-perfil">
+              <div class="card-proposta-motorista-avatar">
+                ${foto ? `<img src="${foto}" alt="foto">` : `<span class="card-proposta-motorista-avatar-inicial">${nome.substring(0,1).toUpperCase()}</span>`}
+              </div>
+              <div class="card-proposta-motorista-info">
+                <div class="nome">${nome}</div>
+                <div class="rating"><i class="fa-solid fa-star"></i> 0.0</div>
+              </div>
+            </div>
+
+            <div class="card-proposta-motorista-detalhes">
+              <div class="corrida-id">Corrida #${String(id).substring(0,6)}</div>
+              <div class="rota"><strong>De:</strong> ${origemTxt}</div>
+              <div class="rota"><strong>Para:</strong> ${destinoTxt}</div>
+              <div class="specs">
+                <span><strong>Veículo:</strong> ${veic}</span>
+                <span><strong>Chegada:</strong> ${tempo} min</span>
+                <span><strong>Ajudantes:</strong> ${ajud}</span>
+              </div>
+            </div>
+
+            <div class="card-proposta-motorista-valor">
+              <div class="preco">R$ ${preco}</div>
+              <button class="aceitar-btn" id="aceitar-${d.id}">ACEITAR PROPOSTA</button>
+            </div>
+          </div>`;
+          
+        lista.appendChild(card);
+        const b = document.getElementById(`aceitar-${d.id}`);
+        if (b){ b.addEventListener('click', ()=> aceitarPropostaAgendamento(id, d.id, uidM)); }
+      });
+    });
+  return unsub;
+}
+
+// expõe o listener globalmente para reanexar ao voltar de abas
+window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
+
+    async function aceitarPropostaAgendamento(agendamentoId, propostaId, motoristaUid){
+      if (!db) return alert('Firebase indisponível.');
+      try{
+        const snap = await db.collection('agendamentos').doc(agendamentoId).collection('propostas').doc(propostaId).get();
+        if (!snap.exists) return alert('Proposta não encontrada.');
+        const propostaData = snap.data();
+        // Atualiza o agendamento como confirmado
+        const user = firebase?.auth()?.currentUser || null;
+        const clienteUid = user?.uid || propostaData?.clienteUid || null;
+        await db.collection('agendamentos').doc(agendamentoId).set({ 
+          status:'corrida_agendamento_confirmado', 
+          motoristaId: motoristaUid, 
+          clienteId: clienteUid || firebase.firestore.FieldValue.delete(),
+          propostaAceita:{ motoristaUid, ...propostaData }, 
+          confirmadoEm: firebase.firestore.FieldValue.serverTimestamp() 
+        }, { merge:true });
+
+        // Notificações simples (cliente e motorista)
+        try{
+          // já pegamos clienteUid acima
+          const notifRef = db.collection('notificacoes');
+          const payload = {
+            tipo: 'agendamento_confirmado',
+            agendamentoId,
+            motoristaUid,
+            clienteUid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            mensagem: 'Seu agendamento foi confirmado.'
+          };
+          if (clienteUid) await notifRef.add({ ...payload, destinatario: clienteUid });
+          if (motoristaUid) await notifRef.add({ ...payload, destinatario: motoristaUid });
+        }catch(err){ console.warn('Falha ao registrar notificações', err); }
+
+        // limpar estado de "em aberto"
+        try { localStorage.removeItem('agendamentoEmAberto'); } catch {}
+
+        // Esconder propostas
+        const propSec = document.getElementById('propostasSection');
+        if (propSec) propSec.style.display = 'none';
+
+        // Exibir modal de confirmação (centralizado) e redirecionar automaticamente
+        try{
+          const modal = document.getElementById('modalPropostaAceita');
+          if (modal){
+            modal.classList.add('show');
+            setTimeout(()=>{
+              modal.classList.remove('show');
+              const t = document.getElementById('tab-agendados');
+              if (t) t.click();
+              // força um refresh da lista pouco depois do redirecionamento
+              setTimeout(()=>{ try{ renderAgendados(); }catch{} }, 400);
+            }, 1200);
+          } else {
+            // Fallback
+            const t = document.getElementById('tab-agendados'); if (t) t.click();
+          }
+        }catch{}
+      }catch(e){ console.error(e); alert('Falha ao aceitar proposta.'); }
+    }
+
+    // Helpers para novos status exclusivos de agendamento (sem integrar telas agora)
+    async function finalizarAgendamento(agendamentoId){
+      if (!db) return;
+      try{
+        await db.collection('agendamentos').doc(agendamentoId).set({ status:'finalizado_agendamento', finalizadoEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
+      }catch(e){ console.warn('Falha ao finalizar agendamento:', e); }
+    }
+    async function cancelarAgendamento(agendamentoId, motivo){
+      if (!db) return;
+      try{
+        await db.collection('agendamentos').doc(agendamentoId).set({ status:'cancelado_agendamento', canceladoEm: firebase.firestore.FieldValue.serverTimestamp(), motivoCancelamento: motivo||null }, { merge:true });
+      }catch(e){ console.warn('Falha ao cancelar agendamento:', e); }
+    }
+    // expõe para futuras chamadas externas
+    window.finalizarAgendamentoCliente = finalizarAgendamento;
+    window.cancelarAgendamentoCliente = cancelarAgendamento;
+
+    let propostasUnsub = null;
+    function autoOuvirUltimoAgendamentoDoCliente(uid){
+      if (!db || !uid) return;
+      db.collection('agendamentos').where('clienteId','==', uid)
+        .onSnapshot(snap=>{
+          if (!snap || snap.empty) return;
+          // pegar o mais recente com status aguardando_propostas_agendamento
+          let maisRecente = null; let tsRef = 0;
+          snap.forEach(doc=>{
+            const d = doc.data()||{};
+            if (d.status !== 'aguardando_propostas_agendamento') return;
+            let ord = 0;
+            try{
+              if (d.criadoEm?.toDate) ord = d.criadoEm.toDate().getTime();
+              else if (typeof d.criadoEm?.seconds === 'number') ord = d.criadoEm.seconds*1000;
+              else if (typeof d.dataHoraAgendada?.seconds === 'number') ord = d.dataHoraAgendada.seconds*1000;
+            }catch{}
+            if (ord >= tsRef){ tsRef = ord; maisRecente = doc.id; }
+          });
+          if (maisRecente){
+            if (propostasUnsub) { try{ propostasUnsub(); }catch{} propostasUnsub=null; }
+            propostasUnsub = ouvirPropostasAgendamento(maisRecente);
+          }
+        });
+    }
+
+    if (btnConfirmar){
+      btnConfirmar.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        if (!db){ alert('Serviço indisponível no momento.'); return; }
+        const dataSel = (dataAgendamento?.value||'').trim();
+        const horaSel = (horaAgendamento?.value||'').trim();
+        const localR = (localRetirada?.value||'').trim();
+        const localE = (localEntrega?.value||'').trim();
+        const numeroR = (document.getElementById('numeroRetirada')?.value||'').trim();
+        const compR = (document.getElementById('complementoRetirada')?.value||'').trim();
+        const numeroE = (document.getElementById('numeroEntrega')?.value||'').trim();
+        const compE = (document.getElementById('complementoEntrega')?.value||'').trim();
+        const volumes = parseInt(document.getElementById('volumes')?.value||'0',10);
+        const tipoVeiculo = (document.getElementById('tipoVeiculo')?.value||'').trim();
+        const cepVal = (cepInput?.value||'').replace(/\D/g,'');
+
+        if (!dataSel || !horaSel) return alert('Selecione data e horário.');
+        if (!localR) return alert('Informe o local de retirada.');
+        if (!localE) return alert('Informe o local de entrega.');
+        if (!tipoVeiculo) return alert('Selecione o tipo de veículo.');
+        if (!volumes || volumes<=0) return alert('Informe o número de volumes.');
+        if (cepVal && !isCEPSaoPaulo(cepVal)) return alert('CEP precisa ser do estado de São Paulo.');
+
+        async function validarEnderecoSP(texto){
+          const cepVal = (document.getElementById('cep')?.value||'').replace(/\D/g,'');
+          try{
+            const q = (String(texto).toLowerCase().includes('são paulo')||String(texto).includes('SP'))? texto : `${texto}, São Paulo, Brasil`;
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&countrycodes=br&q=${encodeURIComponent(q )}`);
+            const d = await r.json();
+            if (d[0]){
+              const lat=parseFloat(d[0].lat), lon=parseFloat(d[0].lon);
+              if (isEnderecoSP(d[0].address, lat, lon)) return { lat, lon, address: d[0].address, display_name: d[0].display_name };
+            }
+          }catch(e){ console.warn('Geo falhou, usando fallback SP', e); }
+          // Fallback: aceitar se texto/CEP indicarem SP
+          if (textoIndicaSP(texto, cepVal)) return { lat:null, lon:null, address:null, display_name:String(texto) };
+          return null;
+        }
+        const origemOk = await validarEnderecoSP(localR); if (!origemOk) return alert('Local de retirada precisa ser em São Paulo.');
+        const destinoOk = await validarEnderecoSP(localE); if (!destinoOk) return alert('Local de entrega precisa ser em São Paulo.');
+
+        const user = await obterUsuarioAtualAsync(); if (!user){ alert('Faça login para agendar.'); return; }
+        const clienteNome = await getClienteNome(user.uid);
+        const tsLocal = new Date(`${dataSel}T${horaSel}:00`);
+        if (isNaN(tsLocal.getTime())) return alert('Data/hora inválidas.');
+        if (tsLocal < new Date()) return alert('Escolha uma data/horário no futuro.');
+
+        const dados = {
+          origem: {
+            endereco: localR,
+            numero: numeroR,
+            complemento: compR,
+            cep: formatarCEP(cepVal || (origemOk.address?.postcode||'')),
+            coordenadas: { lat: origemOk.lat, lng: origemOk.lon }
+          },
+          destino: {
+            endereco: localE,
+            numero: numeroE,
+            complemento: compE,
+            coordenadas: { lat: destinoOk.lat, lng: destinoOk.lon }
+          },
+          tipoVeiculo,
+          volumes,
+          distancia: null,
+          status: 'aguardando_propostas_agendamento',
+          criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+          dataHoraAgendada: firebase.firestore.Timestamp.fromDate(tsLocal),
+          propostas: {},
+          clienteId: user.uid,
+          clienteNome
+        };
+
+        try{
+          const docRef = await db.collection('agendamentos').add(dados);
+          alert('Solicitação criada com sucesso! Aguardando propostas...');
+          
+          // Persistir o agendamento em aberto para manter a visualização ao trocar de abas
+          try { localStorage.setItem('agendamentoEmAberto', docRef.id); } catch {}
+          
+          // Mostrar a seção de propostas e ocultar os campos do formulário
+          const propSec = document.getElementById('propostasSection');
+          if (propSec) { propSec.style.display = 'block'; propSec.dataset.active = 'true'; }
+          // Mantém o formulário visível: não esconder '.form-fields'
+          
+          if (propostasUnsub) { try{ propostasUnsub(); }catch{} propostasUnsub=null; }
+          propostasUnsub = ouvirPropostasAgendamento(docRef.id);
+        } catch (e) { console.error('Falha ao salvar agendamento:', e); alert('Erro ao criar agendamento.'); }
+      });
+    }
+
+    // Quando o usuário recarrega a página, ligar automaticamente no último agendamento aberto
+    firebase.auth().onAuthStateChanged(u=>{
+      const uid = u?.uid || null;
+      if (uid) autoOuvirUltimoAgendamentoDoCliente(uid);
+      // Removido: popup em tempo real por notificações
+      // O modal de confirmação aparece APENAS quando o usuário clica em "Aceitar Proposta".
+    });
   });
 })();

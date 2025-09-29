@@ -212,3 +212,24 @@ hr {
       text-align: center;
       margin-top: 10px;
     }
+    
+.checkbox-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.checkbox-container input {
+  margin-top: 4px;
+}
+
+.checkbox-container a {
+  color: #ff6c0c;
+  text-decoration: none;
+}
+
+

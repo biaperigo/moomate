@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cadastro Motorista - Moomate</title>
   <link rel="stylesheet" href="src/styles/cadastroM.css" />
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
 </head>
 <body>
   <div class="form-wrapper">
@@ -93,7 +94,10 @@
           <input type="text" id="numero-conta" placeholder="Nº da conta" required />
         </div>
         <input type="text" id="pix" placeholder="Chave PIX (opcional)" />
-
+        <label class="checkbox-container">
+          <input type="checkbox" required>
+          <span>Declaro que li e concordo com os termos da <a href="#">Política de Privacidade</a>.</span>
+        </label>
         <button type="submit" id="salvar-dados" class="btn-laranja" disabled>SALVAR DADOS</button>
         <div class="loader" id="loader">⏳ Salvando...</div>
       </form>
