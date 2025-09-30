@@ -4,6 +4,123 @@
   // Firebase é inicializado no HTML (agendamentoM.html). Se ainda não estiver pronto, aborta silenciosamente.
   if (!firebase || !firebase.apps || !firebase.apps.length) return;
   const db = firebase.firestore();
+  // Referência urbana para fallback (centro da cidade de São Paulo)
+  const CENTRO_SP_REF = { lat: -23.55052, lng: -46.633308 };
+
+  // Geocodificação rápida (mesma estratégia do homeM, mas simplificada)
+  async function geocodificarEndereco(endereco){
+    if (!endereco) return null;
+    try{
+      const searchQuery = (endereco.includes('SP') || endereco.includes('São Paulo')) ? endereco : `${endereco}, São Paulo, Brasil`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=1&countrycodes=br`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (Array.isArray(data) && data.length>0){
+        const r = data[0];
+        const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng, endereco: r.display_name };
+      }
+    }catch{}
+    return null;
+  }
+
+  // Agenda lembrete para início no horário agendado (motorista)
+  function scheduleStartReminderMotorista(v){
+    try{
+      if (!v?.id || !v?.data || !v?.hora) return;
+      if (!window.__agStartTimersM) window.__agStartTimersM = {};
+      if (window.__agStartTimersM[v.id]) return;
+      const ts = new Date(`${v.data}T${v.hora}:00`);
+      if (!(ts instanceof Date) || isNaN(ts.getTime())) return;
+      const now = new Date();
+      const ms = ts.getTime() - now.getTime();
+      const fire = ()=>{
+        showStartAgModalM('Seu agendamento começou. Inicie a corrida.', ()=>{
+          window.location.href = `rotaA.html?agendamento=${encodeURIComponent(v.id)}`;
+        });
+        delete window.__agStartTimersM[v.id];
+      };
+      if (ms <= 0){ fire(); return; }
+      if (ms > 24*60*60*1000) return;
+      window.__agStartTimersM[v.id] = setTimeout(fire, ms);
+    }catch{}
+  }
+  
+  // Modal informativo reutilizável (recriado após correção)
+  function ensureInfoModal(){
+    let modal = document.getElementById('mm-info-modal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'mm-info-modal';
+    modal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:9999;';
+    modal.innerHTML = `
+      <div id="mm-info-modal-content" style="background:#fff;border-radius:8px;min-width:280px;max-width:92vw;padding:20px 18px;box-shadow:0 10px 30px rgba(0,0,0,.15);transform:scale(.95);transition:transform .2s ease,opacity .2s ease;opacity:0">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <i class="fa-solid fa-circle-info" style="color:#ff6b35"></i>
+          <h3 id="mm-info-modal-title" style="margin:0;font-size:1.05rem;color:#333">Aviso</h3>
+        </div>
+        <div id="mm-info-modal-body" style="color:#555;font-size:.95rem;line-height:1.35"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px">
+          <button id="mm-info-modal-ok" style="background:#ff6b35;color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    const ok = modal.querySelector('#mm-info-modal-ok');
+    ok.addEventListener('click', hideInfoModal);
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) hideInfoModal(); });
+    return modal;
+  }
+  function showInfoModal(title, message){
+    const modal = ensureInfoModal();
+    modal.querySelector('#mm-info-modal-title').textContent = title || 'Aviso';
+    modal.querySelector('#mm-info-modal-body').textContent = message || '';
+    modal.style.display = 'flex';
+    const content = modal.querySelector('#mm-info-modal-content');
+    requestAnimationFrame(()=>{ content.style.opacity='1'; content.style.transform='scale(1)'; });
+  }
+  function hideInfoModal(){
+    const modal = document.getElementById('mm-info-modal'); if (!modal) return;
+    const content = modal.querySelector('#mm-info-modal-content');
+    content.style.opacity='0'; content.style.transform='scale(.95)';
+    setTimeout(()=>{ modal.style.display='none'; }, 180);
+  }
+
+  // Modal para iniciar corrida no horário agendado (lado do motorista)
+  function ensureStartAgModalM(){
+    let modal = document.getElementById('ag-start-modal-m');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'ag-start-modal-m';
+    modal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:10000;';
+    modal.innerHTML = `
+      <div class="modal-content" style="background:#fff;border-radius:8px;min-width:300px;max-width:92vw;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.2);transform:scale(.96);transition:transform .2s ease,opacity .2s ease;opacity:0">
+        <h3 style=\"margin:0 0 6px 0;color:#333\">Está na hora do seu agendamento</h3>
+        <p id=\"ag-start-text-m\" style=\"margin:4px 0 12px 0;color:#555\">Inicie a corrida agora.</p>
+        <div style=\"display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap\">
+          <button id=\"ag-start-cancel-m\" style=\"background:#e7e7e7;border:0;color:#111;border-radius:8px;padding:8px 12px;cursor:pointer\">Depois</button>
+          <button id=\"ag-start-go-m\" style=\"background:#ff6b35;border:0;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600\">Iniciar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) hideStartAgModalM(); });
+    modal.querySelector('#ag-start-cancel-m').addEventListener('click', hideStartAgModalM);
+    return modal;
+  }
+  function showStartAgModalM(msg, onStart){
+    const modal = ensureStartAgModalM();
+    modal.querySelector('#ag-start-text-m').textContent = msg || 'Inicie a corrida agora.';
+    const go = modal.querySelector('#ag-start-go-m');
+    go.onclick = ()=>{ try{ onStart && onStart(); }finally{ hideStartAgModalM(); } };
+    modal.style.display = 'flex';
+    requestAnimationFrame(()=>{
+      const c = modal.querySelector('.modal-content'); c.style.opacity='1'; c.style.transform='scale(1)';
+    });
+  }
+  function hideStartAgModalM(){
+    const modal = document.getElementById('ag-start-modal-m'); if (!modal) return;
+    const c = modal.querySelector('.modal-content'); c.style.opacity='0'; c.style.transform='scale(.96)';
+    setTimeout(()=>{ modal.style.display='none'; }, 180);
+  }
 
   const listaEntregas = document.getElementById('delivery-list');
   const mensagemCarregando = document.getElementById('loading-message');
@@ -27,21 +144,51 @@
     return { base: Math.round(base*100)/100, min: Math.round(min*100)/100, max: Math.round(max*100)/100 };
   }
 
+  // Listener por documento para remover o card e avisar quando o cliente cancelar
+  function attachCardStatusListenerM(agendamentoId, cardEl){
+    try{
+      const ref = db.collection('agendamentos').doc(String(agendamentoId));
+      const unsub = ref.onSnapshot(snap=>{
+        if (!snap.exists) { try{ cardEl.remove(); }catch{}; return; }
+        const d = snap.data()||{};
+        const status = String(d.status||'').toLowerCase();
+        const confirmados = ['agendamento_confirmado','corrida_agendamento_confirmado'];
+        if (!confirmados.includes(status)){
+          if (status === 'cancelado_agendamento' && !cardEl.dataset.modalShown){
+            try{ showInfoModal('Agendamento cancelado', 'O cliente cancelou este agendamento.'); cardEl.dataset.modalShown = '1'; }catch{}
+          }
+          try{ cardEl.remove(); }catch{}
+        }
+      });
+      if (!window.__agCardUnsubsM) window.__agCardUnsubsM = {};
+      window.__agCardUnsubsM[agendamentoId] = unsub;
+    }catch{}
+  }
+
   function distanciaEstimativaKmFromDoc(d){
-    const salvo = Number(d?.distancia);
-    if (Number.isFinite(salvo) && salvo>0) return salvo;
-    const toNum = v => (v==null? null : Number(v));
-    const oLat = toNum(d?.origem?.lat ?? d?.origem?.coordenadas?.lat);
-    const oLng = toNum(d?.origem?.lng ?? d?.origem?.coordenadas?.lng);
-    const dLat = toNum(d?.destino?.lat ?? d?.destino?.coordenadas?.lat);
-    const dLng = toNum(d?.destino?.lng ?? d?.destino?.coordenadas?.lng);
-    const R=6371, toRad=(deg)=>deg*Math.PI/180;
-    const calc=(a1,o1,a2,o2)=>{ const dPhi=toRad(a2-a1), dLam=toRad(o2-o1); const a=Math.sin(dPhi/2)**2+Math.cos(toRad(a1))*Math.cos(toRad(a2))*Math.sin(dLam/2)**2; return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); };
-    const CENTRO_SP={ lat:-22.19, lng:-48.79 };
-    if ([oLat,oLng,dLat,dLng].every(Number.isFinite)) return calc(oLat,oLng,dLat,dLng);
-    if ([dLat,dLng].every(Number.isFinite)) return calc(CENTRO_SP.lat,CENTRO_SP.lng,dLat,dLng);
-    if ([oLat,oLng].every(Number.isFinite)) return calc(oLat,oLng,CENTRO_SP.lat,CENTRO_SP.lng);
-    return 1; // fallback mínimo
+    try{
+      const distInformada = Number(d?.distancia);
+      if (Number.isFinite(distInformada) && distInformada > 0) return distInformada;
+
+      const toNum = (v)=> (v!=null && !Number.isNaN(Number(v)) ? Number(v) : null);
+      const oLat = toNum(d?.origem?.lat ?? d?.origem?.coordenadas?.lat);
+      const oLng = toNum(d?.origem?.lng ?? d?.origem?.coordenadas?.lng);
+      const dLat = toNum(d?.destino?.lat ?? d?.destino?.coordenadas?.lat);
+      const dLng = toNum(d?.destino?.lng ?? d?.destino?.coordenadas?.lng);
+
+      const R = 6371; const toRad = (deg)=>deg*Math.PI/180;
+      const calc = (lat1,lon1,lat2,lon2)=>{
+        const dPhi=toRad(lat2-lat1), dLam=toRad(lon2-lon1);
+        const a=Math.sin(dPhi/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLam/2)**2;
+        return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+      };
+
+      if ([oLat,oLng,dLat,dLng].every(Number.isFinite)) return calc(oLat,oLng,dLat,dLng);
+      if ([dLat,dLng].every(Number.isFinite)) return calc(CENTRO_SP_REF.lat,CENTRO_SP_REF.lng,dLat,dLng);
+      if ([oLat,oLng].every(Number.isFinite)) return calc(oLat,oLng,CENTRO_SP_REF.lat,CENTRO_SP_REF.lng);
+
+      return 1;
+    }catch{ return 1; }
   }
 
   // Cache simples para nomes/fotos
@@ -116,12 +263,17 @@
 
         const list = document.createElement('div');
         list.style.display='flex'; list.style.flexDirection='column'; list.style.gap='16px';
+        // Limpa listeners antigos
+        try{ if(!window.__agCardUnsubsM) window.__agCardUnsubsM = {}; Object.values(window.__agCardUnsubsM).forEach(fn=>{ try{fn();}catch{} }); window.__agCardUnsubsM = {}; }catch{}
+
         viagens.forEach(v=> { 
           const card = createViagemCard(v);
           list.appendChild(card);
           if ((v.nomeCliente==='—' || v.emailCliente==='—') && v.clienteUid){
             try{ preencherContatoCliente(card, v.clienteUid); }catch{}
           }
+          try{ attachCardStatusListenerM(v.id, card); }catch{}
+          try{ scheduleStartReminderMotorista(v); }catch{}
         });
         container.appendChild(list);
       });
@@ -166,6 +318,37 @@
     // Se não temos nome mas temos UID, buscar e preencher
     if (!d.clienteNome && clienteUid) preencherNomeEAvatar(card, clienteUid);
     return card;
+  }
+
+  async function atualizarDistanciaAssincrona(s, cardEl){
+    try{
+      if (cardEl.dataset.distCalcRunning==='1') return; cardEl.dataset.distCalcRunning='1';
+      const origemEnd = s.origem?.endereco || s.localRetirada || '';
+      const destinoEnd = s.destino?.endereco || s.localEntrega || '';
+      let oLat = Number(s.origem?.coordenadas?.lat ?? s.origem?.lat);
+      let oLng = Number(s.origem?.coordenadas?.lng ?? s.origem?.lng);
+      let dLat = Number(s.destino?.coordenadas?.lat ?? s.destino?.lat);
+      let dLng = Number(s.destino?.coordenadas?.lng ?? s.destino?.lng);
+      const precisaOrigem = !(Number.isFinite(oLat) && Number.isFinite(oLng));
+      const precisaDestino = !(Number.isFinite(dLat) && Number.isFinite(dLng));
+      const TEMPO_LIMITE_MS = 1000;
+      const limit = (p)=> Promise.race([p, new Promise(r=>setTimeout(()=>r(null),TEMPO_LIMITE_MS))]);
+      if (precisaOrigem && origemEnd){ const g = await limit(geocodificarEndereco(origemEnd)); if (g){ oLat=g.lat; oLng=g.lng; } }
+      if (precisaDestino && destinoEnd){ const g = await limit(geocodificarEndereco(destinoEnd)); if (g){ dLat=g.lat; dLng=g.lng; } }
+      if ([oLat,oLng,dLat,dLng].every(Number.isFinite)){
+        const R=6371, toRad=(deg)=>deg*Math.PI/180;
+        const dPhi=toRad(dLat-oLat), dLam=toRad(dLng-oLng);
+        const a=Math.sin(dPhi/2)**2 + Math.cos(toRad(oLat))*Math.cos(toRad(dLat))*Math.sin(dLam/2)**2;
+        const dist = 2*R*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distEl = cardEl.querySelector('.ag-mid')?.querySelector('div');
+        // Atualiza o primeiro item da coluna do meio que mostra Distância
+        const label = cardEl.querySelector('.ag-mid');
+        if (label){
+          const distRow = label.querySelector('div');
+          if (distRow) distRow.innerHTML = `<strong>Distância:</strong> ${dist.toFixed(2)} km`;
+        }
+      }
+    }catch{} finally{ delete cardEl.dataset.distCalcRunning; }
   }
 
   // ====== Card igual ao cliente ======
@@ -320,23 +503,39 @@
     const destino = s.destino?.endereco || s.localEntrega || '—';
     const volsNum = Number(s.volumes||0);
     const tipoV = s.tipoVeiculo || s.tipoCaminhao || 'pequeno';
+    let usouFallbackCentro = false;
     const distKm = (function(){
-      // usar valor salvo se existente, senão haversine com fallbacks simples
-      const salvo = Number(s.distancia);
-      if (Number.isFinite(salvo) && salvo>0) return salvo;
-      const toNum = v => (v==null? null : Number(v));
-      const oLat = toNum(s.origem?.lat ?? s.origem?.coordenadas?.lat);
-      const oLng = toNum(s.origem?.lng ?? s.origem?.coordenadas?.lng);
-      const dLat = toNum(s.destino?.lat ?? s.destino?.coordenadas?.lat);
-      const dLng = toNum(s.destino?.lng ?? s.destino?.coordenadas?.lng);
-      const R=6371, toRad=(deg)=>deg*Math.PI/180;
-      const calc=(a1,o1,a2,o2)=>{ const dPhi=toRad(a2-a1), dLam=toRad(o2-o1); const a=Math.sin(dPhi/2)**2+Math.cos(toRad(a1))*Math.cos(toRad(a2))*Math.sin(dLam/2)**2; return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); };
-      const CENTRO_SP={ lat:-22.19, lng:-48.79 };
-      if ([oLat,oLng,dLat,dLng].every(Number.isFinite)) return calc(oLat,oLng,dLat,dLng);
-      if ([dLat,dLng].every(Number.isFinite)) return calc(CENTRO_SP.lat,CENTRO_SP.lng,dLat,dLng);
-      if ([oLat,oLng].every(Number.isFinite)) return calc(oLat,oLng,CENTRO_SP.lat,CENTRO_SP.lng);
-      return NaN;
+      try{
+        const distInformada = Number(s.distancia);
+        if (Number.isFinite(distInformada) && distInformada > 0) return distInformada;
+
+        const toNum = (v)=> (v!=null && !Number.isNaN(Number(v)) ? Number(v) : null);
+        const oLat = toNum(s.origem?.lat ?? s.origem?.coordenadas?.lat);
+        const oLng = toNum(s.origem?.lng ?? s.origem?.coordenadas?.lng);
+        const dLat = toNum(s.destino?.lat ?? s.destino?.coordenadas?.lat);
+        const dLng = toNum(s.destino?.lng ?? s.destino?.coordenadas?.lng);
+
+        const R = 6371; const toRad = (deg)=>deg*Math.PI/180;
+        const calc = (lat1,lon1,lat2,lon2)=>{
+          const dPhi=toRad(lat2-lat1), dLam=toRad(lon2-lon1);
+          const a=Math.sin(dPhi/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLam/2)**2;
+          return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+        };
+
+        if ([oLat,oLng,dLat,dLng].every(Number.isFinite)) return calc(oLat,oLng,dLat,dLng);
+        if ([dLat,dLng].every(Number.isFinite)) { usouFallbackCentro = true; return calc(CENTRO_SP_REF.lat,CENTRO_SP_REF.lng,dLat,dLng); }
+        if ([oLat,oLng].every(Number.isFinite)) { usouFallbackCentro = true; return calc(oLat,oLng,CENTRO_SP_REF.lat,CENTRO_SP_REF.lng); }
+
+        return 1;
+      }catch{ return 1; }
     })();
+    // Se a distância está em fallback (1 km) ou NaN, tentar geocodificar e atualizar o card de forma assíncrona
+    try{
+      if (!Number.isFinite(distKm) || distKm === 1 || usouFallbackCentro){
+        atualizarDistanciaAssincrona(s, card);
+      }
+    }catch{}
+
     const agTs = s.dataHoraAgendada?.seconds || s.dataAgendada?.seconds || null;
     let quando = '—';
     let dataLabel = '—';

@@ -12,6 +12,104 @@ document.addEventListener('DOMContentLoaded', function() {
   // Lista em memória (preenchida via Firestore)
   let viagensAgendadas = [];
 
+  // Utilitário simples de modal informativo
+  function ensureInfoModal(){
+    let modal = document.getElementById('mm-info-modal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'mm-info-modal';
+    modal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:9999;';
+    modal.innerHTML = `
+      <div id="mm-info-modal-content" style="background:#fff;border-radius:12px;min-width:280px;max-width:92vw;padding:20px 18px;box-shadow:0 10px 30px rgba(0,0,0,.15);transform:scale(.95);transition:transform .2s ease,opacity .2s ease;opacity:0">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <i class="fa-solid fa-circle-info" style="color:#ff6b35"></i>
+          <h3 id="mm-info-modal-title" style="margin:0;font-size:1.05rem;color:#333">Aviso</h3>
+        </div>
+        <div id="mm-info-modal-body" style="color:#555;font-size:.95rem;line-height:1.35"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px">
+          <button id="mm-info-modal-ok" style="background:#ff6b35;color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    const ok = modal.querySelector('#mm-info-modal-ok');
+    ok.addEventListener('click', hideInfoModal);
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) hideInfoModal(); });
+    return modal;
+  }
+  function showInfoModal(title, message){
+    const modal = ensureInfoModal();
+    modal.querySelector('#mm-info-modal-title').textContent = title || 'Aviso';
+    modal.querySelector('#mm-info-modal-body').textContent = message || '';
+    modal.style.display = 'flex';
+    const content = modal.querySelector('#mm-info-modal-content');
+    requestAnimationFrame(()=>{ content.style.opacity='1'; content.style.transform='scale(1)'; });
+  }
+  function hideInfoModal(){
+    const modal = document.getElementById('mm-info-modal'); if (!modal) return;
+    const content = modal.querySelector('#mm-info-modal-content');
+    content.style.opacity='0'; content.style.transform='scale(.95)';
+    setTimeout(()=>{ modal.style.display='none'; }, 180);
+  }
+
+  // Modal para iniciar corrida no horário agendado (lado do cliente)
+  function ensureStartAgModalC(){
+    let modal = document.getElementById('ag-start-modal-c');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'ag-start-modal-c';
+    modal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:10000;';
+    modal.innerHTML = `
+      <div class="modal-content" style="background:#fff;border-radius:12px;min-width:300px;max-width:92vw;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.2);transform:scale(.96);transition:transform .2s ease,opacity .2s ease;opacity:0">
+        <h3 style="margin:0 0 6px 0;color:#333">Está na hora do seu agendamento</h3>
+        <p id="ag-start-text-c" style="margin:4px 0 12px 0;color:#555">Sua corrida está programada para agora.</p>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <button id="ag-start-cancel" style="background:#e7e7e7;border:0;color:#111;border-radius:8px;padding:8px 12px;cursor:pointer">Depois</button>
+          <button id="ag-start-go" style="background:#ff6b35;border:0;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600">Iniciar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) hideStartAgModalC(); });
+    modal.querySelector('#ag-start-cancel').addEventListener('click', hideStartAgModalC);
+    return modal;
+  }
+  function showStartAgModalC(msg, onStart){
+    const modal = ensureStartAgModalC();
+    modal.querySelector('#ag-start-text-c').textContent = msg || 'Sua corrida está programada para agora.';
+    const go = modal.querySelector('#ag-start-go');
+    go.onclick = ()=>{ try{ onStart && onStart(); }finally{ hideStartAgModalC(); } };
+    modal.style.display = 'flex';
+    requestAnimationFrame(()=>{
+      const c = modal.querySelector('.modal-content'); c.style.opacity='1'; c.style.transform='scale(1)';
+    });
+  }
+  function hideStartAgModalC(){
+    const modal = document.getElementById('ag-start-modal-c'); if (!modal) return;
+    const c = modal.querySelector('.modal-content'); c.style.opacity='0'; c.style.transform='scale(.96)';
+    setTimeout(()=>{ modal.style.display='none'; }, 180);
+  }
+
+  // Agenda lembrete para início no horário agendado (cliente)
+  function scheduleStartReminderCliente(v){
+    try{
+      if (!v?.id || !v?.data || !v?.hora) return;
+      if (!window.__agStartTimersC) window.__agStartTimersC = {};
+      if (window.__agStartTimersC[v.id]) return; // já agendado
+      const ts = new Date(`${v.data}T${v.hora}:00`);
+      if (!(ts instanceof Date) || isNaN(ts.getTime())) return;
+      const now = new Date();
+      const ms = ts.getTime() - now.getTime();
+      const fire = ()=>{
+        showStartAgModalC('Seu agendamento começou. Acompanhe o status agora.', ()=>{
+          window.location.href = `statusA.html?agendamento=${encodeURIComponent(v.id)}`;
+        });
+        delete window.__agStartTimersC[v.id];
+      };
+      if (ms <= 0){ fire(); return; }
+      if (ms > 24*60*60*1000) return; // não agenda além de 24h
+      window.__agStartTimersC[v.id] = setTimeout(fire, ms);
+    }catch{}
+  }
+
   // Função para alternar entre as tabs
   function switchTab(activeTab, tabName) {
     // Remove a classe 'active' de todas as abas
@@ -79,6 +177,8 @@ document.addEventListener('DOMContentLoaded', function() {
   function showAgendadosContent() {
     formSection.style.display = 'none';
     renderAgendados();
+    // Inicia listener em tempo real para remover imediatamente itens cancelados
+    startAgendadosRealtime();
   }
   
   // Função para voltar para a aba anterior
@@ -86,18 +186,57 @@ document.addEventListener('DOMContentLoaded', function() {
     switchTab(tabSolicitar, 'solicitar');
   }
 
-  // Função para esconder o conteúdo da aba "Agendados"
-  function hideAgendadosContent() {
+  // Remove apenas o container da UI, sem mexer no listener
+  function removeAgendadosContainer(){
     const agendadosContainer = document.getElementById('agendados-container');
-    if (agendadosContainer) {
-      agendadosContainer.remove();
-    }
+    if (agendadosContainer) agendadosContainer.remove();
+  }
+
+  // Função para esconder o conteúdo da aba "Agendados" (saindo da aba)
+  function hideAgendadosContent() {
+    removeAgendadosContainer();
+    // Para evitar vazamento de listeners ao sair da aba
+    stopAgendadosRealtime();
+  }
+
+  // Listener em tempo real para os agendamentos do cliente
+  function startAgendadosRealtime(){
+    try{
+      const { firebase } = window;
+      if (!firebase || !firebase.apps?.length) return;
+      const db = firebase.firestore();
+      const auth = firebase.auth();
+      // Se já existir, não reanexa
+      if (window.__agendadosUnsub) return;
+      const attach = (uid)=>{
+        if (!uid) return;
+        if (window.__agendadosUnsub) return;
+        window.__agendadosUnsub = db.collection('agendamentos')
+          .where('clienteId','==', uid)
+          .onSnapshot(()=>{
+            // Re-render sempre que houver mudança
+            renderAgendados();
+          });
+        // Render inicial assim que conectar
+        renderAgendados();
+      };
+      const user = auth.currentUser || null;
+      if (user && user.uid) attach(user.uid);
+      else {
+        // Aguarda autenticação e então anexa
+        const off = auth.onAuthStateChanged(u=>{ if(u?.uid){ attach(u.uid); off(); } });
+      }
+    }catch{}
+  }
+
+  function stopAgendadosRealtime(){
+    try{ if (window.__agendadosUnsub){ window.__agendadosUnsub(); window.__agendadosUnsub = null; } }catch{}
   }
 
   // Função para renderizar as viagens agendadas
   async function renderAgendados() {
     // Remove container existente se houver
-    hideAgendadosContent();
+    removeAgendadosContainer();
 
     const agendadosContainer = document.createElement('section');
     agendadosContainer.id = 'agendados-container';
@@ -171,6 +310,9 @@ document.addEventListener('DOMContentLoaded', function() {
       list.style.display = 'flex';
       list.style.flexDirection = 'column';
       list.style.gap = '16px';
+      // Limpa listeners antigos de cards
+      try{ if(!window.__agCardUnsubs) window.__agCardUnsubs = {}; Object.values(window.__agCardUnsubs).forEach(fn=>{ try{fn();}catch{} }); window.__agCardUnsubs = {}; }catch{}
+
       viagensAgendadas.forEach(v=>{ 
         const card = createViagemCard(v); 
         list.appendChild(card);
@@ -178,6 +320,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if ((v.motorista==='—' || v.telefone==='—') && v.motoristaUid){
           try{ preencherContatoMotorista(card, v.motoristaUid); }catch{}
         }
+        // Listener por documento: remove o card se deixar de ser confirmado
+        try{ attachCardStatusListener(v.id, card); }catch{}
+        // Agenda alerta de início no horário marcado
+        try{ scheduleStartReminderCliente(v); }catch{}
       });
       cardsContainer.appendChild(list);
       agendadosContainer.appendChild(cardsContainer);
@@ -281,6 +427,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }catch{}
   }
 
+  // Listener por documento para remover o card se o status deixar de ser confirmado
+  function attachCardStatusListener(agendamentoId, cardEl){
+    try{
+      const { firebase } = window; if (!firebase?.apps?.length) return;
+      const db = firebase.firestore();
+      const ref = db.collection('agendamentos').doc(String(agendamentoId));
+      const unsub = ref.onSnapshot(snap=>{
+        if (!snap.exists) { try{ cardEl.remove(); }catch{}; return; }
+        const d = snap.data()||{};
+        const status = String(d.status||'').toLowerCase();
+        const confirmados = ['agendamento_confirmado','corrida_agendamento_confirmado'];
+        if (!confirmados.includes(status)){
+          // Mostrar motivo específico quando foi o motorista que cancelou
+          if (status === 'corrida_agendamento_cancelado' && !cardEl.dataset.modalShown){
+            try{ showInfoModal('Agendamento cancelado', 'O motorista cancelou seu agendamento.'); cardEl.dataset.modalShown = '1'; }catch{}
+          }
+          try{ cardEl.remove(); }catch{}
+        }
+      });
+      if (!window.__agCardUnsubs) window.__agCardUnsubs = {};
+      window.__agCardUnsubs[agendamentoId] = unsub;
+    }catch{}
+  }
+
   // Função para determinar a classe CSS do status
   function getStatusClass(status) {
     switch (status.toLowerCase()) {
@@ -318,10 +488,10 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!window.firebase || !firebase.apps.length) return alert('Serviço indisponível.');
       const db = firebase.firestore();
       if (!confirm('Deseja realmente cancelar este agendamento?')) return;
-      await db.collection('agendamentos').doc(String(agendamentoId)).set({ status: 'corrida_agendamento_cancelado', canceladoEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-      // Atualiza a lista após cancelar
+      // Cliente cancelando: usar um status distinto para diferenciar do cancelamento do motorista
+      await db.collection('agendamentos').doc(String(agendamentoId)).set({ status: 'cancelado_agendamento', canceladoEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      // Atualiza a lista após cancelar (sem modal para o próprio cliente)
       await renderAgendados();
-      alert('Agendamento cancelado.');
     }catch(e){ console.error('Falha ao cancelar', e); alert('Erro ao cancelar agendamento.'); }
   };
 

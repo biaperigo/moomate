@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rota do Motorista</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
+  <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+  <link rel="stylesheet" href="src/styles/rotaM.css">
+</head>
+<body>
+  
+  <div id="map"></div>
+
+  <div id="route-instructions" class="waze-instructions">
+    <h4>📍 Próximas instruções</h4>
+    <ol id="directionsList"><li>Carregando instruções…</li></ol>
+  </div>
+
+  <div class="ride-info">
+    <div class="ride-details">
+      <h3>🚗 Informações da Corrida</h3>
+      <div id="ride-data">
+        <p><strong>Cliente:</strong> <span id="clienteInfo">Carregando…</span></p>
+        <p><strong>Origem:</strong> <span id="origemInfo">Carregando…</span></p>
+        <p><strong>Destino:</strong> <span id="destinoInfo">Carregando…</span></p>
+        <p><strong>Distância:</strong> <span id="distanciaInfo">Calculando…</span></p>
+        <p><strong>Tempo estimado:</strong> <span id="tempoInfo">Calculando…</span></p>
+      </div>
+      <div class="action-buttons">
+        <button id="btnSeguirDestino" class="action-btn primary">
+          <i class="fas fa-check"></i> Tudo pronto, seguir até o destino
+        </button>
+        <button id="btnFinalizar" class="action-btn success" style="display:none;">
+          <i class="fas fa-flag-checkered"></i> Corrida concluída
+        </button>
+        
+      </div>
+    </div>
+  </div>
+
+<!-- Modal for canceled ride -->
+<div id="modal-cancelada" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <h3>🚫 Corrida Cancelada</h3>
+    <p>A corrida foi cancelada pelo cliente. Você será redirecionado para a página inicial.</p>
+    <button id="close-cancel-modal" class="btn-close">Fechar</button>
+  </div>
+</div>
+
+  <div id="user-rating-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⭐ Avalie o Usuário</h3>
+        <button class="modal-close" id="close-user-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="user-info">
+          <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
+          <div class="user-details">
+            <p><strong>Nome:</strong> <span id="modal-client-name">—</span></p>
+            <p><strong>Corrida:</strong> Finalizada com sucesso</p>
+          </div>
+        </div>
+        <div class="rating-section">
+          <p class="rating-label">Como foi sua experiência com este usuário?</p>
+          <div class="rating-stars">
+            <span class="star" data-rating="1">⭐</span>
+            <span class="star" data-rating="2">⭐</span>
+            <span class="star" data-rating="3">⭐</span>
+            <span class="star" data-rating="4">⭐</span>
+            <span class="star" data-rating="5">⭐</span>
+          </div>
+        </div>
+        <div class="comment-section">
+          <label for="user-rating-comment">Comentário (opcional):</label>
+          <textarea id="user-rating-comment" placeholder="Conte como foi sua experiência..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="submit-user-rating" class="btn-primary">
+          <i class="fas fa-paper-plane"></i> Enviar Avaliação
+        </button>
+      
+      </div>
+    </div>
+  </div>
+<button id="openChat" class="track-btn">Chat</button>
+
+
+
+  <footer>
+    <div id="footer_content">
+      <div class="footer-left">
+        <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
+      </div>
+      <div class="footer-social">
+        <span class="social-text">Acompanhe nós</span>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a>
+        </div>
+      </div>
+    </div>
+    <div id="footer_items">
+      <span id="copyright">© 2025 Moomate. Todos os direitos reservados.</span>
+    </div>
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
+      authDomain: "moomate-39239.firebaseapp.com",
+      projectId: "moomate-39239",
+      storageBucket: "moomate-39239.appspot.com",
+      messagingSenderId: "637968714747",
+      appId: "1:637968714747:web:ad15dc3571c22f046b595e",
+      measurementId: "G-62J7Q8CKP4"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
+
+  <script src="src/javascript/rotaA.js"></script>
+ 
+</body>
+</html>
