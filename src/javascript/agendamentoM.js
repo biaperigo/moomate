@@ -34,7 +34,28 @@
       if (!(ts instanceof Date) || isNaN(ts.getTime())) return;
       const now = new Date();
       const ms = ts.getTime() - now.getTime();
-      const fire = ()=>{
+      const fire = async ()=>{
+        try{
+          // Criar/atualizar corridaagendamento antes de redirecionar (espelha dados essenciais)
+          const agRef = db.collection('agendamentos').doc(String(v.id));
+          const agSnap = await agRef.get();
+          const ag = agSnap.exists ? (agSnap.data()||{}) : {};
+          const base = {
+            clienteId: ag.clienteId || ag.clienteUid || null,
+            motoristaId: ag.motoristaId || ag.propostaAceita?.motoristaUid || (window.firebase?.auth()?.currentUser?.uid||null),
+            propostaAceita: ag.propostaAceita || null,
+            tipoVeiculo: ag.tipoVeiculo || null,
+            volumes: ag.volumes || null,
+            origem: ag.origem || (ag.localRetirada ? { endereco: ag.localRetirada } : null),
+            destino: ag.destino || (ag.localEntrega ? { endereco: ag.localEntrega } : null),
+            agendamentoId: v.id,
+            status: 'indo_retirar',
+            criadoEm: window.firebase.firestore.FieldValue.serverTimestamp(),
+          };
+          const corridaRef = db.collection('corridaagendamento').doc(String(v.id));
+          await corridaRef.set(base, { merge: true });
+          await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
+        }catch(e){ console.warn('[agendamentoM] Falha ao preparar corridaagendamento:', e?.message||e); }
         showStartAgModalM('Seu agendamento começou. Inicie a corrida.', ()=>{
           window.location.href = `rotaA.html?agendamento=${encodeURIComponent(v.id)}`;
         });

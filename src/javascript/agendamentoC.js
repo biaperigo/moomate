@@ -98,9 +98,38 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!(ts instanceof Date) || isNaN(ts.getTime())) return;
       const now = new Date();
       const ms = ts.getTime() - now.getTime();
-      const fire = ()=>{
+      const fire = async ()=>{
+        try{
+          // Criar/atualizar corridaagendamento e espelhar em corridas para reaproveitar o fluxo existente
+          const { firebase } = window; if (!firebase?.apps?.length) throw new Error('Firebase não inicializado');
+          const db = firebase.firestore();
+          const agRef = db.collection('agendamentos').doc(String(v.id));
+          const agSnap = await agRef.get();
+          const ag = agSnap.exists ? (agSnap.data()||{}) : {};
+          const base = {
+            clienteId: ag.clienteId || ag.clienteUid || firebase.auth()?.currentUser?.uid || null,
+            motoristaId: ag.motoristaId || ag.propostaAceita?.motoristaUid || null,
+            propostaAceita: ag.propostaAceita || null,
+            tipoVeiculo: ag.tipoVeiculo || null,
+            volumes: ag.volumes || null,
+            origem: ag.origem || (ag.localRetirada ? { endereco: ag.localRetirada } : null),
+            destino: ag.destino || (ag.localEntrega ? { endereco: ag.localEntrega } : null),
+            agendamentoId: v.id,
+            status: 'indo_retirar',
+            criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+          };
+          const corridaAgRef = db.collection('corridaagendamento').doc(String(v.id));
+          await corridaAgRef.set(base, { merge: true });
+          await corridaAgRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
+          // Espelho em corridas para compatibilidade do statusA.js
+          const corridaRef = db.collection('corridas').doc(String(v.id));
+          await corridaRef.set(base, { merge: true });
+          await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
+          try{ localStorage.setItem('ultimaCorridaCliente', String(v.id)); }catch{}
+        }catch(e){ console.warn('[agendamentoC] Falha ao preparar corrida agendada:', e?.message||e); }
         showStartAgModalC('Seu agendamento começou. Acompanhe o status agora.', ()=>{
-          window.location.href = `statusA.html?agendamento=${encodeURIComponent(v.id)}`;
+          // Usa ?corrida= para aproveitar fluxo existente em statusA.js
+          window.location.href = `statusA.html?corrida=${encodeURIComponent(v.id)}`;
         });
         delete window.__agStartTimersC[v.id];
       };
