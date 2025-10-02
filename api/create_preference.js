@@ -99,3 +99,6 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'internal_error', message: e?.message || String(e) });
   }
 }
+
+// Ensure Node.js runtime on Vercel
+module.exports.config = { runtime: 'nodejs18.x' };
