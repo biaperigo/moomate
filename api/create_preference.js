@@ -27,23 +27,27 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
+  if (req.method === 'OPTIONS' || req.method === 'HEAD') return res.status(204).end();
   try {
     const db = getDbOrThrow();
-    const { corridaId, items, back_urls, auto_return } = req.body || {};
+    // Accept both POST body and GET querystring
+    let corridaId = null, items = null, back_urls = null, auto_return = null;
+    if (req.method === 'POST') {
+      ({ corridaId, items, back_urls, auto_return } = req.body || {});
+    } else if (req.method === 'GET') {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      corridaId = url.searchParams.get('corridaId');
+    } else {
+      return res.status(405).json({ error: 'method_not_allowed' });
+    }
+    console.log('create_preference method=', req.method, 'corridaId=', corridaId);
     if (!corridaId) return res.status(400).json({ error: 'corridaId_required' });
 
-    // Try in 'agendamentos', fallback to 'corridas'
-    let collName = 'agendamentos';
+    // Apenas corridas
+    const collName = 'corridas';
     let ref = db.collection(collName).doc(String(corridaId));
     let snap = await ref.get();
-    if (!snap.exists) {
-      collName = 'corridas';
-      ref = db.collection(collName).doc(String(corridaId));
-      snap = await ref.get();
-    }
-    if (!snap.exists) return res.status(404).json({ error: 'document_not_found', collectionTried: ['agendamentos','corridas'] });
+    if (!snap.exists) return res.status(404).json({ error: 'corrida_not_found' });
     const ag = snap.data() || {};
 
     // Determine price to charge the client
@@ -51,7 +55,7 @@ module.exports = async function handler(req, res) {
     if (!Number.isFinite(precoCliente) || precoCliente <= 0) {
       // Try to read proposta from common locations
       const motoristaUid = ag?.motoristaId || ag?.propostaAceita?.motoristaUid || null;
-      const candidates = [collName, 'agendamentos', 'corridas', 'entregas', 'orcamentos'];
+      const candidates = ['corridas'];
       let proposta = null;
       if (motoristaUid) {
         for (const c of candidates) {
