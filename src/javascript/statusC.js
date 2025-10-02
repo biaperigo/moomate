@@ -1120,7 +1120,10 @@ async function buscarDadosPagamento(corridaId) {
     
     return {
       corridaId,
-      valor: data.precoFinal || data.valor || data.preco || 50.00, // valor padrão
+      // Valor que o cliente vai pagar (preço da proposta aceita com 10% + ajudantes)
+      valor: (data.propostaAceita && typeof data.propostaAceita.preco === 'number')
+        ? data.propostaAceita.preco
+        : (data.precoFinal || data.valor || data.preco || 50.00),
       clienteId: data.clienteId || currentUser?.uid,
       motoristaId: data.motoristaId || data.propostaAceita?.motoristaUid,
       tipo: tipoAtual,
@@ -1136,12 +1139,11 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
   const { corridaId, valor, clienteId, descricao } = dadosPagamento;
   
   try {
-    // SUBSTITUA ESTA URL PELA URL DO SEU BACKEND
-    const response = await fetch('https://seu-backend.com/api/mercadopago/create-preference', {
+    // Vercel API: cria a preferência no Mercado Pago
+    const response = await fetch('https://moomate-omrw.vercel.app/api/create_preference', {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${await firebase.auth().currentUser.getIdToken()}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         corridaId,
@@ -1154,9 +1156,9 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
           currency_id: 'BRL'
         }],
         back_urls: {
-          success: `${window.location.origin}/pagamento-sucesso.html?corrida=${corridaId}`,
-          failure: `${window.location.origin}/pagamento-erro.html?corrida=${corridaId}`,
-          pending: `${window.location.origin}/pagamento-pendente.html?corrida=${corridaId}`
+          success: `${window.location.origin}/pagamento_sucesso.html?corrida=${corridaId}`,
+          failure: `${window.location.origin}/pagamentoC.html?corrida=${corridaId}`,
+          pending: `${window.location.origin}/pagamentoC.html?corrida=${corridaId}`
         },
         auto_return: 'approved'
       })

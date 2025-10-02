@@ -1,26 +1,36 @@
-// Vercel Serverless Function: Finalizar Pagamento (credita motorista)
+// Vercel Serverless Function: Finalizar Pagamento (credita motorista) - CommonJS
 // Env required: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
 
-import admin from 'firebase-admin';
+const admin = require('firebase-admin');
 
-let app;
-try {
-  if (!admin.apps?.length) {
-    app = admin.initializeApp({
+function getDbOrThrow() {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
+  if (!projectId || !clientEmail || !privateKeyRaw) {
+    throw new Error('Missing Firebase Admin envs');
+  }
+  if (!admin.apps || !admin.apps.length) {
+    admin.initializeApp({
       credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n')
+        projectId,
+        clientEmail,
+        privateKey: (privateKeyRaw || '').replace(/\\n/g, '\n')
       })
     });
   }
-} catch {}
+  return admin.firestore();
+}
 
-const db = admin.firestore();
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   try {
+    const db = getDbOrThrow();
     const { corridaId, paymentId } = req.body || {};
     if (!corridaId) return res.status(400).json({ error: 'corridaId_required' });
 
