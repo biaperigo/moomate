@@ -101,4 +101,4 @@ module.exports = async function handler(req, res) {
 }
 
 // Ensure Node.js runtime on Vercel
-module.exports.config = { runtime: 'nodejs18.x' };
+module.exports.config = { runtime: 'nodejs22.x' };

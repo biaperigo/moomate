@@ -1,7 +1,8 @@
 {
   "name": "moomate-web",
   "private": true,
-  "engines": { "node": "18.x" },
+  "type": "commonjs",
+  "engines": { "node": "22.x" },
   "dependencies": {
     "firebase-admin": "^11.11.1"
   }

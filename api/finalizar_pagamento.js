@@ -63,3 +63,4 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'internal_error', message: e?.message || String(e) });
   }
 }
+module.exports.config = { runtime: 'nodejs22.x' };
