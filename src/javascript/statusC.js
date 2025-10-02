@@ -1115,8 +1115,18 @@ async function pickCorridaId(uid){
 // FUNÇÕES DO MERCADO PAGO - Adicionar antes da inicialização principal
 async function buscarDadosPagamento(corridaId) {
   try {
-    const docSnap = await db.collection(colecaoAtual).doc(corridaId).get();
-    const data = docSnap.data() || {};
+    let data = null;
+    try {
+      const snap = await db.collection(colecaoAtual).doc(corridaId).get();
+      data = snap.exists ? (snap.data() || null) : null;
+    } catch {}
+    if (!data) {
+      try {
+        const snap2 = await db.collection('corridas').doc(corridaId).get();
+        data = snap2.exists ? (snap2.data() || null) : null;
+      } catch {}
+    }
+    if (!data) throw new Error('Corrida não encontrada');
     
     return {
       corridaId,

@@ -34,10 +34,17 @@ module.exports = async function handler(req, res) {
     const { corridaId, paymentId } = req.body || {};
     if (!corridaId) return res.status(400).json({ error: 'corridaId_required' });
 
-    const agRef = db.collection('agendamentos').doc(String(corridaId));
-    const agSnap = await agRef.get();
-    if (!agSnap.exists) return res.status(404).json({ error: 'agendamento_not_found' });
-    const ag = agSnap.data() || {};
+    // Try in 'agendamentos', fallback to 'corridas'
+    let collName = 'agendamentos';
+    let ref = db.collection(collName).doc(String(corridaId));
+    let snap = await ref.get();
+    if (!snap.exists) {
+      collName = 'corridas';
+      ref = db.collection(collName).doc(String(corridaId));
+      snap = await ref.get();
+    }
+    if (!snap.exists) return res.status(404).json({ error: 'document_not_found', collectionTried: ['agendamentos','corridas'] });
+    const ag = snap.data() || {};
 
     // idempotência
     if (ag?.pagamento?.status === 'aprovado' && ag?.pagamento?.creditado === true) {
@@ -52,7 +59,7 @@ module.exports = async function handler(req, res) {
 
     await db.runTransaction(async (tx) => {
       const now = admin.firestore.FieldValue.serverTimestamp();
-      tx.set(agRef, { pagamento: { status: 'aprovado', creditado: true, paymentId: paymentId || null, atualizadoEm: now } }, { merge: true });
+      tx.set(ref, { pagamento: { status: 'aprovado', creditado: true, paymentId: paymentId || null, atualizadoEm: now } }, { merge: true });
       const movRef = db.collection('movimentacoes').doc();
       tx.set(movRef, { tipo: 'credito_motorista', corridaId: String(corridaId), motoristaUid, valor: Number(credit), criadoEm: now });
     });

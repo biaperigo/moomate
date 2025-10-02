@@ -34,14 +34,46 @@ module.exports = async function handler(req, res) {
     const { corridaId, items, back_urls, auto_return } = req.body || {};
     if (!corridaId) return res.status(400).json({ error: 'corridaId_required' });
 
-    const agRef = db.collection('agendamentos').doc(String(corridaId));
-    const agSnap = await agRef.get();
-    if (!agSnap.exists) return res.status(404).json({ error: 'agendamento_not_found' });
-    const ag = agSnap.data() || {};
+    // Try in 'agendamentos', fallback to 'corridas'
+    let collName = 'agendamentos';
+    let ref = db.collection(collName).doc(String(corridaId));
+    let snap = await ref.get();
+    if (!snap.exists) {
+      collName = 'corridas';
+      ref = db.collection(collName).doc(String(corridaId));
+      snap = await ref.get();
+    }
+    if (!snap.exists) return res.status(404).json({ error: 'document_not_found', collectionTried: ['agendamentos','corridas'] });
+    const ag = snap.data() || {};
 
-    const precoCliente = Number(ag?.propostaAceita?.preco || 0);
+    // Determine price to charge the client
+    let precoCliente = Number(ag?.propostaAceita?.preco || ag?.precoFinal || ag?.valor || ag?.preco || 0);
     if (!Number.isFinite(precoCliente) || precoCliente <= 0) {
-      return res.status(400).json({ error: 'invalid_price' });
+      // Try to read proposta from common locations
+      const motoristaUid = ag?.motoristaId || ag?.propostaAceita?.motoristaUid || null;
+      const candidates = [collName, 'agendamentos', 'corridas', 'entregas', 'orcamentos'];
+      let proposta = null;
+      if (motoristaUid) {
+        for (const c of candidates) {
+          try {
+            const pRef = db.collection(c).doc(String(corridaId)).collection('propostas').doc(String(motoristaUid));
+            const pSnap = await pRef.get();
+            if (pSnap.exists) { proposta = pSnap.data() || null; break; }
+          } catch {}
+        }
+      }
+      if (proposta) {
+        // preço cobrado do cliente: proposta.preco (já inclui ajudantes + 10%)
+        if (typeof proposta.preco === 'number') {
+          precoCliente = Number(proposta.preco);
+        } else if (proposta.precoOriginal && typeof proposta.precoOriginal.total === 'number') {
+          // fallback: total do motorista + 10%
+          precoCliente = Number((proposta.precoOriginal.total * 1.10).toFixed(2));
+        }
+      }
+    }
+    if (!Number.isFinite(precoCliente) || precoCliente <= 0) {
+      return res.status(400).json({ error: 'invalid_price', hint: 'sem preco em documento/proposta' });
     }
 
     const desc = (ag?.tipo === 'descarte' ? 'Serviço de Descarte' : 'Corrida de Mudança') + ` - ${String(corridaId).slice(0,8)}`;
@@ -83,7 +115,7 @@ module.exports = async function handler(req, res) {
     const pref = await mpResp.json();
 
     // Save status
-    await agRef.set({
+    await ref.set({
       pagamento: {
         preferenceId: pref?.id || null,
         valor: Number(precoCliente),
