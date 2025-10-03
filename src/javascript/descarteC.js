@@ -1,4 +1,98 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Classe para geocodificação com cache e rate limiting
+    class GeocodificadorDescartes {
+        constructor() {
+            this.cache = new Map();
+            this.ultimaRequisicao = 0;
+            this.DELAY_MINIMO = 1000;
+        }
+
+        async aguardarRateLimit() {
+            const agora = Date.now();
+            const tempoDecorrido = agora - this.ultimaRequisicao;
+            if (tempoDecorrido < this.DELAY_MINIMO) {
+                await new Promise(resolve => setTimeout(resolve, this.DELAY_MINIMO - tempoDecorrido));
+            }
+            this.ultimaRequisicao = Date.now();
+        }
+
+        validarCoordenadas(lat, lng) {
+            const latNum = parseFloat(lat);
+            const lngNum = parseFloat(lng);
+            return !isNaN(latNum) && !isNaN(lngNum) &&
+                   latNum >= -25.30 && latNum <= -19.80 &&
+                   lngNum >= -53.10 && lngNum <= -44.20;
+        }
+
+        async geocodificar(endereco) {
+            if (!endereco || typeof endereco !== 'string') {
+                console.warn('[Geocodificador] Endereço inválido:', endereco);
+                return null;
+            }
+
+            const enderecoNormalizado = endereco.trim().toLowerCase();
+            
+            if (this.cache.has(enderecoNormalizado)) {
+                const cached = this.cache.get(enderecoNormalizado);
+                console.log('[Geocodificador] Cache:', endereco);
+                return cached;
+            }
+
+            try {
+                await this.aguardarRateLimit();
+
+                const searchQuery = endereco.includes('SP') || 
+                                  endereco.includes('São Paulo') || 
+                                  endereco.includes('SÃ£o Paulo') ? 
+                    endereco : `${endereco}, São Paulo, SP, Brasil`;
+
+                const url = `https://nominatim.openstreetmap.org/search?` +
+                    `format=json&q=${encodeURIComponent(searchQuery)}` +
+                    `&addressdetails=1&limit=5&countrycodes=br`;
+
+                console.log('[Geocodificador] Buscando:', searchQuery);
+
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'MoomateApp/1.0',
+                        'Accept-Language': 'pt-BR,pt;q=0.9'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data && data.length > 0) {
+                    for (const item of data) {
+                        const lat = parseFloat(item.lat);
+                        const lng = parseFloat(item.lon);
+                        
+                        if (this.validarCoordenadas(lat, lng)) {
+                            const coords = { lat, lng, endereco: item.display_name };
+                            console.log('[Geocodificador] ✓ Encontrado:', coords);
+                            this.cache.set(enderecoNormalizado, coords);
+                            return coords;
+                        }
+                    }
+                }
+
+                console.warn('[Geocodificador] ✗ Nenhum resultado em SP:', endereco);
+                this.cache.set(enderecoNormalizado, null);
+                return null;
+
+            } catch (error) {
+                console.error('[Geocodificador] Erro:', error.message);
+                this.cache.set(enderecoNormalizado, null);
+                return null;
+            }
+        }
+    }
+
+    const geocodificador = new GeocodificadorDescartes();
+
     const firebaseConfig = {
         apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
         authDomain: "moomate-39239.firebaseapp.com",
@@ -9,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
         measurementId: "G-62J7Q8CKP4"
     };
 
-    // Evita re-inicializar o Firebase se já houver um app ativo
     try {
         if (!firebase.apps || firebase.apps.length === 0) {
             firebase.initializeApp(firebaseConfig);
@@ -17,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         console.warn('Firebase já estava inicializado ou falhou ao iniciar:', e?.message || e);
     }
+    
     const db = firebase.firestore();
     const descarteForm = document.getElementById('descarteForm');
     const propostasContainer = document.getElementById('propostasContainer');
@@ -1053,6 +1147,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     ];
 
+
     function isWithinSaoPaulo(lat, lng) {
         return lat >= SP_BOUNDS.south && lat <= SP_BOUNDS.north && 
                lng >= SP_BOUNDS.west && lng <= SP_BOUNDS.east;
@@ -1104,7 +1199,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     }
 
-    // Autocomplete para ecopontos (local de entrega)
     function autocompleteEcopontos(campo) {
         clearTimeout(timeoutAutocomplete);
         timeoutAutocomplete = setTimeout(() => {
@@ -1116,7 +1210,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Filtrar ecopontos que correspondem à busca
             const resultados = ecopontosSaoPaulo.filter(ecoponto => 
                 ecoponto.nome.toLowerCase().includes(val) ||
                 ecoponto.endereco.toLowerCase().includes(val) ||
@@ -1155,7 +1248,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
             
-            // Diferentes layouts para endereços e ecopontos
             if (item.tipo === 'ecoponto') {
                 div.innerHTML = `
                     <div class="autocomplete-ecoponto">
@@ -1189,7 +1281,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById(campo);
         
         if (item.tipo === 'ecoponto') {
-            // Para ecopontos, usar o nome + endereço e guardar coordenadas no dataset
             input.value = `${item.nome} - ${item.endereco}`;
             input.dataset.nome = item.nome || '';
             input.dataset.endereco = item.endereco || '';
@@ -1201,10 +1292,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete input.dataset.lng;
             }
         } else {
-            // Para endereços normais
             input.value = item.endereco;
             
-            // Se for local de retirada e tiver CEP, preenchê-lo automaticamente
             if (campo === 'localRetirada' && item.cep && isCEPSaoPaulo(item.cep)) {
                 document.getElementById('cep').value = formatarCEP(item.cep);
             }
@@ -1271,7 +1360,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Configurar autocompletes
     function setupAutocompletes() {
         if (localRetiradaInput) {
             localRetiradaInput.addEventListener('input', () => {
@@ -1285,7 +1373,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Fechar autocompletes ao clicar fora
         document.addEventListener('click', (e) => {
             if (!e.target.closest('#localRetirada') && !e.target.closest('#autocomplete-list-localRetirada')) {
                 closeAutocomplete('localRetirada');
@@ -1296,7 +1383,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Aguarda o Firebase Auth entregar o usuário (útil quando a página acabou de carregar)
     const waitAuthUser = () => new Promise((resolve) => {
         try {
             const u = firebase.auth()?.currentUser || null;
@@ -1305,18 +1391,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 try { off && off(); } catch {}
                 resolve(usr || null);
             });
-            // Safety timeout
             setTimeout(() => { try { off && off(); } catch {}; resolve(firebase.auth()?.currentUser || null); }, 2500);
         } catch { resolve(null); }
     });
 
     const enviarParaFirebase = async (dadosDescarte) => {
         try {
-            console.log('Enviando dados para Firebase:', dadosDescarte);
-            // Capturar cliente autenticado e nome
+            console.log('[Firebase] Enviando:', dadosDescarte);
             const user = await waitAuthUser();
             if (!user) {
-                console.warn('[descarteC] Sem usuário autenticado. Impedindo criação do descarte.');
+                console.warn('[Firebase] Sem usuário autenticado');
                 alert('Faça login para solicitar um descarte.');
                 return null;
             }
@@ -1327,7 +1411,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const uSnap = await db.collection('usuarios').doc(clienteUid).get();
                     const u = uSnap.exists ? (uSnap.data()||{}) : {};
                     clienteNome = u.nome || u.dadosPessoais?.nome || clienteNome || null;
-                } catch (e) { console.warn('[descarteC] Falha ao obter nome do cliente:', e?.message||e); }
+                } catch (e) { console.warn('[Firebase] Falha ao obter nome:', e?.message||e); }
             }
 
             const payload = {
@@ -1342,7 +1426,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const docRef = await db.collection('descartes').add(payload);
 
             currentDescarteId = docRef.id;
-            console.log('Descarte salvo com ID:', currentDescarteId);
+            console.log('[Firebase] ✓ Descarte salvo:', currentDescarteId);
             
             propostasContainer.style.display = 'block';
             propostasContainer.scrollIntoView({ behavior: 'smooth' });
@@ -1351,278 +1435,249 @@ document.addEventListener('DOMContentLoaded', () => {
             
             return currentDescarteId;
         } catch (error) {
-            console.error('Erro ao salvar no Firebase:', error?.message || error);
+            console.error('[Firebase] Erro:', error?.message || error);
             alert('Erro ao enviar solicitação. ' + (error?.message || 'Tente novamente.'));
         }
     };
 
-    // Ouvir Propostas em Tempo Real
-    const ouvirPropostas = (descarteId) => {
-        if (!db || !descarteId) return;
-        db.collection('descartes').doc(descarteId).get().then(doc => {
-            if (!doc.exists) {
-                console.error("Documento de descarte não encontrado!");
+    // APAGUE as funções ouvirPropostas e exibirProposta existentes e SUBSTITUA por este bloco:
+
+const ouvirPropostas = (descarteId) => {
+    if (!db || !descarteId) return;
+
+    const descarteRef = db.collection('descartes').doc(descarteId);
+
+    descarteRef.get().then(doc => {
+        if (!doc.exists) {
+            console.error("Documento de descarte não encontrado!");
+            return;
+        }
+        const descarteData = doc.data();
+
+        const propostasRef = descarteRef.collection('propostas').orderBy('dataEnvio', 'asc');
+        
+        propostasRef.onSnapshot((snapshot) => {
+            const lista = document.getElementById('lista-propostas');
+            if (!lista) return;
+
+            if (snapshot.empty) {
+                lista.innerHTML = '<p>Aguardando propostas dos motoristas...</p>';
                 return;
             }
-            const descarteData = doc.data();
 
-            db.collection('descartes')
-                .doc(descarteId)
-                .collection('propostas')
-                .orderBy('dataEnvio', 'asc')
-                .onSnapshot((snapshot) => {
-                    const lista = document.getElementById('lista-propostas');
+            const aguardandoMsg = lista.querySelector('p');
+            if (aguardandoMsg) aguardandoMsg.remove();
+
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const proposta = change.doc.data();
+                    proposta.id = change.doc.id;
                     
-                    if (snapshot.empty) {
-                        lista.innerHTML = '<p>Aguardando propostas dos motoristas...</p>';
-                        return;
-                    }
-
-                    const aguardando = lista.querySelector('p');
-                    if (aguardando && aguardando.textContent.includes('Aguardando')) {
-                        aguardando.remove();
-                    }
-
-                    snapshot.docChanges().forEach((change) => {
-                        if (change.type === 'added') {
-                            const proposta = change.doc.data();
-                            proposta.id = change.doc.id;
-                            
-                            exibirProposta(proposta, descarteData); 
-                        }
-                    });
-                });
-        }).catch(error => {
-            console.error("Erro ao buscar dados do descarte:", error);
+                    // Chama a nova função async para exibir o card
+                    exibirProposta(proposta, descarteData); 
+                }
+            });
         });
-    };
-
-    const exibirProposta = (proposta, descarteData) => {
-        const lista = document.getElementById('lista-propostas');
-
-        const origem = descarteData.localRetirada || 'N/A';
-        const destino = descarteData.localEntrega || 'N/A';
-
-        const propostaDiv = document.createElement('div');
-        propostaDiv.classList.add('proposta-card', 'sustentavel');
-        propostaDiv.innerHTML = `
-            <div class="proposta-header">
-                <div class="motorista-info">
-                    <div class="motorista-avatar">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
-                    <div class="motorista-dados">
-                        <h4>${proposta.nomeMotorista || 'Motorista'}</h4>
-                        <div class="avaliacao">
-                            <i class="fa-solid fa-star"></i>
-                            <span>${proposta.avaliacaoMotorista || '5.0'}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="icone-sustentavel">
-                    <i class="fa-solid fa-recycle"></i>
-                </div>
-            </div>
-            <div class="proposta-body">
-                <div class="proposta-info">
-                    <p><strong>Descarte #${currentDescarteId.substring(0, 6)}</strong></p>
-                    <p><strong>De:</strong> ${origem}</p>
-                    <p><strong>Para:</strong> ${destino}</p>
-                    <p><strong>Tipo de veículo:</strong> ${proposta.veiculo || 'N/A'}</p>
-                    <p><strong>Tempo de chegada:</strong> ${proposta.tempoChegada || 0} min</p>
-                </div>
-                <div class="proposta-preco">
-                    <span class="valor">R$ ${Number(proposta.preco || 0).toFixed(2)}</span>
-                    <button class="btn-aceitar-proposta" data-proposta-id="${proposta.id}" data-motorista="${proposta.nomeMotorista || 'Motorista'}">
-                        Aceitar Proposta
-                    </button>
-                </div>
-            </div>
-        `;
-
-        lista.prepend(propostaDiv);
-        const btnAceitar = propostaDiv.querySelector('.btn-aceitar-proposta');
-        btnAceitar.addEventListener('click', (event) => {
-            const propostaId = event.target.dataset.propostaId;
-            const nomeMotorista = event.target.dataset.motorista;
-            aceitarProposta(propostaId, nomeMotorista, proposta);
-        });
-    };
-
-const aceitarProposta = async (propostaId, nomeMotorista, proposta) => {
-    try {
-        console.log('Aceitando proposta:', propostaId, 'do motorista:', nomeMotorista);
-        
-        // Atualizar status do descarte para aceito
-        await db.collection('descartes').doc(currentDescarteId).update({
-            status: 'aceito',
-            propostaAceita: {
-                propostaId: propostaId,
-                motoristaId: proposta.motoristaUid,
-                motoristaUid: proposta.motoristaUid,
-                ...proposta
-            },
-            motoristaEscolhido: nomeMotorista,
-            aceitoEm: firebase.firestore.FieldValue.serverTimestamp(),
-            clienteConfirmou: true
-        });
-
-        console.log(`Proposta ${propostaId} aceita com sucesso!`);
-        
-        // Mostrar modal de aguardando motorista
-        mostrarModalAguardandoMotorista(currentDescarteId, nomeMotorista, proposta);
-        
-    } catch (error) {
-        console.error('Erro ao aceitar proposta:', error);
-        alert('Erro ao aceitar proposta. Tente novamente.');
-    }
+    }).catch(error => {
+        console.error("Erro ao buscar dados do descarte:", error);
+    });
 };
 
-// Nova função para mostrar modal de aguardando motorista
-function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
-    // Remover modal anterior se existir
-    const modalExistente = document.getElementById('modal-aguardando-motorista');
-    if (modalExistente) {
-        modalExistente.remove();
-    }
+const exibirProposta = async (proposta, descarteData) => {
+    const lista = document.getElementById('lista-propostas');
+    if (!lista) return;
 
-    const modal = document.createElement('div');
-    modal.id = 'modal-aguardando-motorista';
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content aguardando-style">
-            <div class="modal-header">
-                <h3><i class="fa-solid fa-hourglass-half"></i> Aguardando Motorista</h3>
-            </div>
-            <div class="modal-body">
-                <div class="aguardando-info">
-                    <div class="icone-sucesso">
-                        <i class="fa-solid fa-check-circle"></i>
-                    </div>
-                    <p><strong>Proposta aceita com sucesso!</strong></p>
-                    <p>Motorista: <strong>${nomeMotorista}</strong></p>
-                    <p>Valor: <strong>R$ ${Number(proposta.preco || 0).toFixed(2)}</strong></p>
-                    <p>Aguardando o motorista confirmar o início da corrida...</p>
-                    <div class="loading-spinner">
-                        <i class="fa-solid fa-spinner fa-spin"></i>
+    const origem = descarteData.localRetirada || 'N/A';
+    const destino = descarteData.localEntrega || 'N/A';
+
+    // --- Lógica de busca de dados do motorista (VERSÃO CORRIGIDA) ---
+    let motoristaNome = proposta.nomeMotorista || 'Motorista';
+    let motoristaFotoUrl = null;
+    let motoristaAvaliacao = 0.0;
+
+    // A proposta DEVE ter o motoristaUid para funcionar
+    if (proposta.motoristaUid) {
+        try {
+            const motoristaDoc = await db.collection('motoristas').doc(proposta.motoristaUid).get();
+            if (motoristaDoc.exists) {
+                const motoristaData = motoristaDoc.data();
+                
+                // **CORREÇÃO 1: Acessando os campos corretos**
+                // Acessa o nome dentro de 'dadosPessoais' ou no nível principal
+                motoristaNome = motoristaData.dadosPessoais?.nome || motoristaData.nome || motoristaNome;
+                // Acessa a foto dentro de 'dadosPessoais' ou no nível principal
+                motoristaFotoUrl = motoristaData.dadosPessoais?.fotoPerfilUrl || motoristaData.fotoPerfilUrl || null;
+                
+                // **CORREÇÃO 2: O campo de avaliação é 'media'**
+                motoristaAvaliacao = motoristaData.media || 0; 
+            }
+        } catch (error) {
+            console.error("Erro ao buscar dados do motorista:", error);
+        }
+    }
+    // --- Fim da lógica de busca ---
+
+    const getIniciais = (nome) => {
+        if (!nome) return '?';
+        const partes = nome.trim().split(' ').filter(p => p);
+        if (partes.length > 1) {
+            return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+        }
+        return (partes[0]?.[0] || '').toUpperCase();
+    };
+
+    const propostaDiv = document.createElement('div');
+    propostaDiv.classList.add('proposta-card');
+    propostaDiv.dataset.propostaId = proposta.id;
+
+    // **CORREÇÃO 3: HTML do card ajustado para corresponder ao estilo desejado**
+    propostaDiv.innerHTML = `
+        <div class="proposta-header">
+            <div class="motorista-info">
+                <div class="motorista-avatar">
+                    ${motoristaFotoUrl 
+                        ? `<img src="${motoristaFotoUrl}" alt="Foto de ${motoristaNome}" class="motorista-foto">` 
+                        : `<span class="motorista-iniciais">${getIniciais(motoristaNome)}</span>`
+                    }
+                </div>
+                <div class="motorista-dados">
+                    <h4>${motoristaNome}</h4>
+                    <div class="avaliacao">
+                        <i class="fa-solid fa-star"></i>
+                        <span>${Number(motoristaAvaliacao).toFixed(1)}</span>
                     </div>
                 </div>
+            </div>
+            <div class="icone-sustentavel">
+                <i class="fa-solid fa-recycle"></i>
+            </div>
+        </div>
+        <div class="proposta-body">
+            <div class="proposta-info">
+                <p><strong>Descarte #${(currentDescarteId || '').substring(0, 6)}</strong></p>
+                <p><strong>De:</strong> ${origem}</p>
+                <p><strong>Para:</strong> ${destino}</p>
+                <p><strong>Tipo de veículo:</strong> ${proposta.veiculo || 'N/A'}</p>
+                <p><strong>Tempo de chegada:</strong> ${proposta.tempoChegada || 0} min</p>
+            </div>
+            <div class="proposta-preco">
+                <span class="valor">R$ ${Number(proposta.preco || 0).toFixed(2)}</span>
+                <button class="btn-aceitar-proposta" data-proposta-id="${proposta.id}" data-motorista="${motoristaNome}">
+                    Aceitar Proposta
+                </button>
             </div>
         </div>
     `;
 
-    document.body.appendChild(modal);
+    const cardExistente = lista.querySelector(`[data-proposta-id="${proposta.id}"]`);
+    if(cardExistente) cardExistente.remove();
 
-    // Listener para quando o motorista aceitar ou recusar
-    const stopListener = db.collection('corridas').doc(descarteId)
-        .onSnapshot(doc => {
-            if (doc.exists) {
-                const corridaData = doc.data();
-                if (corridaData.status === 'em_andamento') {
-                    // Motorista aceitou - redirecionar para status
-                    modal.remove();
-                    localStorage.setItem('ultimaCorridaCliente', descarteId);
-                    window.location.href = `statusC.html?corrida=${encodeURIComponent(descarteId)}&tipo=cliente`;
-                    stopListener();
-                }
-            }
-        });
-
-    // Listener para caso o motorista recuse
-    const stopDescarteListener = db.collection('descartes').doc(descarteId)
-        .onSnapshot(doc => {
-            if (doc.exists) {
-                const descarteData = doc.data();
-                if (descarteData.status === 'pendente' || descarteData.motoristaRecusou) {
-                    // Motorista recusou - voltar para lista de propostas
-                    modal.remove();
-                    alert('O motorista recusou a corrida. Escolha outra proposta.');
-                    stopDescarteListener();
-                    stopListener();
-                }
-            }
-        });
-
-    // Fechar modal ao clicar fora (cancelar)
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            if (confirm('Deseja cancelar a espera pelo motorista?')) {
-                modal.remove();
-                stopListener();
-                stopDescarteListener();
-            }
-        }
+    lista.prepend(propostaDiv);
+    const btnAceitar = propostaDiv.querySelector('.btn-aceitar-proposta');
+    btnAceitar.addEventListener('click', (event) => {
+        const propostaId = event.target.dataset.propostaId;
+        const nomeMotorista = event.target.dataset.motorista;
+        aceitarProposta(propostaId, nomeMotorista, proposta);
     });
-}
-// Cache global para geocodificação
-    const geocodingCache = new Map();
-    
-    // Função de geocodificação melhorada para descartes
-    async function geocodificarEnderecoDescarte(endereco) {
-        if (!endereco || typeof endereco !== 'string') return null;
-        
-        // Verificar cache primeiro
-        const cacheKey = endereco.trim().toLowerCase();
-        if (geocodingCache.has(cacheKey)) {
-            return geocodingCache.get(cacheKey);
-        }
-        
+};
+
+
+    const aceitarProposta = async (propostaId, nomeMotorista, proposta) => {
         try {
-            // Aguardar 500ms para respeitar rate limit do Nominatim
-            await new Promise(resolve => setTimeout(resolve, 500));
+            console.log('Aceitando proposta:', propostaId);
             
-            // Garantir que inclui São Paulo na busca
-            const searchQuery = endereco.includes('SP') || endereco.includes('São Paulo') || endereco.includes('SÃ£o Paulo') ? 
-                endereco : endereco + ', São Paulo, SP, Brasil';
-            
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=5&countrycodes=br`;
-            
-            const response = await fetch(url, {
-                headers: {
-                    'User-Agent': 'MoomateApp/1.0',
-                    'Accept-Language': 'pt-BR,pt;q=0.9'
-                }
+            await db.collection('descartes').doc(currentDescarteId).update({
+                status: 'aceito',
+                propostaAceita: {
+                    propostaId: propostaId,
+                    motoristaId: proposta.motoristaUid,
+                    motoristaUid: proposta.motoristaUid,
+                    ...proposta
+                },
+                motoristaEscolhido: nomeMotorista,
+                aceitoEm: firebase.firestore.FieldValue.serverTimestamp(),
+                clienteConfirmou: true
             });
+
+            console.log(`✓ Proposta ${propostaId} aceita`);
             
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data && data.length > 0) {
-                // Filtrar resultados dentro dos limites de São Paulo
-                const resultadosSP = data.filter(item => {
-                    const lat = parseFloat(item.lat);
-                    const lng = parseFloat(item.lon);
-                    return lat >= -25.30 && lat <= -19.80 && lng >= -53.10 && lng <= -44.20;
-                });
-                
-                if (resultadosSP.length > 0) {
-                    const melhorResultado = resultadosSP[0];
-                    const coords = {
-                        lat: parseFloat(melhorResultado.lat),
-                        lng: parseFloat(melhorResultado.lon),
-                        endereco: melhorResultado.display_name
-                    };
-                    
-                    // Salvar no cache
-                    geocodingCache.set(cacheKey, coords);
-                    return coords;
-                }
-            }
-            
-            // Se não encontrou, salvar null no cache
-            geocodingCache.set(cacheKey, null);
-            return null;
+            mostrarModalAguardandoMotorista(currentDescarteId, nomeMotorista, proposta);
             
         } catch (error) {
-            console.warn('Erro na geocodificação (continuando sem coordenadas):', error.message);
-            geocodingCache.set(cacheKey, null);
-            return null;
+            console.error('Erro ao aceitar proposta:', error);
+            alert('Erro ao aceitar proposta. Tente novamente.');
         }
-    }
+    };
 
+    function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
+        const modalExistente = document.getElementById('modal-aguardando-motorista');
+        if (modalExistente) {
+            modalExistente.remove();
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-aguardando-motorista';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content aguardando-style">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-hourglass-half"></i> Aguardando Motorista</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="aguardando-info">
+                        <div class="icone-sucesso">
+                            <i class="fa-solid fa-check-circle"></i>
+                        </div>
+                        <p><strong>Proposta aceita com sucesso!</strong></p>
+                        <p>Motorista: <strong>${nomeMotorista}</strong></p>
+                        <p>Valor: <strong>R$ ${Number(proposta.preco || 0).toFixed(2)}</strong></p>
+                        <p>Aguardando o motorista confirmar o início da corrida...</p>
+                        <div class="loading-spinner">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const stopListener = db.collection('corridas').doc(descarteId)
+            .onSnapshot(doc => {
+                if (doc.exists) {
+                    const corridaData = doc.data();
+                    if (corridaData.status === 'em_andamento') {
+                        modal.remove();
+                        localStorage.setItem('ultimaCorridaCliente', descarteId);
+                        window.location.href = `statusC.html?corrida=${encodeURIComponent(descarteId)}&tipo=cliente`;
+                        stopListener();
+                    }
+                }
+            });
+
+        const stopDescarteListener = db.collection('descartes').doc(descarteId)
+            .onSnapshot(doc => {
+                if (doc.exists) {
+                    const descarteData = doc.data();
+                    if (descarteData.status === 'pendente' || descarteData.motoristaRecusou) {
+                        modal.remove();
+                        alert('O motorista recusou a corrida. Escolha outra proposta.');
+                        stopDescarteListener();
+                        stopListener();
+                    }
+                }
+            });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                if (confirm('Deseja cancelar a espera pelo motorista?')) {
+                    modal.remove();
+                    stopListener();
+                    stopDescarteListener();
+                }
+            }
+        });
+    }
 
     if (descarteForm) {
         descarteForm.addEventListener('submit', async (event) => {
@@ -1643,76 +1698,8 @@ function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
 
             const enderecoCompleto = `${localRetirada}${numero ? ', ' + numero : ''}${complemento ? ', ' + complemento : ''}`;
 
-            // Montar objetos origem/destino no formato esperado pelo rotaM.js
-            const origemObj = {
-                endereco: enderecoCompleto,
-                lat: null,
-                lng: null
-            };
-
-            // Tentar geocodificar a origem com timeout curto para não travar o envio
-            try {
-                // Usa instância única global para aproveitar cache interno do geocodificador
-                const geo = (window && window._geoEcopontos) ? window._geoEcopontos : (typeof GeocodificadorEcopontos !== 'undefined' ? (window._geoEcopontos = new GeocodificadorEcopontos()) : null);
-                const TIMEOUT_MS = 1000; // 1s de orçamento no submit
-                const geocodeWithTimeout = (promise, ms) => {
-                    return Promise.race([
-                        promise,
-                        new Promise(resolve => setTimeout(() => resolve(null), ms))
-                    ]);
-                };
-                if (geo && typeof geo.geocodificarEndereco === 'function') {
-                    const coords = await geocodeWithTimeout(geo.geocodificarEndereco(enderecoCompleto), TIMEOUT_MS);
-                    if (coords && geo.validarCoordenadas && geo.validarCoordenadas(coords.lat, coords.lng)) {
-                        origemObj.lat = parseFloat(coords.lat);
-                        origemObj.lng = parseFloat(coords.lng);
-                    }
-                }
-            } catch (e) {
-                console.warn('Geocodificação da origem falhou/expirou (seguindo com lat/lng nulos):', e?.message || e);
-            }
-
-            // Se o usuário selecionou um ecoponto do autocomplete com lat/lng, aproveitar
-            let destinoObj = { endereco: localEntrega, lat: null, lng: null };
-            const destLat = parseFloat(localEntregaInput?.dataset?.lat || '');
-            const destLng = parseFloat(localEntregaInput?.dataset?.lng || '');
-            if (!Number.isNaN(destLat) && !Number.isNaN(destLng)) {
-                destinoObj = { endereco: localEntrega, lat: destLat, lng: destLng };
-            }
-
-            // Obter UID do cliente de forma resiliente (suporta páginas sem Firebase Auth)
-            let uid = null;
-            try {
-                if (typeof firebase.auth === 'function') {
-                    uid = firebase.auth().currentUser?.uid || null;
-                } else if (firebase.auth && firebase.auth.currentUser) {
-                    // Alguns bundles expõem firebase.auth como objeto e currentUser diretamente
-                    uid = firebase.auth.currentUser?.uid || null;
-                }
-            } catch (e) {
-                console.warn('Não foi possível ler firebase.auth().currentUser:', e?.message || e);
-            }
-            // Fallbacks adicionais (ex.: salvo após login)
-            if (!uid) {
-                uid = localStorage.getItem('clienteUid') || localStorage.getItem('uid') || null;
-            }
-
-            const dadosDescarte = {
-                localRetirada: enderecoCompleto,
-                cep,
-                localEntrega,
-                tipoCaminhao,
-                descricao,
-                clienteId: uid,
-                origem: origemObj,
-                destino: destinoObj,
-                tipoVeiculo: tipoCaminhao,
-                tipo: 'descarte'
-            };
-            
-            // Tornar busca do botão de submit mais robusta
             const formEl = event.target;
-            const btnSubmit = event.submitter || formEl.querySelector('[type="submit"], .btn-enviarsolicitação, .btn-enviarsolicitacao, .btn-enviar');
+            const btnSubmit = event.submitter || formEl.querySelector('[type="submit"]');
             const textoOriginal = btnSubmit?.textContent || '';
             if (btnSubmit) {
                 btnSubmit.textContent = 'Enviando...';
@@ -1720,6 +1707,163 @@ function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
             }
 
             try {
+                console.log('[Submit] Geocodificando origem...');
+                let coordsOrigem = null;
+                let origemEnderecoUsado = enderecoCompleto;
+                // Se o usuário escolheu no autocomplete, use diretamente (mais rápido)
+                try {
+                    const oriLat = parseFloat(localRetiradaInput?.dataset?.lat || '');
+                    const oriLng = parseFloat(localRetiradaInput?.dataset?.lng || '');
+                    if (!isNaN(oriLat) && !isNaN(oriLng) && geocodificador.validarCoordenadas(oriLat, oriLng)) {
+                        coordsOrigem = { lat: oriLat, lng: oriLng };
+                        origemEnderecoUsado = localRetirada;
+                        console.log('[Submit] Origem do autocomplete dataset:', coordsOrigem);
+                    }
+                } catch {}
+                // Prioriza endereço canônico (ViaCEP + número) para reduzir tentativas/lentidão
+                try {
+                    const cepNumPre = (cep || '').replace(/\D/g, '');
+                    if (cepNumPre.length === 8 && numero) {
+                        const resPre = await fetch(`https://viacep.com.br/ws/${cepNumPre}/json/`);
+                        const dataPre = await resPre.json();
+                        if (!dataPre.erro && dataPre.uf === 'SP' && dataPre.logradouro && dataPre.localidade) {
+                            let logPre = String(dataPre.logradouro || '').trim()
+                                .replace(/^ruc\b/i, 'Rua')
+                                .replace(/^r\.?\s+/i, 'Rua ')
+                                .replace(/^av\.?\s+/i, 'Avenida ')
+                                .replace(/^trav\.?\s+/i, 'Travessa ');
+                            const cidadePre = String(dataPre.localidade || 'São Paulo');
+                            const bairroPre = String(dataPre.bairro || '').trim();
+                            const candPre = `${logPre}, ${String(numero).trim()} - ${bairroPre}, ${cidadePre} - SP, Brasil`;
+                            const tentativaPre = await geocodificador.geocodificar(candPre);
+                            if (tentativaPre && geocodificador.validarCoordenadas(tentativaPre.lat, tentativaPre.lng)) {
+                                coordsOrigem = tentativaPre;
+                                origemEnderecoUsado = candPre;
+                                console.log('[Submit] ✓ Origem geocodificada (canônico):', origemEnderecoUsado);
+                            }
+                        }
+                    }
+                } catch {}
+                if (!coordsOrigem) {
+                    coordsOrigem = await geocodificador.geocodificar(enderecoCompleto);
+                    origemEnderecoUsado = enderecoCompleto;
+                }
+                const origemObj = {
+                    endereco: origemEnderecoUsado,
+                    lat: coordsOrigem?.lat || null,
+                    lng: coordsOrigem?.lng || null
+                };
+                if (!coordsOrigem) {
+                    console.warn('[Submit] ⚠️ Não foi possível geocodificar a origem. Tentando fallback via CEP...');
+                    let retryOk = false;
+                    try {
+                        const cepNum = (cep || '').replace(/\D/g, '');
+                        if (cepNum.length === 8) {
+                            const res = await fetch(`https://viacep.com.br/ws/${cepNum}/json/`);
+                            const data = await res.json();
+                            if (!data.erro && data.uf === 'SP' && data.logradouro && data.localidade) {
+                                // Normaliza prefixos e testa múltiplos formatos de endereço
+                                let log = String(data.logradouro || '').trim();
+                                log = log.replace(/^ruc\b/i, 'Rua');
+                                log = log.replace(/^r\.?\s+/i, 'Rua ');
+                                log = log.replace(/^av\.?\s+/i, 'Avenida ');
+                                log = log.replace(/^trav\.?\s+/i, 'Travessa ');
+                                const cidade = String(data.localidade || 'São Paulo');
+                                const bairro = String(data.bairro || '').trim();
+                                const numeroFmt = numero ? String(numero).trim() : '';
+                                const candidatos = [];
+                                if (numeroFmt) {
+                                    candidatos.push(
+                                        `${log}, ${numeroFmt} - ${bairro}, ${cidade} - SP, Brasil`,
+                                        `${log} ${numeroFmt}, ${bairro}, ${cidade} - SP, Brasil`,
+                                        `${log}, ${numeroFmt}, ${cidade} - SP, Brasil`,
+                                        `${log} ${numeroFmt} - ${cidade} - SP, Brasil`
+                                    );
+                                }
+                                candidatos.push(
+                                    `${log} - ${bairro}, ${cidade} - SP, Brasil`,
+                                    `${log}, ${cidade} - SP, Brasil`
+                                );
+                                for (const cand of candidatos) {
+                                    const tentativa = await geocodificador.geocodificar(cand);
+                                    if (tentativa && geocodificador.validarCoordenadas(tentativa.lat, tentativa.lng)) {
+                                        origemObj.endereco = cand;
+                                        origemObj.lat = tentativa.lat;
+                                        origemObj.lng = tentativa.lng;
+                                        retryOk = true;
+                                        console.log('[Submit] ✓ Origem geocodificada no fallback:', origemObj);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[Submit] Fallback via CEP falhou:', e?.message || e);
+                    }
+
+                    if (!retryOk) {
+                        alert('Não foi possível localizar o endereço de retirada. Verifique o endereço (inclua CEP e número) e tente novamente.');
+                        if (btnSubmit) {
+                            btnSubmit.textContent = textoOriginal;
+                            btnSubmit.disabled = false;
+                            btnSubmit.classList.remove('enviado');
+                        }
+                        return;
+                    }
+                }
+
+                console.log('[Submit] Origem:', origemObj);
+
+                let destinoObj = { endereco: localEntrega, lat: null, lng: null };
+                
+                const destLat = parseFloat(localEntregaInput?.dataset?.lat || '');
+                const destLng = parseFloat(localEntregaInput?.dataset?.lng || '');
+                
+                if (!isNaN(destLat) && !isNaN(destLng) && geocodificador.validarCoordenadas(destLat, destLng)) {
+                    destinoObj = { endereco: localEntrega, lat: destLat, lng: destLng };
+                    console.log('[Submit] Destino (autocomplete):', destinoObj);
+                } else {
+                    console.log('[Submit] Geocodificando destino...');
+                    const coordsDestino = await geocodificador.geocodificar(localEntrega);
+                    destinoObj = {
+                        endereco: localEntrega,
+                        lat: coordsDestino?.lat || null,
+                        lng: coordsDestino?.lng || null
+                    };
+                    if (!coordsDestino) {
+                        console.warn('[Submit] ⚠️ Não foi possível geocodificar destino, mas continuando...');
+                    }
+                    console.log('[Submit] Destino:', destinoObj);
+                }
+                let uid = null;
+                try {
+                    if (typeof firebase.auth === 'function') {
+                        uid = firebase.auth().currentUser?.uid || null;
+                    }
+                } catch (e) {
+                    console.warn('Erro ao obter UID:', e?.message);
+                }
+                if (!uid) {
+                    uid = localStorage.getItem('clienteUid') || localStorage.getItem('uid') || null;
+                }
+
+                const dadosDescarte = {
+                    localRetirada: enderecoCompleto,
+                    cep,
+                    localEntrega,
+                    tipoCaminhao,
+                    descricao,
+                    clienteId: uid,
+                    origem: origemObj,
+                    destino: destinoObj,
+                    tipoVeiculo: tipoCaminhao,
+                    tipo: 'descarte',
+                    // Flag para indicar que precisa geocodificar
+                    precisaGeocodificar: (!origemObj.lat || !destinoObj.lat)
+                };
+
+                console.log('[Submit] Dados finais:', dadosDescarte);
+
                 await enviarParaFirebase(dadosDescarte);
                 
                 if (btnSubmit) {
@@ -1727,22 +1871,50 @@ function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
                     btnSubmit.classList.add('enviado');
                 }
 
-                // Atualização em background da origem caso não tenha conseguido lat/lng no submit
-                try {
-                    if ((!dadosDescarte.origem.lat || !dadosDescarte.origem.lng) && window && window._geoEcopontos) {
-                        const geoBg = window._geoEcopontos;
-                        const coordsBg = await geoBg.geocodificarEndereco(dadosDescarte.origem.endereco);
-                        if (coordsBg && geoBg.validarCoordenadas && geoBg.validarCoordenadas(coordsBg.lat, coordsBg.lng) && currentDescarteId) {
-                            const origemAtualizada = {
-                                ...dadosDescarte.origem,
-                                lat: parseFloat(coordsBg.lat),
-                                lng: parseFloat(coordsBg.lng)
-                            };
-                            await db.collection('descartes').doc(currentDescarteId).update({ origem: origemAtualizada });
+                // Atualização em background (SEMPRE tenta, mesmo que já tenha coordenadas)
+                if (currentDescarteId) {
+                    setTimeout(async () => {
+                        console.log('[Background] Iniciando geocodificação em background...');
+                        const atualizacoes = {};
+                        let precisaAtualizar = false;
+
+                        // Tentar origem novamente se não tem coordenadas
+                        if (!dadosDescarte.origem.lat || !dadosDescarte.origem.lng) {
+                            console.log('[Background] Tentando geocodificar origem (tentativa 2)...');
+                            const coords = await geocodificador.geocodificar(dadosDescarte.origem.endereco);
+                            if (coords && geocodificador.validarCoordenadas(coords.lat, coords.lng)) {
+                                atualizacoes.origem = {
+                                    ...dadosDescarte.origem,
+                                    lat: coords.lat,
+                                    lng: coords.lng
+                                };
+                                precisaAtualizar = true;
+                                console.log('[Background] ✓ Origem geocodificada:', atualizacoes.origem);
+                            }
                         }
-                    }
-                } catch (bgErr) {
-                    console.warn('Falha ao atualizar origem em background:', bgErr?.message || bgErr);
+
+                        // Tentar destino novamente se não tem coordenadas
+                        if (!dadosDescarte.destino.lat || !dadosDescarte.destino.lng) {
+                            console.log('[Background] Tentando geocodificar destino (tentativa 2)...');
+                            const coords = await geocodificador.geocodificar(dadosDescarte.destino.endereco);
+                            if (coords && geocodificador.validarCoordenadas(coords.lat, coords.lng)) {
+                                atualizacoes.destino = {
+                                    ...dadosDescarte.destino,
+                                    lat: coords.lat,
+                                    lng: coords.lng
+                                };
+                                precisaAtualizar = true;
+                            }
+                        }
+
+                        if (precisaAtualizar) {
+                            atualizacoes.precisaGeocodificar = false;
+                            console.log('[Background] Atualizando Firebase com coordenadas:', atualizacoes);
+                            await db.collection('descartes').doc(currentDescarteId).update(atualizacoes);
+                        } else {
+                            console.log('[Background] Nenhuma atualização necessária ou possível');
+                        }
+                    }, 3000); // Esperar 3 segundos antes de tentar novamente
                 }
                 
                 setTimeout(() => {
@@ -1753,10 +1925,12 @@ function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
                     }
                 }, 3000);
             } catch (error) {
+                console.error('[Submit] Erro:', error);
                 if (btnSubmit) {
                     btnSubmit.textContent = textoOriginal;
                     btnSubmit.disabled = false;
                 }
+                alert('Erro ao enviar solicitação: ' + (error?.message || 'Tente novamente.'));
             }
         });
     }
@@ -1769,7 +1943,6 @@ function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
 function adicionarEstilosCSS() {
     const style = document.createElement('style');
     style.textContent = `
-        /* Autocomplete base */
         .autocomplete-items {
             position: absolute;
             top: 100%;
@@ -1800,14 +1973,39 @@ function adicionarEstilosCSS() {
             border-bottom: none;
         }
 
-        /* Estilo para ecopontos */
         .autocomplete-ecoponto {
             display: flex;
             align-items: center;
             padding: 12px;
             gap: 12px;
         }
+.motorista-avatar {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Essencial para cortar a imagem */
+    flex-shrink: 0;
+    
+    /* Remove o fundo laranja e adiciona a borda */
+    background: #eee; /* Um fundo neutro caso a imagem falhe */
+    border: 3px solid #ff6b35; /* A borda laranja! */
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
 
+.motorista-foto {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Garante que a imagem cubra o espaço sem distorcer */
+}
+
+.motorista-iniciais {
+    font-weight: 700;
+    font-size: 20px;
+    color: #555; /* Cor para as iniciais caso não haja foto */
+}
         .ecoponto-icon {
             font-size: 24px;
             flex-shrink: 0;
@@ -1830,7 +2028,6 @@ function adicionarEstilosCSS() {
             line-height: 1.3;
         }
 
-        /* Estilo para endereços normais */
         .autocomplete-endereco {
             display: flex;
             align-items: center;
@@ -1850,7 +2047,6 @@ function adicionarEstilosCSS() {
             line-height: 1.4;
         }
 
-        /* Hover específicos */
         .autocomplete-item:hover .ecoponto-nome {
             color: #e55a2b;
         }
@@ -1859,7 +2055,6 @@ function adicionarEstilosCSS() {
             color: #ff6b35;
         }
 
-        /* Container de propostas */
         .propostas-container {
             margin-top: 30px;
             padding: 20px;
@@ -1881,7 +2076,6 @@ function adicionarEstilosCSS() {
             gap: 15px;
         }
 
-        /* Cards de proposta */
         .proposta-card {
             background: white;
             border-radius: 12px;
@@ -1997,7 +2191,6 @@ function adicionarEstilosCSS() {
             transform: translateY(-1px);
         }
 
-        /* Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -2033,19 +2226,11 @@ function adicionarEstilosCSS() {
             color: #ff6b35;
         }
 
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: #999;
-        }
-
         .modal-body {
             padding: 20px;
         }
 
-        .confirmacao-info {
+        .aguardando-info {
             text-align: center;
             margin-bottom: 20px;
         }
@@ -2056,60 +2241,21 @@ function adicionarEstilosCSS() {
             margin-bottom: 15px;
         }
 
-        .confirmacao-info p {
+        .aguardando-info p {
             margin: 10px 0;
             color: #666;
         }
 
-        .modal-actions {
-            text-align: center;
+        .loading-spinner {
+            margin-top: 20px;
+            font-size: 32px;
+            color: #ff6b35;
         }
 
-        .btn-iniciar {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 16px;
-        }
-
-        .btn-iniciar.ativo {
-            background: #ff6b35;
-        }
-
-        .btn-iniciar:hover {
-            transform: translateY(-1px);
-        }
-
-        .notificacao-motorista {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-
-        .notificacao-content {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #155724;
-        }
-
-        .notificacao-content i {
-            font-size: 20px;
-        }
-
-        /* Estados do botão de envio */
         .btn-enviarsolicitação.enviado {
             background: #28a745 !important;
         }
 
-        /* Scrollbar customizada para autocomplete */
         .autocomplete-items::-webkit-scrollbar {
             width: 6px;
         }
@@ -2128,7 +2274,6 @@ function adicionarEstilosCSS() {
             background: #999;
         }
 
-        /* Responsividade */
         @media (max-width: 768px) {
             .proposta-body {
                 flex-direction: column;
@@ -2158,7 +2303,6 @@ function adicionarEstilosCSS() {
             }
         }
 
-        /* Melhorias visuais adicionais */
         .form-group {
             position: relative;
         }
@@ -2178,7 +2322,6 @@ function adicionarEstilosCSS() {
             }
         }
 
-        /* Loading state para autocomplete */
         .autocomplete-loading {
             padding: 15px;
             text-align: center;
@@ -2186,7 +2329,6 @@ function adicionarEstilosCSS() {
             font-style: italic;
         }
 
-        /* Destaque para item ativo */
         .autocomplete-item.active {
             background-color: #e3f2fd;
         }

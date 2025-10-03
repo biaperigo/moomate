@@ -299,27 +299,41 @@ async function autocompleteEndereco(campo) {
   }, 300);
 }
 
-function mostrarListaAutocomplete(campo, data) {
-  let container = document.getElementById(`autocomplete-list-${campo}`);
-  if (!container) {
-    container = document.createElement("div");
-    container.id = `autocomplete-list-${campo}`;
-    container.classList.add("autocomplete-items");
-    document.getElementById(campo).parentNode.appendChild(container);
-  }
-  container.innerHTML = "";
-  if (!data.length) return (container.style.display = "none");
+// SUBSTITUA a função mostrarListaAutocomplete no seu homeC.js por esta:
 
-  data.forEach((item) => {
-    const div = document.createElement("div");
-    div.textContent = item.display_name;
-    div.addEventListener("click", () => {
-      selecionarItemAutocomplete(campo, item);
-      fecharAutocomplete(campo);
+
+// SUBSTITUA a função mostrarListaAutocomplete no seu homeC.js por esta:
+
+function mostrarListaAutocomplete(campo, data) {
+    let container = document.getElementById(`autocomplete-list-${campo}`);
+    if (!container) {
+        container = document.createElement("div");
+        container.id = `autocomplete-list-${campo}`;
+        container.classList.add("autocomplete-items");
+        const parent = document.getElementById(campo)?.parentNode;
+        if (parent) {
+            parent.appendChild(container);
+        }
+    }
+    container.innerHTML = ""; // Limpa a lista anterior
+    if (!data.length) {
+        container.style.display = "none";
+        return;
+    }
+
+    // **A CORREÇÃO ESTÁ AQUI**
+    // Criamos um 'div' para cada endereço, garantindo que sejam elementos de bloco.
+    data.forEach((item) => {
+        const div = document.createElement("div");
+        div.textContent = item.display_name;
+        div.addEventListener("click", () => {
+            selecionarItemAutocomplete(campo, item);
+            fecharAutocomplete(campo);
+        });
+        container.appendChild(div);
     });
-    container.appendChild(div);
-  });
-  container.style.display = "block";
+
+    container.style.display = "block";
 }
 
 function fecharAutocomplete(campo) {
@@ -406,64 +420,40 @@ async function ouvirPropostas(entregaId) {
         pedido = pedidoSnap.exists ? (pedidoSnap.data()||{}) : {};
       } catch {}
       async function getMotorista(uid) {
-        console.log("Buscando motorista com ID:", uid); 
-        if (!uid) return { nome: "Motorista", foto: null, nota: 0 };
+    console.log("Buscando motorista com ID:", uid); 
+    if (!uid) return { nome: "Motorista", foto: null, nota: 0 };
 
-        if (cacheMotoristas[uid]) return cacheMotoristas[uid];
+    // Usa o cache para evitar buscas repetidas
+    if (cacheMotoristas[uid]) return cacheMotoristas[uid];
 
-        try {
-          const snap = await db.collection("motoristas").doc(uid).get();
-          if (!snap.exists) {
+    try {
+        const snap = await db.collection("motoristas").doc(uid).get();
+        if (!snap.exists) {
             console.log("Motorista não encontrado com ID:", uid); 
             return { nome: "Motorista", foto: null, nota: 0 };
-          }
-          const data = snap.data();
-          const nome = data?.dadosPessoais?.nome || data?.nome || "Motorista";
-          const foto = data?.dadosPessoais?.fotoPerfilUrl || data?.fotoPerfilUrl || null;
-          let nota = (
-            data?.avaliacaoMedia ??
-            data?.rating ??
-            data?.avaliacoes?.media ??
-            data?.dadosPessoais?.avaliacao ??
-            0
-          );
-
-          // Caso não haja campo agregado, calcular média das avaliações
-          async function calcularMediaAvaliacoes(uidAlvo){
-            try {
-              let soma = 0, qtd = 0;
-              // 1) subcoleção motoristas/{uid}/avaliacoes
-              const sub = await db.collection('motoristas').doc(uidAlvo).collection('avaliacoes').get().catch(()=>null);
-              if (sub && !sub.empty) {
-                sub.forEach(d=>{ const v = Number(d.data()?.estrelas ?? d.data()?.nota ?? d.data()?.rating); if (Number.isFinite(v)) { soma += v; qtd++; } });
-              }
-              // 2) coleção global 'avaliacoes' filtrando pelo uid do motorista
-              if (qtd === 0) {
-                const glob = await db.collection('avaliacoes')
-                  .where('motoristaUid','==', uidAlvo)
-                  .limit(50)
-                  .get().catch(()=>null);
-                if (glob && !glob.empty) {
-                  glob.forEach(d=>{ const v = Number(d.data()?.estrelas ?? d.data()?.nota ?? d.data()?.rating); if (Number.isFinite(v)) { soma += v; qtd++; } });
-                }
-              }
-              return qtd>0 ? (soma/qtd) : 0;
-            } catch { return 0; }
-          }
-
-          if (!(Number(nota) > 0)) {
-            nota = await calcularMediaAvaliacoes(uid);
-          }
-
-          console.log("Foto do motorista (fotoPerfilUrl):", foto); 
-
-          cacheMotoristas[uid] = { nome, foto, nota: Number(nota)||0 };
-          return cacheMotoristas[uid];
-        } catch (error) {
-          console.error("Erro ao carregar dados do motorista:", error);
-          return { nome: "Motorista", foto: null, nota: 0 };
         }
-      }
+        
+        const data = snap.data() || {};
+        
+        // Lógica robusta para encontrar nome e foto
+        const nome = data.dadosPessoais?.nome || data.nome || "Motorista";
+        const foto = data.dadosPessoais?.fotoPerfilUrl || data.fotoPerfilUrl || null;
+        
+        // **A CORREÇÃO ESTÁ AQUI**
+        // Prioriza o campo 'media', que é o correto para a sua estrutura de dados.
+        const nota = data.media || data.avaliacoesNota || 0;
+
+        console.log(`Dados encontrados para ${nome}: Foto=${foto}, Nota=${nota}`);
+
+        const motoristaInfo = { nome, foto, nota: Number(nota) || 0 };
+        cacheMotoristas[uid] = motoristaInfo;
+        return motoristaInfo;
+
+    } catch (error) {
+        console.error("Erro ao carregar dados do motorista:", error);
+        return { nome: "Motorista", foto: null, nota: 0 };
+    }
+}
       const fmtData = (v) => {
         try {
           if (v && typeof v.toDate === "function") return v.toDate().toLocaleString();
@@ -803,8 +793,12 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+// Encontre esta função no seu código
 window.onload = function () {
   iniciarMapa();
+
+  // Adicione a chamada aqui
+  injetarEstilosHomeC(); 
 
   if (typeof firebase !== "undefined") {
     firebase.initializeApp(firebaseConfig);
@@ -814,3 +808,87 @@ window.onload = function () {
     console.warn("Firebase não carregado. Funcionalidade limitada.");
   }
 };
+
+// COLE ESTE BLOCO NO FINAL DO SEU ARQUIVO homeC.js
+
+// SUBSTITUA a função injetarEstilosHomeC inteira pela versão abaixo:
+
+function injetarEstilosHomeC() {
+    const styleId = 'homec-custom-styles';
+    // Remove o estilo antigo se ele existir, para garantir uma reinjeção limpa
+    const oldStyle = document.getElementById(styleId);
+    if (oldStyle) {
+        oldStyle.remove();
+    }
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+        /* --- Estilo para o Dropdown de Autocomplete (VERSÃO !IMPORTANT) --- */
+        .input-box {
+            position: relative !important; 
+        }
+        .autocomplete-items {
+            position: absolute !important;
+            top: 100% !important;
+            left: 0 !important;
+            right: 0 !important;
+            background: white !important;
+            border: 1px solid #ddd !important;
+            border-top: none !important;
+            z-index: 1001 !important;
+            max-height: 220px !important;
+            overflow-y: auto !important;
+            border-radius: 0 0 10px 10px !important;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
+        }
+        /* Estilo para CADA item da lista */
+        .autocomplete-items div {
+            display: block !important;
+            width: 100% !important;
+            padding: 12px 15px !important;
+            cursor: pointer !important;
+            border-bottom: 1px solid #f5f5f5 !important;
+            font-size: 14px !important;
+            color: #333 !important;
+            line-height: 1.5 !important;
+            text-align: left !important;
+            white-space: normal !important;
+            transition: background-color 0.2s ease !important;
+        }
+        .autocomplete-items div:last-child {
+            border-bottom: none !important;
+        }
+        .autocomplete-items div:hover {
+            background-color: #fff5ef !important; /* Fundo laranja claro */
+        }
+
+        /* --- Estilos para o Card de Proposta (mantidos) --- */
+        .proposta-card-home {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08); border-left: 5px solid #ff6b35;
+            margin-bottom: 15px;
+        }
+        .proposta-header-home { display: flex; align-items: center; margin-bottom: 15px; }
+        .motorista-info-home { display: flex; align-items: center; gap: 12px; }
+        .motorista-avatar-home {
+            width: 50px; height: 50px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; overflow: hidden;
+            flex-shrink: 0; border: 3px solid #ff6b35; background: #f0f0f0;
+        }
+        .motorista-foto-home { width: 100%; height: 100%; object-fit: cover; }
+        .motorista-iniciais-home { font-weight: 700; font-size: 18px; color: #555; }
+        .motorista-dados-home h4 { margin: 0; font-size: 18px; font-weight: 600; }
+        .avaliacao-home { display: flex; align-items: center; gap: 5px; color: #ffc107; font-size: 14px; }
+        .proposta-body-home { display: flex; justify-content: space-between; align-items: flex-end; }
+        .proposta-info-home p { margin: 4px 0; font-size: 14px; color: #666; }
+        .proposta-preco-home { text-align: right; }
+        .valor-home { font-size: 26px; font-weight: 700; color: #ff6b35; display: block; margin-bottom: 8px; }
+        .aceitar-btn-home {
+            background: #ff6b35; color: white; border: none; padding: 10px 20px;
+            border-radius: 8px; font-weight: 600; cursor: pointer; transition: background-color 0.2s;
+        }
+        .aceitar-btn-home:hover { background: #e55a2b; }
+    `;
+    document.head.appendChild(style);
+}
