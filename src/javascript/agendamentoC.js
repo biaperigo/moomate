@@ -736,13 +736,7 @@ document.addEventListener('DOMContentLoaded', function() {
         hint.style.fontSize = '12px';
         input.parentElement.appendChild(hint);
       }
-      if (ok){
-        hint.textContent = 'Endereço válido no estado de São Paulo';
-        hint.style.color = '#2e7d32';
-      } else {
-        hint.textContent = 'Verifique se o endereço é do estado de São Paulo';
-        hint.style.color = '#a66a00';
-      }
+      
     }
     async function selecionarItemAutocomplete(campo, item){
       const input = document.getElementById(campo);
@@ -786,7 +780,7 @@ document.addEventListener('DOMContentLoaded', function() {
           const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&countrycodes=br
 &q=${encodeURIComponent(q)}`);
           const data = await res.json();
-          if (!data[0]) { alert('Endereço inválido. Use um endereço de São Paulo.'); setSpHint('localRetirada', false); return; }
+          if (!data[0]) { setSpHint('localRetirada', false); return; }
           const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
           if (!isEnderecoSP(data[0].address, lat, lon)) {
             // fallback textual: não bloquear o usuário
@@ -887,86 +881,129 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // No seu arquivo agendamentoC.js
 
-function ouvirPropostasAgendamento(id){
-  if (!db || !id) return;
-  const agRef = db.collection('agendamentos').doc(id);
-  let origemTxt = '—', destinoTxt = '—';
-  
-  agRef.get().then(snap=>{
-    const ag = snap.exists ? (snap.data()||{}) : {};
-    origemTxt = ag?.origem?.endereco || ag?.localRetirada || origemTxt;
-    destinoTxt = ag?.destino?.endereco || ag?.localEntrega || destinoTxt;
-  }).catch(()=>{});
+/// ==================================================================
+// CÓDIGO FINAL PARA agendamentoC.js (usando a lógica de homeC.js)
+// ==================================================================
 
-  const unsub = agRef.collection('propostas').orderBy('dataEnvio','asc')
-    .onSnapshot(async snap=>{
-      const container = document.getElementById('propostasContainer');
-      if (!container) return;
-      
-      if (snap.empty){
-        container.innerHTML = `
-          <h3>Propostas Recebidas</h3>
-          <p>Aguardando propostas dos motoristas...</p>
-        `;
-        return;
-      }
-      
-      container.innerHTML = `<h3>Propostas Recebidas</h3><div id="lista-propostas"></div>`;
-      const lista = document.getElementById('lista-propostas');
-      
-      snap.docs.forEach(d=>{
-        const p = d.data()||{};
-        const uidM = p.motoristaUid || d.id;
-        const nome = p.nomeMotorista || 'Motorista';
-        const foto = p.fotoMotoristaUrl || '';
-        const preco = Number(p.preco||0).toFixed(2).replace('.', ',');
-        const tempo = p.tempoChegada || 0;
-        const ajud = p.ajudantes || 0;
-        const veic = p.veiculo || '-';
+async function ouvirPropostasAgendamento(id) {
+    if (!db || !id) return;
 
-        const card = document.createElement('div');
-        // Usando a nova classe específica
-        card.className = 'card-proposta-motorista'; 
-        
-        // Gerando o HTML com as novas classes específicas
-        card.innerHTML = `
-          <div class="card-proposta-motorista-content">
-            <div class="card-proposta-motorista-accent"></div>
+    const agRef = db.collection('agendamentos').doc(id);
+    let origemTxt = '—', destinoTxt = '—';
+
+    // Pega os detalhes do agendamento (De/Para) uma vez
+    try {
+        const agSnap = await agRef.get();
+        const ag = agSnap.exists ? (agSnap.data() || {}) : {};
+        origemTxt = ag?.origem?.endereco || ag?.localRetirada || origemTxt;
+        destinoTxt = ag?.destino?.endereco || ag?.localEntrega || destinoTxt;
+    } catch (e) {
+        console.warn("Falha ao buscar detalhes do agendamento:", e);
+    }
+
+    // Cache para não buscar o mesmo motorista várias vezes
+    const cacheMotoristas = {};
+
+    // Função para buscar dados do motorista (copiada e adaptada de homeC.js)
+    async function getMotorista(uid) {
+        if (!uid) return { nome: "Motorista", foto: null, nota: 0 };
+        if (cacheMotoristas[uid]) return cacheMotoristas[uid];
+
+        try {
+            const snap = await db.collection("motoristas").doc(uid).get();
+            if (!snap.exists) {
+                return { nome: "Motorista", foto: null, nota: 0 };
+            }
             
-            <div class="card-proposta-motorista-perfil">
-              <div class="card-proposta-motorista-avatar">
-                ${foto ? `<img src="${foto}" alt="foto">` : `<span class="card-proposta-motorista-avatar-inicial">${nome.substring(0,1).toUpperCase()}</span>`}
-              </div>
-              <div class="card-proposta-motorista-info">
-                <div class="nome">${nome}</div>
-                <div class="rating"><i class="fa-solid fa-star"></i> 0.0</div>
-              </div>
-            </div>
+            const data = snap.data() || {};
+            
+            // Lógica robusta para encontrar o nome e a foto
+            const nome = data?.dadosPessoais?.nome || data?.nome || "Motorista";
+            const foto = data?.dadosPessoais?.fotoPerfilUrl || data?.fotoPerfilUrl || null;
+            const nota = data?.media || 0; // No seu DB de agendamento, o campo é 'media'
 
-            <div class="card-proposta-motorista-detalhes">
-              <div class="corrida-id">Corrida #${String(id).substring(0,6)}</div>
-              <div class="rota"><strong>De:</strong> ${origemTxt}</div>
-              <div class="rota"><strong>Para:</strong> ${destinoTxt}</div>
-              <div class="specs">
-                <span><strong>Veículo:</strong> ${veic}</span>
-                <span><strong>Chegada:</strong> ${tempo} min</span>
-                <span><strong>Ajudantes:</strong> ${ajud}</span>
-              </div>
-            </div>
+            const motoristaInfo = { nome, foto, nota: Number(nota) || 0 };
+            cacheMotoristas[uid] = motoristaInfo;
+            return motoristaInfo;
 
-            <div class="card-proposta-motorista-valor">
-              <div class="preco">R$ ${preco}</div>
-              <button class="aceitar-btn" id="aceitar-${d.id}">ACEITAR PROPOSTA</button>
-            </div>
-          </div>`;
-          
-        lista.appendChild(card);
-        const b = document.getElementById(`aceitar-${d.id}`);
-        if (b){ b.addEventListener('click', ()=> aceitarPropostaAgendamento(id, d.id, uidM)); }
-      });
-    });
-  return unsub;
+        } catch (error) {
+            console.error("Erro ao carregar dados do motorista:", error);
+            return { nome: "Motorista", foto: null, nota: 0 };
+        }
+    }
+
+    const unsub = agRef.collection('propostas').orderBy('dataEnvio', 'asc')
+        .onSnapshot(async snap => {
+            const container = document.getElementById('propostasContainer');
+            if (!container) return;
+
+            if (snap.empty) {
+                container.innerHTML = `<h3>Propostas Recebidas</h3><p>Aguardando propostas dos motoristas...</p>`;
+                return;
+            }
+
+            container.innerHTML = `<h3>Propostas Recebidas</h3><div id="lista-propostas"></div>`;
+            const lista = document.getElementById('lista-propostas');
+            lista.innerHTML = '';
+
+            for (const d of snap.docs) {
+                const p = d.data() || {};
+                const uidM = p.motoristaUid || d.id;
+                
+                // Usa a nova função robusta para obter os dados
+                const motorista = await getMotorista(uidM);
+
+                const nome = motorista.nome;
+                const fotoUrl = motorista.foto;
+                const avaliacao = motorista.nota;
+
+                const preco = Number(p.preco || 0).toFixed(2).replace('.', ',');
+                const tempo = p.tempoChegada || 0;
+                const ajud = p.ajudantes || 0;
+                const veic = p.veiculo || '-';
+
+                const card = document.createElement('div');
+                card.className = 'card-proposta-motorista';
+
+                card.innerHTML = `
+                    <div class="card-proposta-motorista-content">
+                        <div class="card-proposta-motorista-accent"></div>
+                        <div class="card-proposta-motorista-perfil">
+                            <div class="card-proposta-motorista-avatar">
+                                ${fotoUrl ? `<img src="${fotoUrl}" alt="Foto de ${nome}">` : `<span class="card-proposta-motorista-avatar-inicial">${nome.substring(0,1).toUpperCase()}</span>`}
+                            </div>
+                            <div class="card-proposta-motorista-info">
+                                <div class="nome">${nome}</div>
+                                <div class="rating"><i class="fa-solid fa-star"></i> ${avaliacao.toFixed(1)}</div>
+                            </div>
+                        </div>
+                        <div class="card-proposta-motorista-detalhes">
+                            <div class="corrida-id">Corrida #${String(id).substring(0,6)}</div>
+                            <div class="rota"><strong>De:</strong> ${origemTxt}</div>
+                            <div class="rota"><strong>Para:</strong> ${destinoTxt}</div>
+                            <div class="specs">
+                                <span><strong>Veículo:</strong> ${veic}</span>
+                                <span><strong>Chegada:</strong> ${tempo} min</span>
+                                <span><strong>Ajudantes:</strong> ${ajud}</span>
+                            </div>
+                        </div>
+                        <div class="card-proposta-motorista-valor">
+                            <div class="preco">R$ ${preco}</div>
+                            <button class="aceitar-btn" id="aceitar-${d.id}">ACEITAR PROPOSTA</button>
+                        </div>
+                    </div>`;
+
+                lista.appendChild(card);
+                const b = document.getElementById(`aceitar-${d.id}`);
+                if (b) {
+                    b.addEventListener('click', () => aceitarPropostaAgendamento(id, d.id, uidM));
+                }
+            }
+        });
+    return unsub;
 }
+
+
 
 // expõe o listener globalmente para reanexar ao voltar de abas
 window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;

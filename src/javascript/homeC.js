@@ -589,7 +589,7 @@ async function aceitarProposta(entregaId, propostaId, motoristaId) {
 
     localStorage.setItem("ultimaCorridaCliente", entregaId);
 
-    alert("Proposta aceita com sucesso!");
+    
     fecharModalPropostas();
     mostrarAguardandoMotorista(entregaId, { nomeMotorista: motoristaNome, valor: propostaData?.preco });
   } catch (error) {
@@ -733,28 +733,7 @@ async function verMotoristas() {
       } catch (e) { console.warn('Falha ao reforçar clienteId/nome na entrega:', e?.message||e); }
       currentEntregaId = docRef.id;
 
-      alert(
-        `Pedido criado com sucesso!\n\nID do Pedido: ${docRef.id}\n\nORIGEM:\n${dadosFormulario.origem.endereco}\n${
-          dadosFormulario.origem.numero ? "Número: " + dadosFormulario.origem.numero : ""
-        }\n${
-          dadosFormulario.origem.complemento
-            ? "Complemento: " + dadosFormulario.origem.complemento
-            : ""
-        }\nCEP: ${dadosFormulario.origem.cep}\n\nDESTINO:\n${
-          dadosFormulario.destino.endereco
-        }\n${
-          dadosFormulario.destino.numero ? "Número: " + dadosFormulario.destino.numero : ""
-        }\n${
-          dadosFormulario.destino.complemento
-            ? "Complemento: " + dadosFormulario.destino.complemento
-            : ""
-        }\n\nDETALHES:\nTipo de veículo: ${dadosFormulario.tipoVeiculo}\nVolumes: ${
-          dadosFormulario.volumes
-        }\nDistância: ${dadosFormulario.distancia} km\nPreço estimado: R$ ${dadosFormulario.precoEstimado.toFixed(
-          2
-        )}\n\nStatus: Aguardando propostas dos motoristas...`
-      );
-
+    
       console.log("Dados salvos no Firebase:", dadosFormulario);
 
       ouvirPropostas(docRef.id);

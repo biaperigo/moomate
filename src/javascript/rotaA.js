@@ -16,13 +16,14 @@
 
   const modal = pick("user-rating-modal")
   const salvarAvaliacaoBtn = pick("submit-user-rating")
+  const cancelarAvaliacaoBtn = pick("cancel-user-rating")
   const fecharModalBtn = pick("close-user-modal")
   const comentarioEl = pick("user-rating-comment")
 
   const $openModal = () => modal && (modal.style.display = "flex")
   const $closeModal = () => modal && (modal.style.display = "none")
-  
-  if (fecharModalBtn) fecharModalBtn.addEventListener("click", $closeModal)
+  ;[cancelarAvaliacaoBtn, fecharModalBtn].forEach((b) => b?.addEventListener("click", $closeModal))
+  if (cancelarAvaliacaoBtn) cancelarAvaliacaoBtn.style.display = "none"
 
   if (!window.firebase) {
     console.error("Firebase não está carregado!")
@@ -31,32 +32,32 @@
 
   const firebase = window.firebase
   const db = firebase.firestore()
-  let agendamentoId = null
-  let dadosAgendamento = null
-  let agendamentoRef = null
+  let corridaId = null
+  let dadosCorrida = null
+  let corridaRef = null
   let syncRef = null
 
-  async function resolverNomeCliente({ docData, agendamentoId }) {
+  async function resolverNomeCliente({ docData, corridaId }) {
     try {
-      let nome = docData?.clienteNome || dadosAgendamento?.clienteNome || null
-      if (nome && typeof nome === 'string' && nome.trim() && nome.toLowerCase() !== 'cliente') return nome
+      let nome = docData?.clienteNome || dadosCorrida?.clienteNome || null;
+      if (nome && typeof nome === 'string' && nome.trim() && nome.toLowerCase() !== 'cliente') return nome;
 
       if (docData?.clienteId) {
-        const uNome = await obterNome(docData.clienteId)
-        if (uNome && uNome !== '—') return uNome
+        const uNome = await obterNome(docData.clienteId);
+        if (uNome && uNome !== '—') return uNome;
       }
     } catch {}
-    return null
+    return null;
   }
 
   function criarModalCancelamento() {
-    console.log("🚨 CRIANDO MODAL DE CANCELAMENTO")
-    
-    let modal = document.getElementById('client-cancel-modal')
-    if (modal) modal.remove()
+    let modal = document.getElementById('client-cancel-modal');
+    if (modal) {
+      modal.remove();
+    }
 
-    modal = document.createElement('div')
-    modal.id = 'client-cancel-modal'
+    modal = document.createElement('div');
+    modal.id = 'client-cancel-modal';
     modal.style.cssText = `
       position: fixed !important;
       top: 0 !important;
@@ -69,7 +70,7 @@
       justify-content: center !important;
       z-index: 99999 !important;
       animation: fadeIn 0.3s ease !important;
-    `
+    `;
     
     modal.innerHTML = `
       <div style="
@@ -152,83 +153,102 @@
           transform: translateY(1px);
         }
       </style>
-    `
+    `;
 
-    document.body.appendChild(modal)
+    document.body.appendChild(modal);
 
-    const okBtn = document.getElementById('ok-cancel-btn')
+    const okBtn = document.getElementById('ok-cancel-btn');
     if (okBtn) {
       okBtn.addEventListener('click', () => {
-        localStorage.removeItem("ultimaCorridaMotorista")
-        localStorage.removeItem("corridaSelecionada")
+        localStorage.removeItem("ultimaCorridaMotorista");
+        localStorage.removeItem("corridaSelecionada");
         
         if (window.cancelamentoListeners) {
           try {
-            window.cancelamentoListeners.unsubscribeAgendamento()
-            window.cancelamentoListeners.unsubscribeSync()
+            window.cancelamentoListeners.unsubscribeCorreda();
+            window.cancelamentoListeners.unsubscribeSync();
           } catch (e) {
-            console.log("Erro ao limpar listeners:", e)
+            console.log("Erro ao limpar listeners:", e);
           }
         }
         
-        window.location.href = "homeM.html"
-      })
+        window.location.href = "homeM.html";
+      });
     }
 
     setTimeout(() => {
       if (document.getElementById('client-cancel-modal')) {
-        okBtn?.click()
+        okBtn?.click();
       }
-    }, 10000)
+    }, 10000);
   }
 
   function validarCoordenadas(lat, lng) {
-    if (lat === null || lng === null || lat === undefined || lng === undefined) return false
+    if (lat === null || lng === null || lat === undefined || lng === undefined) {
+      return false
+    }
     
     const latNum = parseFloat(lat)
     const lngNum = parseFloat(lng)
     
-    if (isNaN(latNum) || isNaN(lngNum)) return false
-    if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) return false
-    if (latNum < -25.50 || latNum > -19.50 || lngNum < -53.50 || lngNum > -44.00) return false
+    if (isNaN(latNum) || isNaN(lngNum)) {
+      return false
+    }
+    
+    if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
+      return false
+    }
+    
+    if (latNum < -25.50 || latNum > -19.50 || lngNum < -53.50 || lngNum > -44.00) {
+      return false
+    }
     
     return true
   }
 
   async function geocodificarEndereco(endereco) {
-    if (!endereco || typeof endereco !== 'string') return null
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
-    
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco + ', São Paulo, SP, Brasil')}&addressdetails=1&limit=1&countrycodes=br`
-      const response = await fetch(url, { 
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'MoomateApp/1.0'
-        }
-      })
-      clearTimeout(timeoutId)
-      
-      if (!response.ok) return null
-      
-      const data = await response.json()
-      if (data && data.length > 0) {
-        const result = data[0]
-        const lat = parseFloat(result.lat)
-        const lng = parseFloat(result.lon)
-
-        if (validarCoordenadas(lat, lng)) {
-          return { lat, lng, endereco: result.display_name }
-        }
-      }
-    } catch (error) {
-      clearTimeout(timeoutId)
-      console.warn("Erro ao geocodificar:", error)
+    if (!endereco || typeof endereco !== 'string') {
+      return null;
     }
 
-    return null
+    let searchQuery = endereco;
+
+    if (searchQuery.toLowerCase().includes('ecoponto')) {
+      const partes = searchQuery.split('–');
+      if (partes.length > 1) {
+        searchQuery = partes[1].trim();
+      }
+      searchQuery = searchQuery.replace(/(defronte|bairro:|nº)/gi, '');
+      searchQuery = searchQuery.replace(/\s+/g, ' ').trim();
+    }
+
+    const queries = [
+      searchQuery + ', São Paulo, SP, Brasil',
+      searchQuery + ', São Paulo, Brasil',
+      searchQuery.split(',')[0] + ', São Paulo, Brasil'
+    ];
+
+    for (const query of queries) {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=3&countrycodes=br`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data && data.length > 0) {
+          const result = data[0];
+          const lat = parseFloat(result.lat);
+          const lng = parseFloat(result.lon);
+
+          if (validarCoordenadas(lat, lng)) {
+            return { lat, lng, endereco: result.display_name };
+          }
+        }
+      } catch (error) {
+        console.warn(`Erro na query: ${query}`, error);
+      }
+    }
+
+    return null;
   }
 
   async function obterNome(uid) {
@@ -251,15 +271,15 @@
     return "—"
   }
 
-  async function obterAgendamentoAtivo(uid) {
+  async function obterCorridaAtiva(uid) {
     try {
-      const ultimo = localStorage.getItem("ultimaCorridaMotorista")
-      if (ultimo) {
+      const ultima = localStorage.getItem("ultimaCorridaMotorista")
+      if (ultima) {
         try {
-          let d = await db.collection("agendamentos").doc(ultimo).get()
+          let d = await db.collection("agendamentos").doc(ultima).get()
           if (d.exists) {
             const data = d.data()
-            if (data && data.status && !["finalizada", "cancelada", "cancelado_agendamento"].includes(data.status)) {
+            if (data && data.status && data.status !== "finalizada" && data.status !== "cancelada") {
               return { id: d.id }
             }
           }
@@ -425,70 +445,68 @@
       }
     }
 
-    if (dadosAgendamento?.origem && validarCoordenadas(dadosAgendamento.origem.lat, dadosAgendamento.origem.lng)) {
+    if (dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
       const origemIcon = `<div style="width:22px;height:22px;background:#1E3A8A;border:3px solid #fff;border-radius:50%;"></div>`
       
       if (!origemMarker) {
-        origemMarker = L.marker([dadosAgendamento.origem.lat, dadosAgendamento.origem.lng], {
+        origemMarker = L.marker([dadosCorrida.origem.lat, dadosCorrida.origem.lng], {
           icon: L.divIcon({
             className: "marker-origem",
             html: origemIcon,
           }),
         }).addTo(map)
       } else {
-        origemMarker.setLatLng([dadosAgendamento.origem.lat, dadosAgendamento.origem.lng])
+        origemMarker.setLatLng([dadosCorrida.origem.lat, dadosCorrida.origem.lng])
       }
     }
 
-    if (fase === "a_caminho_destino" && dadosAgendamento?.destino && validarCoordenadas(dadosAgendamento.destino.lat, dadosAgendamento.destino.lng)) {
+    if (fase === "a_caminho_destino" && dadosCorrida?.destino && validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
       const destinoIcon = `<div style="width:22px;height:22px;background:#FF6C0C;border:3px solid #fff;border-radius:50%;"></div>`
       
       if (!destinoMarker) {
-        destinoMarker = L.marker([dadosAgendamento.destino.lat, dadosAgendamento.destino.lng], {
+        destinoMarker = L.marker([dadosCorrida.destino.lat, dadosCorrida.destino.lng], {
           icon: L.divIcon({
             className: "marker-destino",
             html: destinoIcon,
           }),
         }).addTo(map)
       } else {
-        destinoMarker.setLatLng([dadosAgendamento.destino.lat, dadosAgendamento.destino.lng])
+        destinoMarker.setLatLng([dadosCorrida.destino.lat, dadosCorrida.destino.lng])
       }
     }
   }
 
   const getTexto = (el) => (el && el.textContent && el.textContent.trim()) || ""
 
-  async function upsertAgendamentoBase() {
-    if (!agendamentoRef || !dadosAgendamento) return
+  async function upsertCorridaBase() {
+    if (!corridaRef || !dadosCorrida) return
     
     try {
-      const snap = await agendamentoRef.get()
+      const snap = await corridaRef.get()
       const base = snap.exists ? (snap.data() || {}) : {}
 
       const payload = {}
-      if (dadosAgendamento?.clienteId) payload.clienteId = dadosAgendamento.clienteId
-      if (dadosAgendamento?.motoristaId) payload.motoristaId = dadosAgendamento.motoristaId
+      if (dadosCorrida?.clienteId) payload.clienteId = dadosCorrida.clienteId
+      if (dadosCorrida?.motoristaId) payload.motoristaId = dadosCorrida.motoristaId
 
-      if (dadosAgendamento?.origem) {
-        if (validarCoordenadas(dadosAgendamento.origem.lat, dadosAgendamento.origem.lng)) {
+      if (dadosCorrida?.origem) {
+        if (validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
           payload.origem = {
-            lat: parseFloat(dadosAgendamento.origem.lat),
-            lng: parseFloat(dadosAgendamento.origem.lng),
-            endereco: dadosAgendamento.origem.endereco || getTexto(origemInfoEl) || base?.origem?.endereco || "",
+            lat: parseFloat(dadosCorrida.origem.lat),
+            lng: parseFloat(dadosCorrida.origem.lng),
+            endereco: dadosCorrida.origem.endereco || getTexto(origemInfoEl) || base?.origem?.endereco || "",
           }
         }
-        else if (dadosAgendamento.origem.endereco && typeof dadosAgendamento.origem.endereco === 'string' && dadosAgendamento.origem.endereco.trim()) {
+        else if (dadosCorrida.origem.endereco && typeof dadosCorrida.origem.endereco === 'string' && dadosCorrida.origem.endereco.trim()) {
           try {
-            console.log("Geocodificando origem:", dadosAgendamento.origem.endereco)
-            const coords = await geocodificarEndereco(dadosAgendamento.origem.endereco)
+            const coords = await geocodificarEndereco(dadosCorrida.origem.endereco)
             if (coords && validarCoordenadas(coords.lat, coords.lng)) {
               payload.origem = {
                 lat: parseFloat(coords.lat),
                 lng: parseFloat(coords.lng),
-                endereco: dadosAgendamento.origem.endereco,
+                endereco: dadosCorrida.origem.endereco,
               }
-              dadosAgendamento.origem = payload.origem
-              console.log("Origem geocodificada:", payload.origem)
+              dadosCorrida.origem = payload.origem
             }
           } catch (error) {
             console.warn("Erro ao geocodificar origem:", error.message)
@@ -496,26 +514,24 @@
         }
       }
 
-      if (dadosAgendamento?.destino) {
-        if (validarCoordenadas(dadosAgendamento.destino.lat, dadosAgendamento.destino.lng)) {
+      if (dadosCorrida?.destino) {
+        if (validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
           payload.destino = {
-            lat: parseFloat(dadosAgendamento.destino.lat),
-            lng: parseFloat(dadosAgendamento.destino.lng),
-            endereco: dadosAgendamento.destino.endereco || getTexto(destinoInfoEl) || base?.destino?.endereco || "",
+            lat: parseFloat(dadosCorrida.destino.lat),
+            lng: parseFloat(dadosCorrida.destino.lng),
+            endereco: dadosCorrida.destino.endereco || getTexto(destinoInfoEl) || base?.destino?.endereco || "",
           }
         }
-        else if (dadosAgendamento.destino.endereco && typeof dadosAgendamento.destino.endereco === 'string' && dadosAgendamento.destino.endereco.trim()) {
+        else if (dadosCorrida.destino.endereco && typeof dadosCorrida.destino.endereco === 'string' && dadosCorrida.destino.endereco.trim()) {
           try {
-            console.log("Geocodificando destino:", dadosAgendamento.destino.endereco)
-            const coords = await geocodificarEndereco(dadosAgendamento.destino.endereco)
+            const coords = await geocodificarEndereco(dadosCorrida.destino.endereco)
             if (coords && validarCoordenadas(coords.lat, coords.lng)) {
               payload.destino = {
                 lat: parseFloat(coords.lat),
                 lng: parseFloat(coords.lng),
-                endereco: dadosAgendamento.destino.endereco,
+                endereco: dadosCorrida.destino.endereco,
               }
-              dadosAgendamento.destino = payload.destino
-              console.log("Destino geocodificado:", payload.destino)
+              dadosCorrida.destino = payload.destino
             }
           } catch (error) {
             console.warn("Erro ao geocodificar destino:", error.message)
@@ -526,10 +542,10 @@
       if (!base.status) payload.status = "indo_retirar"
 
       if (Object.keys(payload).length) {
-        await agendamentoRef.set(payload, { merge: true })
+        await corridaRef.set(payload, { merge: true })
       }
     } catch (error) {
-      console.error("Erro ao atualizar agendamento base:", error)
+      console.error("Erro ao atualizar corrida base:", error)
     }
   }
 
@@ -542,8 +558,8 @@
     posMotorista = { lat: parseFloat(lat), lng: parseFloat(lng) }
     desenharMarcadores()
     
-    if (fase === "indo_retirar" && dadosAgendamento?.origem && validarCoordenadas(dadosAgendamento.origem.lat, dadosAgendamento.origem.lng)) {
-      desenharRota(posMotorista, dadosAgendamento.origem).catch(error => 
+    if (fase === "indo_retirar" && dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
+      desenharRota(posMotorista, dadosCorrida.origem).catch(error => 
         console.warn("Erro ao desenhar rota para origem:", error.message)
       )
     }
@@ -583,42 +599,43 @@
   }
 
   btnTudoPronto?.addEventListener("click", async () => {
-    if (!dadosAgendamento) return
+    if (!dadosCorrida) return
     
     try {
       fase = "a_caminho_destino"
       if (routeLayer) map.removeLayer(routeLayer)
       desenharMarcadores()
       
-      if (dadosAgendamento.origem && dadosAgendamento.destino && 
-          validarCoordenadas(dadosAgendamento.origem.lat, dadosAgendamento.origem.lng) &&
-          validarCoordenadas(dadosAgendamento.destino.lat, dadosAgendamento.destino.lng)) {
-        await desenharRota(dadosAgendamento.origem, dadosAgendamento.destino)
+      if (dadosCorrida.origem && dadosCorrida.destino && 
+          validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng) &&
+          validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
+        await desenharRota(dadosCorrida.origem, dadosCorrida.destino)
       }
       
+      btnTudoPronto.innerHTML = '<i class="fas fa-check"></i> Tudo pronto, seguir até o destino'
       btnTudoPronto.style.display = "none"
       if (btnFinalizar) btnFinalizar.style.display = "inline-block"
 
       const updatePromises = []
       if (syncRef) {
         const payload = { fase: "a_caminho_destino" }
-        if (dadosAgendamento?.origem && validarCoordenadas(dadosAgendamento.origem.lat, dadosAgendamento.origem.lng)) {
+        if (dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
           payload.origem = {
-            lat: parseFloat(dadosAgendamento.origem.lat),
-            lng: parseFloat(dadosAgendamento.origem.lng),
-            endereco: dadosAgendamento.origem.endereco || ''
+            lat: parseFloat(dadosCorrida.origem.lat),
+            lng: parseFloat(dadosCorrida.origem.lng),
+            endereco: dadosCorrida.origem.endereco || ''
           }
         }
-        if (dadosAgendamento?.destino && validarCoordenadas(dadosAgendamento.destino.lat, dadosAgendamento.destino.lng)) {
+        if (dadosCorrida?.destino && validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
           payload.destino = {
-            lat: parseFloat(dadosAgendamento.destino.lat),
-            lng: parseFloat(dadosAgendamento.destino.lng),
-            endereco: dadosAgendamento.destino.endereco || ''
+            lat: parseFloat(dadosCorrida.destino.lat),
+            lng: parseFloat(dadosCorrida.destino.lng),
+            endereco: dadosCorrida.destino.endereco || ''
           }
         }
         updatePromises.push(syncRef.set(payload, { merge: true }))
       }
-      if (agendamentoRef) updatePromises.push(agendamentoRef.set({ status: "a_caminho_destino" }, { merge: true }))
+      if (corridaRef) updatePromises.push(corridaRef.set({ status: "a_caminho_destino" }, { merge: true }))
       
       if (updatePromises.length > 0) {
         await Promise.all(updatePromises)
@@ -635,13 +652,13 @@
       
       const updatePromises = []
       if (syncRef) updatePromises.push(syncRef.set({ fase: "finalizada_pendente" }, { merge: true }))
-      if (agendamentoRef) updatePromises.push(agendamentoRef.set({ status: "finalizada_pendente" }, { merge: true }))
+      if (corridaRef) updatePromises.push(corridaRef.set({ status: "finalizada_pendente" }, { merge: true }))
       
       if (updatePromises.length > 0) {
         await Promise.all(updatePromises)
       }
     } catch (error) {
-      console.error("Erro ao finalizar agendamento:", error)
+      console.error("Erro ao finalizar corrida:", error)
     }
   })
 
@@ -650,40 +667,42 @@
       const comentario = comentarioEl ? comentarioEl.value || "" : ""
       const rating = window.ratingAtual || 0
       
-      if (agendamentoRef && rating > 0) {
-        await agendamentoRef.set({
+      if (corridaRef && rating > 0) {
+        const novoStatus = 'finalizada'
+        await corridaRef.set({
           avaliacao: {
             nota: rating,
             comentario: comentario,
             avaliadoEm: firebase.firestore.FieldValue.serverTimestamp()
           },
-          status: 'finalizada'
+          status: novoStatus
         }, { merge: true })
         
         try {
-          const clienteUid = dadosAgendamento?.clienteId || null
+          const clienteUid = dadosCorrida?.clienteId || null;
           if (clienteUid) {
-            const userRef = db.collection('usuarios').doc(clienteUid)
-            const motId = firebase.auth()?.currentUser?.uid || null
-            let motNome = null
+            const userRef = db.collection('usuarios').doc(clienteUid);
+            const motId = firebase.auth()?.currentUser?.uid || null;
+            let motNome = null;
+            try {
+              if (motId) {
+                const mSnap = await db.collection('motoristas').doc(motId).get();
+                const m = mSnap.exists ? (mSnap.data()||{}) : {};
+                motNome = m.nome || m.dadosPessoais?.nome || null;
+              }
+            } catch {}
             
             if (motId) {
-              try {
-                const mSnap = await db.collection('motoristas').doc(motId).get()
-                const m = mSnap.exists ? (mSnap.data() || {}) : {}
-                motNome = m.nome || m.dadosPessoais?.nome || null
-              } catch {}
-              
-              const contRef = userRef.collection('avaliacoes').doc(motId)
+              const contRef = userRef.collection('avaliacoes').doc(motId);
               await contRef.collection('avaliacoes').add({
-                agendamentoId: agendamentoId,
+                corridaId: corridaId,
                 motoristaId: motId,
                 motoristaNome: motNome || null,
                 nota: rating,
                 comentario: comentario,
                 avaliadoPor: 'motorista',
                 criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-              })
+              });
               
               await contRef.set({
                 motoristaId: motId,
@@ -691,25 +710,35 @@
                 lastNota: rating,
                 lastComentario: comentario || '',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge: true })
+              }, { merge: true });
+            } else {
+              await userRef.collection('avaliacoes').add({
+                corridaId: corridaId,
+                motoristaId: motId,
+                motoristaNome: motNome || null,
+                nota: rating,
+                comentario: comentario,
+                avaliadoPor: 'motorista',
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+              });
             }
             
             await userRef.set({
               ratingCount: firebase.firestore.FieldValue.increment(1),
               ratingSum: firebase.firestore.FieldValue.increment(Number(rating) || 0)
-            }, { merge: true })
+            }, { merge: true });
             
             try {
-              const aggSnap = await userRef.get()
-              const d = aggSnap.exists ? (aggSnap.data() || {}) : {}
-              const count = Number(d.ratingCount || 0)
-              const sum = Number(d.ratingSum || 0)
-              const media = count > 0 ? (sum / count) : 0
-              await userRef.set({ ratingMedia: media }, { merge: true })
+              const aggSnap = await userRef.get();
+              const d = aggSnap.exists ? (aggSnap.data()||{}) : {};
+              const count = Number(d.ratingCount || 0);
+              const sum = Number(d.ratingSum || 0);
+              const media = count > 0 ? (sum / count) : 0;
+              await userRef.set({ ratingMedia: media }, { merge: true });
             } catch {}
           }
         } catch (e) {
-          console.warn('Falha ao salvar avaliação no perfil do cliente:', e?.message || e)
+          console.warn('Falha ao salvar avaliação no perfil do cliente:', e?.message||e);
         }
       }
       
@@ -726,42 +755,44 @@
   })
 
   firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) {
-      console.error("Usuário não logado.")
-      alert("Usuário não logado.")
+    if(!user){console.error("Usuário não logado.")
+    alert("Usuário não logado.")
+    return
+  }
+  
+  console.log("Usuário logado:", user.uid)
+  
+  try {
+    const corridaAtiva = await obterCorridaAtiva(user.uid)
+    if (!corridaAtiva) {
+      console.error("Nenhum agendamento ativo encontrado.")
+      alert("Nenhum agendamento ativo encontrado.")
       return
     }
     
-    console.log("Usuário logado:", user.uid)
+    corridaId = corridaAtiva.id
     
-    try {
-      const agendamentoAtivo = await obterAgendamentoAtivo(user.uid)
-      if (!agendamentoAtivo) {
-        console.error("Nenhum agendamento ativo encontrado.")
-        alert("Nenhum agendamento ativo encontrado.")
-        return
-      }
-      
-      agendamentoId = agendamentoAtivo.id
-      console.log(`Agendamento ativo encontrado: ${agendamentoId}`)
-      
-      localStorage.setItem("ultimaCorridaMotorista", agendamentoId)
-      
-      if (window.CHAT) {
-        window.CHAT.init('motorista')
-        window.CHAT.attach(agendamentoId)
-      }
+    console.log(`Agendamento ativo encontrado: ${corridaId}`)
+    
+    localStorage.setItem("ultimaCorridaMotorista", corridaId)
+    
+    if (window.CHAT) {
+      window.CHAT.init('motorista');
+      window.CHAT.attach(corridaId);
+    }
 
-      agendamentoRef = db.collection('agendamentos').doc(agendamentoId)
-      syncRef = agendamentoRef.collection("sync").doc("estado")
+    corridaRef = db.collection('agendamentos').doc(corridaId)
+    syncRef = corridaRef.collection("sync").doc("estado")
 
-      if (syncRef) {
-        syncRef.set({ fase: "indo_retirar" }, { merge: true }).catch(error => 
-          console.error("Erro ao definir fase inicial:", error)
-        )
-      }
+    if (syncRef) {
+      syncRef.set({ fase: "indo_retirar" }, { merge: true }).catch(error => 
+        console.error("Erro ao definir fase inicial:", error)
+      )
+    }
 
-      const unsubscribeAgendamento = agendamentoRef.onSnapshot(async (doc) => {
+    const unsubscribeCorreda = db.collection('agendamentos')
+      .doc(corridaId)
+      .onSnapshot(async (doc) => {
         console.log("Snapshot recebido, doc exists:", doc.exists)
         
         if (!doc.exists) {
@@ -779,36 +810,37 @@
           }
 
           if (docData.status === "cancelado_agendamento" || docData.canceladoPor === "cliente") {
-            console.log("🚨 AGENDAMENTO CANCELADO PELO CLIENTE DETECTADO!")
+            console.log("🚫 AGENDAMENTO CANCELADO PELO CLIENTE!")
+            console.log("Status:", docData.status)
+            console.log("Cancelado por:", docData.canceladoPor)
+            
             criarModalCancelamento()
             return
           }
           
-          dadosAgendamento = {
+          dadosCorrida = {
             ...docData,
-            clienteId: docData.clienteId,
-            motoristaId: docData.motoristaId || docData.propostaAceita?.motoristaUid || user.uid,
-            clienteNome: docData.clienteNome || dadosAgendamento?.clienteNome || null,
-            motoristaNome: docData.motoristaNome || dadosAgendamento?.motoristaNome || null,
+            clienteNome: docData.clienteNome || dadosCorrida?.clienteNome || null,
+            motoristaNome: docData.motoristaNome || dadosCorrida?.motoristaNome || null,
+            
             origem: docData.origem || {
-              endereco: docData.localRetirada || '',
+              endereco: '',
               lat: null,
               lng: null
             },
             destino: docData.destino || {
-              endereco: docData.localEntrega || '',
+              endereco: '',
               lat: null,
               lng: null
             }
           }
 
-          if (!validarCoordenadas(dadosAgendamento.origem.lat, dadosAgendamento.origem.lng) && 
-              dadosAgendamento.origem.endereco) {
+          if (!validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng) && docData.origem?.endereco) {
             try {
-              const coordsOrigem = await geocodificarEndereco(dadosAgendamento.origem.endereco)
+              const coordsOrigem = await geocodificarEndereco(docData.origem.endereco)
               if (coordsOrigem && validarCoordenadas(coordsOrigem.lat, coordsOrigem.lng)) {
-                dadosAgendamento.origem = {
-                  endereco: dadosAgendamento.origem.endereco,
+                dadosCorrida.origem = {
+                  endereco: docData.origem.endereco,
                   lat: coordsOrigem.lat,
                   lng: coordsOrigem.lng
                 }
@@ -818,13 +850,12 @@
             }
           }
 
-          if (!validarCoordenadas(dadosAgendamento.destino.lat, dadosAgendamento.destino.lng) && 
-              dadosAgendamento.destino.endereco) {
+          if (!validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng) && docData.destino?.endereco) {
             try {
-              const coordsDestino = await geocodificarEndereco(dadosAgendamento.destino.endereco)
+              const coordsDestino = await geocodificarEndereco(docData.destino.endereco)
               if (coordsDestino && validarCoordenadas(coordsDestino.lat, coordsDestino.lng)) {
-                dadosAgendamento.destino = {
-                  endereco: dadosAgendamento.destino.endereco,
+                dadosCorrida.destino = {
+                  endereco: docData.destino.endereco,
                   lat: coordsDestino.lat,
                   lng: coordsDestino.lng
                 }
@@ -834,56 +865,54 @@
             }
           }
 
-          console.log("Dados do agendamento processados:", dadosAgendamento)
+          console.log("Dados da corrida processados:", dadosCorrida)
           
           if (origemInfoEl) {
-            const textoOrigem = dadosAgendamento.origem?.endereco || "—"
+            const textoOrigem = dadosCorrida.origem?.endereco || "—"
             origemInfoEl.textContent = textoOrigem
             console.log("Origem atualizada na UI:", textoOrigem)
           }
           
           if (destinoInfoEl) {
-            const textoDestino = dadosAgendamento.destino?.endereco || "—"
+            const textoDestino = dadosCorrida.destino?.endereco || "—"
             destinoInfoEl.textContent = textoDestino
             console.log("Destino atualizado na UI:", textoDestino)
           }
           
           {
-            let nomeCliente = docData.clienteNome || dadosAgendamento.clienteNome || null
+            let nomeCliente = docData.clienteNome || dadosCorrida.clienteNome || null;
             if (!nomeCliente || nomeCliente.toLowerCase?.() === 'cliente') {
-              const resolvido = await resolverNomeCliente({ docData, agendamentoId })
-              if (resolvido) nomeCliente = resolvido
+              const resolvido = await resolverNomeCliente({ docData, corridaId });
+              if (resolvido) nomeCliente = resolvido;
             }
-            if (!nomeCliente) nomeCliente = await obterNome(dadosAgendamento.clienteId)
-            if (nomeClienteMainEl && nomeCliente) nomeClienteMainEl.textContent = nomeCliente
-            if (nomeClienteModalEl && nomeCliente) nomeClienteModalEl.textContent = nomeCliente
+            if (!nomeCliente) nomeCliente = await obterNome(dadosCorrida.clienteId);
+            if (nomeClienteMainEl && nomeCliente) nomeClienteMainEl.textContent = nomeCliente;
+            if (nomeClienteModalEl && nomeCliente) nomeClienteModalEl.textContent = nomeCliente;
             console.log("Nome do cliente atualizado:", nomeCliente)
             
             try {
-              if (nomeCliente && agendamentoRef) {
-                await agendamentoRef.set({ clienteNome: nomeCliente }, { merge: true })
+              if (nomeCliente && corridaRef) {
+                await corridaRef.set({ clienteNome: nomeCliente }, { merge: true });
               }
-            } catch (e) { 
-              console.warn('Falha ao persistir clienteNome:', e?.message || e) 
-            }
+            } catch (e) { console.warn('Falha ao persistir clienteNome:', e?.message||e); }
           }
 
-          console.log("Chamando upsertAgendamentoBase...")
-          await upsertAgendamentoBase()
+          console.log("Chamando upsertCorridaBase...")
+          await upsertCorridaBase()
           
           console.log("Chamando desenharMarcadores...")
           desenharMarcadores()
 
           if (posMotorista && validarCoordenadas(posMotorista.lat, posMotorista.lng)) {
             console.log("Motorista tem posição válida, verificando rotas...")
-            if (fase === "indo_retirar" && dadosAgendamento?.origem && validarCoordenadas(dadosAgendamento.origem.lat, dadosAgendamento.origem.lng)) {
+            if (fase === "indo_retirar" && dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
               console.log("Desenhando rota para origem")
-              await desenharRota(posMotorista, dadosAgendamento.origem)
-            } else if (fase === "a_caminho_destino" && dadosAgendamento?.origem && dadosAgendamento?.destino && 
-                      validarCoordenadas(dadosAgendamento.origem.lat, dadosAgendamento.origem.lng) &&
-                      validarCoordenadas(dadosAgendamento.destino.lat, dadosAgendamento.destino.lng)) {
+              await desenharRota(posMotorista, dadosCorrida.origem)
+            } else if (fase === "a_caminho_destino" && dadosCorrida?.origem && dadosCorrida?.destino && 
+                      validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng) &&
+                      validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
               console.log("Desenhando rota origem -> destino")
-              await desenharRota(dadosAgendamento.origem, dadosAgendamento.destino)
+              await desenharRota(dadosCorrida.origem, dadosCorrida.destino)
             }
           } else {
             console.log("Motorista sem posição válida ainda, aguardando geolocalização...")
@@ -895,301 +924,311 @@
         console.error("Erro no listener:", error)
       })
 
-      const unsubscribeSync = syncRef.onSnapshot((syncDoc) => {
-        try {
-          const syncData = syncDoc.data() || {}
-          console.log("Dados do sync:", syncData)
+    const unsubscribeSync = syncRef.onSnapshot((syncDoc) => {
+      try {
+        const syncData = syncDoc.data() || {}
+        console.log("Dados do sync:", syncData)
 
-          if (syncData.fase === "cancelada" || syncData.cancelamento) {
-            console.log("🚨 CANCELAMENTO DETECTADO NO SYNC!")
-            criarModalCancelamento()
-            return
-          }
-
-          if (syncData.fase) fase = syncData.fase
-          if (syncData.motorista) {
-            posMotorista = {
-              lat: parseFloat(syncData.motorista.lat),
-              lng: parseFloat(syncData.motorista.lng)
-            }
-            desenharMarcadores()
-          }
-
-        } catch (error) {
-          console.error("Erro ao processar sync:", error)
+        if (syncData.fase === "cancelada" || syncData.cancelamento) {
+          console.log("🚫 CANCELAMENTO DETECTADO NO SYNC!")
+          console.log("Fase:", syncData.fase)
+          console.log("Cancelamento:", syncData.cancelamento)
+          
+          criarModalCancelamento()
+          return
         }
-      }, (error) => {
-        console.error("Erro no listener do sync:", error)
-      })
 
-      window.cancelamentoListeners = {
-        unsubscribeAgendamento,
-        unsubscribeSync
+        if (syncData.fase) fase = syncData.fase
+        if (syncData.motorista) {
+          posMotorista = {
+            lat: parseFloat(syncData.motorista.lat),
+            lng: parseFloat(syncData.motorista.lng)
+          }
+          desenharMarcadores()
+        }
+
+      } catch (error) {
+        console.error("Erro ao processar sync:", error)
       }
+    }, (error) => {
+      console.error("Erro no listener do sync:", error)
+    })
 
-      console.log("Iniciando geolocalização...")
-      startGeolocation()
-      
-      if (!posMotorista) {
-        map.setView([-23.5505, -46.6333], 12)
-      }
-      
-    } catch (error) {
-      console.error("Erro na inicialização:", error)
-      alert("Erro ao inicializar o sistema: " + error.message)
+    window.cancelamentoListeners = {
+      unsubscribeCorreda,
+      unsubscribeSync
     }
-  })
 
-  const style = document.createElement("style")
-  style.innerHTML = `
-    @keyframes pulse { 
-      0%{transform:scale(.9);opacity:.7} 
-      50%{transform:scale(1.2);opacity:1} 
-      100%{transform:scale(.9);opacity:.7} 
+    console.log("Iniciando geolocalização...")
+    startGeolocation()
+    
+    if (!posMotorista) {
+      map.setView([-23.5505, -46.6333], 12)
     }
-    .marker-motorista, .marker-origem, .marker-destino {
-      background: transparent !important;
-      border: none !important;
-    }
-    .badge {
-      background: #f8f9fa;
-      color: #495057;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 11px;
-      margin-left: 8px;
-    }
-    #route-instructions {
-      max-height: 200px;
-      overflow-y: auto;
-    }
-    #directionsList li {
-      padding: 8px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-  `
-  document.head.appendChild(style)
+    
+  } catch (error) {
+    console.error("Erro na inicialização:", error)
+    alert("Erro ao inicializar o sistema: " + error.message)
+  }
+})
+
+const style = document.createElement("style")
+style.innerHTML = `
+  @keyframes pulse { 
+    0%{transform:scale(.9);opacity:.7} 
+    50%{transform:scale(1.2);opacity:1} 
+    100%{transform:scale(.9);opacity:.7} 
+  }
+  .marker-motorista, .marker-origem, .marker-destino {
+    background: transparent !important;
+    border: none !important;
+  }
+  .badge {
+    background: #f8f9fa;
+    color: #495057;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-left: 8px;
+  }
+  #route-instructions {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  #directionsList li {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+`
+document.head.appendChild(style)
 })()
 
 let ratingAtual = 0
 window.ratingAtual = 0
 
 ;(() => {
-  const stars = document.querySelectorAll(".rating-stars .star")
-  if (!stars || stars.length === 0) return
+const stars = document.querySelectorAll(".rating-stars .star")
+if (!stars || stars.length === 0) return
 
-  const forEach = (list, cb) => Array.prototype.forEach.call(list, cb)
+const forEach = (list, cb) => Array.prototype.forEach.call(list, cb)
 
-  forEach(stars, (star, i) => {
-    star.addEventListener("click", () => {
-      window.ratingAtual = i + 1
-      ratingAtual = i + 1
-      forEach(stars, (s, j) => {
-        if (j < window.ratingAtual) s.classList.add("active")
-        else s.classList.remove("active")
-      })
+forEach(stars, (star, i) => {
+  star.addEventListener("click", () => {
+    window.ratingAtual = i + 1
+    ratingAtual = i + 1
+    forEach(stars, (s, j) => {
+      if (j < window.ratingAtual) s.classList.add("active")
+      else s.classList.remove("active")
     })
   })
+})
 })()
 
 ;(() => {
-  const { firebase } = window
-  if (!firebase || !firebase.apps.length) return
-  const db = firebase.firestore()
+const { firebase } = window
+if (!firebase || !firebase.apps.length) return
+const db = firebase.firestore()
 
-  function ensureStyles() {
-    if (document.getElementById("mm-chat-styles")) return
-    const s = document.createElement("style")
-    s.id = "mm-chat-styles"
-    s.textContent = `
-      #openChat{position:fixed;right:16px;bottom:18px;z-index:20000;background:#ff6c0c;color:#fff;
-        border:0;border-radius:999px;padding:12px 18px;font-weight:700;box-shadow:0 8px 18px rgba(255,108,12,.35);cursor:pointer}
-      .mm-chat-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:20001}
-      .mm-chat-card{width:min(720px,92vw);height:min(70vh,720px);background:#fff;border-radius:16px;display:flex;flex-direction:column;box-shadow:0 18px 48px rgba(0,0,0,.25)}
-      .mm-chat-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #eee}
-      .mm-chat-title{font-weight:800}
-      .mm-chat-list{flex:1;overflow:auto;padding:12px;background:#f8f9fb}
-      .mm-row{display:flex;margin:6px 0}
-      .mm-row.me{justify-content:flex-end}
-      .mm-bub{max-width:75%;padding:10px 12px;border-radius:12px;line-height:1.25;box-shadow:0 2px 6px rgba(0,0,0,.06)}
-      .mm-bub.them{background:#fff;border:1px solid #e9ecef}
-      .mm-bub.me{background:#ffefe5;border:1px solid #ffd7bf}
-      .mm-bub .time{display:block;margin-top:6px;font-size:11px;opacity:.7;text-align:right}
-      .mm-ft{display:flex;gap:8px;padding:10px;border-top:1px solid #eee;background:#fff}
-      .mm-inp{flex:1;resize:none;height:44px;padding:10px;border:1px solid #ddd;border-radius:10px;outline:none}
-      .mm-send{background:#ff6c0c;color:#fff;border:0;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer}
-    `
-    document.head.appendChild(s)
+function ensureStyles() {
+  if (document.getElementById("mm-chat-styles")) return
+  const s = document.createElement("style")
+  s.id = "mm-chat-styles"
+  s.textContent = `
+    #openChat{position:fixed;right:16px;bottom:18px;z-index:20000;background:#ff6c0c;color:#fff;
+      border:0;border-radius:999px;padding:12px 18px;font-weight:700;box-shadow:0 8px 18px rgba(255,108,12,.35);cursor:pointer}
+    .mm-chat-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:20001}
+    .mm-chat-card{width:min(720px,92vw);height:min(70vh,720px);background:#fff;border-radius:16px;display:flex;flex-direction:column;box-shadow:0 18px 48px rgba(0,0,0,.25)}
+    .mm-chat-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #eee}
+    .mm-chat-title{font-weight:800}
+    .mm-chat-list{flex:1;overflow:auto;padding:12px;background:#f8f9fb}
+    .mm-row{display:flex;margin:6px 0}
+    .mm-row.me{justify-content:flex-end}
+    .mm-bub{max-width:75%;padding:10px 12px;border-radius:12px;line-height:1.25;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+    .mm-bub.them{background:#fff;border:1px solid #e9ecef}
+    .mm-bub.me{background:#ffefe5;border:1px solid #ffd7bf}
+    .mm-bub .time{display:block;margin-top:6px;font-size:11px;opacity:.7;text-align:right}
+    .mm-ft{display:flex;gap:8px;padding:10px;border-top:1px solid #eee;background:#fff}
+    .mm-inp{flex:1;resize:none;height:44px;padding:10px;border:1px solid #ddd;border-radius:10px;outline:none}
+    .mm-send{background:#ff6c0c;color:#fff;border:0;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer}
+  `
+  document.head.appendChild(s)
+}
+
+function ensureModal() {
+  if (document.getElementById("mm-chat-modal")) return
+  const el = document.createElement("div")
+  el.className = "mm-chat-modal"
+  el.id = "mm-chat-modal"
+  el.innerHTML = `
+    <div class="mm-chat-card">
+      <div class="mm-chat-hd">
+        <div class="mm-chat-title" id="mm-chat-title">Chat</div>
+        <button id="mm-chat-close" style="background:none;border:0;font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div class="mm-chat-list" id="mm-chat-list"></div>
+      <div class="mm-ft">
+        <textarea id="mm-chat-text" class="mm-inp" placeholder="Escreva uma mensagem"></textarea>
+        <button id="mm-chat-send" class="mm-send">Enviar</button>
+      </div>
+    </div>`
+  document.body.appendChild(el)
+}
+
+function ensureButton() {
+  let btn = document.getElementById("openChat")
+  if (!btn) {
+    btn = document.createElement("button")
+    btn.id = "openChat"
+    btn.textContent = "Chat"
+    document.body.appendChild(btn)
   }
-
-  function ensureModal() {
-    if (document.getElementById("mm-chat-modal")) return
-    const el = document.createElement("div")
-    el.className = "mm-chat-modal"
-    el.id = "mm-chat-modal"
-    el.innerHTML = `
-      <div class="mm-chat-card">
-        <div class="mm-chat-hd">
-          <div class="mm-chat-title" id="mm-chat-title">Chat</div>
-          <button id="mm-chat-close" style="background:none;border:0;font-size:20px;cursor:pointer">✕</button>
-        </div>
-        <div class="mm-chat-list" id="mm-chat-list"></div>
-        <div class="mm-ft">
-          <textarea id="mm-chat-text" class="mm-inp" placeholder="Escreva uma mensagem"></textarea>
-          <button id="mm-chat-send" class="mm-send">Enviar</button>
-        </div>
-      </div>`
-    document.body.appendChild(el)
-  }
-
-  function ensureButton() {
-    let btn = document.getElementById("openChat")
-    if (!btn) {
-      btn = document.createElement("button")
-      btn.id = "openChat"
-      btn.textContent = "Chat"
-      document.body.appendChild(btn)
-    }
-    btn.onclick = (e) => { e.preventDefault(); window.CHAT?.open() }
-  }
-
-  const esc = (s) => (s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))
-  const fmtHora = (ts) => {
-    try { 
-      const d = ts?.toDate ? ts.toDate() : new Date()
-      return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})
-    } catch { 
-      return "" 
-    }
-  }
-  const getQS = (k) => new URLSearchParams(location.search).get(k)
-  const autodAgendamento = () =>
-    getQS("corrida") || getQS("corridaId") || getQS("agendamento") || getQS("id") ||
-    localStorage.getItem("ultimaCorridaCliente") ||
-    localStorage.getItem("ultimaCorridaMotorista") ||
-    localStorage.getItem("corridaSelecionada")
-
-  const CHAT = {
-    _db: db, _uid: null, _role: "cliente", _agendamentoId: null, _unsub: () => {},
-    
-    init(role) {
-      ensureStyles()
-      ensureModal()
-      ensureButton()
-      this._role = role || "cliente"
-      this._uid = firebase.auth().currentUser?.uid || null
-
-      const closeBtn = document.getElementById("mm-chat-close")
-      const sendBtn = document.getElementById("mm-chat-send")
-      const textArea = document.getElementById("mm-chat-text")
-      
-      if (closeBtn) closeBtn.onclick = () => this.close()
-      if (sendBtn) sendBtn.onclick = () => this.send()
-      if (textArea) {
-        textArea.onkeydown = (e) => {
-          if (e.key === "Enter" && !e.shiftKey) { 
-            e.preventDefault()
-            this.send()
-          }
-        }
-      }
-    },
-    
-    attach(id) {
-      if (!id || id === this._agendamentoId) return
-      try { 
-        this._unsub() 
-      } catch (e) { 
-        console.error("Erro ao remover listener anterior:", e) 
-      }
-      this._agendamentoId = id
-
-      const ttl = document.getElementById("mm-chat-title")
-      if (ttl) ttl.textContent = this._role === "motorista" ? "Chat com Cliente" : "Chat com Motorista"
-
-      try {
-        const ref = this._db.collection("agendamentos").doc(id).collection("chat").orderBy("ts","asc").limit(500)
-        this._unsub = ref.onSnapshot((snap) => {
-          const list = document.getElementById("mm-chat-list") 
-          if (!list) return
-          list.innerHTML = ""
-          snap.forEach(d => {
-            try {
-              const m = d.data() || {}
-              const mine = m?.role ? (m.role === this._role) : (m.senderId === this._uid)
-              const row = document.createElement("div")
-              row.className = "mm-row " + (mine ? "me" : "them")
-              row.innerHTML = `<div class="mm-bub ${mine ? "me" : "them"}">
-                  <div>${esc(m.text || "")}</div>
-                  <span class="time">${fmtHora(m.ts)}</span>
-                </div>`
-              list.appendChild(row)
-            } catch (e) {
-              console.error("Erro ao processar mensagem:", e)
-            }
-          })
-          list.scrollTop = list.scrollHeight
-        }, (error) => {
-          console.error("Erro no listener do chat:", error)
-        })
-      } catch (error) {
-        console.error("Erro ao anexar chat:", error)
-      }
-    },
-    
-    open() {
-      ensureStyles()
-      ensureModal()
-      if (!this._agendamentoId) this.attach(autodAgendamento())
-      const modal = document.getElementById("mm-chat-modal")
-      if (modal) modal.style.display = "flex"
-      setTimeout(() => {
-        const textArea = document.getElementById("mm-chat-text")
-        if (textArea) textArea.focus()
-      }, 0)
-    },
-    
-    close() { 
-      const modal = document.getElementById("mm-chat-modal")
-      if (modal) modal.style.display = "none"
-    },
-    
-    async send() {
-      const txtEl = document.getElementById("mm-chat-text")
-      if (!txtEl) return
-      
-      const text = (txtEl.value || "").trim()
-      if (!text || !this._agendamentoId) return
-      
-      txtEl.value = ""
-      
-      try {
-        await this._db.collection("agendamentos").doc(this._agendamentoId).collection("chat").add({
-          text, 
-          senderId: this._uid, 
-          role: this._role, 
-          ts: firebase.firestore.FieldValue.serverTimestamp()
-        })
-      } catch (error) {
-        console.error("Erro ao enviar mensagem:", error)
-        txtEl.value = text
-      }
-    }
-  }
-
-  window.CHAT = CHAT
-
-  firebase.auth().onAuthStateChanged(() => {
-    try {
-      const isCliente = /statusA\.html/i.test(location.pathname)
-      CHAT.init(isCliente ? "cliente" : "motorista")
-      const id = autodAgendamento() 
-      if (id) CHAT.attach(id)
-    } catch (error) {
-      console.error("Erro na inicialização do chat:", error)
+  btn.onclick = (e) => { e.preventDefault(); window.CHAT?.open() }
+  document.addEventListener("click", (e) => {
+    const t = e.target
+    if (t?.id === "openChat" || t?.closest?.("#openChat")) {
+      e.preventDefault()
+      window.CHAT?.open()
     }
   })
+}
+
+const esc = (s) => (s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))
+const fmtHora = (ts) => {
+  try { 
+    const d = ts?.toDate ? ts.toDate() : new Date()
+    return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})
+  } catch { 
+    return "" 
+  }
+}
+const getQS = (k) => new URLSearchParams(location.search).get(k)
+const autodCorrida = () =>
+  getQS("corrida") || getQS("corridaId") || getQS("id") ||
+  localStorage.getItem("ultimaCorridaCliente") ||
+  localStorage.getItem("ultimaCorridaMotorista") ||
+  localStorage.getItem("corridaSelecionada")
+
+const CHAT = {
+  _db: db, _uid: null, _role: "cliente", _corridaId: null, _unsub: () => {},
+  
+  init(role) {
+    ensureStyles()
+    ensureModal()
+    ensureButton()
+    this._role = role || "cliente"
+    this._uid = firebase.auth().currentUser?.uid || null
+
+    const closeBtn = document.getElementById("mm-chat-close")
+    const sendBtn = document.getElementById("mm-chat-send")
+    const textArea = document.getElementById("mm-chat-text")
+    
+    if (closeBtn) closeBtn.onclick = () => this.close()
+    if (sendBtn) sendBtn.onclick = () => this.send()
+    if (textArea) {
+      textArea.onkeydown = (e) => {
+        if (e.key === "Enter" && !e.shiftKey) { 
+          e.preventDefault()
+          this.send()
+        }
+      }
+    }
+  },
+  
+  attach(id) {
+    if (!id || id === this._corridaId) return
+    try { 
+      this._unsub() 
+    } catch (e) { 
+      console.error("Erro ao remover listener anterior:", e) 
+    }
+    this._corridaId = id
+
+    const ttl = document.getElementById("mm-chat-title")
+    if (ttl) ttl.textContent = this._role === "motorista" ? "Chat com Cliente" : "Chat com Motorista"
+
+    try {
+      const ref = this._db.collection("agendamentos").doc(id).collection("chat").orderBy("ts","asc").limit(500)
+      this._unsub = ref.onSnapshot((snap) => {
+        const list = document.getElementById("mm-chat-list") 
+        if (!list) return
+        list.innerHTML = ""
+        snap.forEach(d => {
+          try {
+            const m = d.data() || {}
+            const mine = m?.role ? (m.role === this._role) : (m.senderId === this._uid)
+            const row = document.createElement("div")
+            row.className = "mm-row " + (mine ? "me" : "them")
+            row.innerHTML = `<div class="mm-bub ${mine ? "me" : "them"}">
+                <div>${esc(m.text || "")}</div>
+                <span class="time">${fmtHora(m.ts)}</span>
+              </div>`
+            list.appendChild(row)
+          } catch (e) {
+            console.error("Erro ao processar mensagem:", e)
+          }
+        })
+        list.scrollTop = list.scrollHeight
+      }, (error) => {
+        console.error("Erro no listener do chat:", error)
+      })
+    } catch (error) {
+      console.error("Erro ao anexar chat:", error)
+    }
+  },
+  
+  open() {
+    ensureStyles()
+    ensureModal()
+    if (!this._corridaId) this.attach(autodCorrida())
+    const modal = document.getElementById("mm-chat-modal")
+    if (modal) modal.style.display = "flex"
+    setTimeout(() => {
+      const textArea = document.getElementById("mm-chat-text")
+      if (textArea) textArea.focus()
+    }, 0)
+  },
+  
+  close() { 
+    const modal = document.getElementById("mm-chat-modal")
+    if (modal) modal.style.display = "none"
+  },
+  
+  async send() {
+    const txtEl = document.getElementById("mm-chat-text")
+    if (!txtEl) return
+    
+    const text = (txtEl.value || "").trim()
+    if (!text || !this._corridaId) return
+    
+    txtEl.value = ""
+    
+    try {
+      await this._db.collection("agendamentos").doc(this._corridaId).collection("chat").add({
+        text, 
+        senderId: this._uid, 
+        role: this._role, 
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      })
+    } catch (error) {
+      console.error("Erro ao enviar mensagem:", error)
+      txtEl.value = text
+    }
+  }
+}
+
+window.CHAT = CHAT
+
+firebase.auth().onAuthStateChanged(() => {
+  try {
+    const isCliente = /statusA\.html/i.test(location.pathname)
+    CHAT.init(isCliente ? "cliente" : "motorista")
+    const id = autodCorrida() 
+    if (id) CHAT.attach(id)
+  } catch (error) {
+    console.error("Erro na inicialização do chat:", error)
+  }
+})
 })()

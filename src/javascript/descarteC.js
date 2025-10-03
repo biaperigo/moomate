@@ -1554,6 +1554,75 @@ function mostrarModalAguardandoMotorista(descarteId, nomeMotorista, proposta) {
         }
     });
 }
+// Cache global para geocodificação
+    const geocodingCache = new Map();
+    
+    // Função de geocodificação melhorada para descartes
+    async function geocodificarEnderecoDescarte(endereco) {
+        if (!endereco || typeof endereco !== 'string') return null;
+        
+        // Verificar cache primeiro
+        const cacheKey = endereco.trim().toLowerCase();
+        if (geocodingCache.has(cacheKey)) {
+            return geocodingCache.get(cacheKey);
+        }
+        
+        try {
+            // Aguardar 500ms para respeitar rate limit do Nominatim
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Garantir que inclui São Paulo na busca
+            const searchQuery = endereco.includes('SP') || endereco.includes('São Paulo') || endereco.includes('SÃ£o Paulo') ? 
+                endereco : endereco + ', São Paulo, SP, Brasil';
+            
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=5&countrycodes=br`;
+            
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'MoomateApp/1.0',
+                    'Accept-Language': 'pt-BR,pt;q=0.9'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                // Filtrar resultados dentro dos limites de São Paulo
+                const resultadosSP = data.filter(item => {
+                    const lat = parseFloat(item.lat);
+                    const lng = parseFloat(item.lon);
+                    return lat >= -25.30 && lat <= -19.80 && lng >= -53.10 && lng <= -44.20;
+                });
+                
+                if (resultadosSP.length > 0) {
+                    const melhorResultado = resultadosSP[0];
+                    const coords = {
+                        lat: parseFloat(melhorResultado.lat),
+                        lng: parseFloat(melhorResultado.lon),
+                        endereco: melhorResultado.display_name
+                    };
+                    
+                    // Salvar no cache
+                    geocodingCache.set(cacheKey, coords);
+                    return coords;
+                }
+            }
+            
+            // Se não encontrou, salvar null no cache
+            geocodingCache.set(cacheKey, null);
+            return null;
+            
+        } catch (error) {
+            console.warn('Erro na geocodificação (continuando sem coordenadas):', error.message);
+            geocodingCache.set(cacheKey, null);
+            return null;
+        }
+    }
+
 
     if (descarteForm) {
         descarteForm.addEventListener('submit', async (event) => {

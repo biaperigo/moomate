@@ -1,4 +1,4 @@
-    // Histórico do Motorista – Concluídos e Cancelados
+// Histórico do Motorista – Concluídos e Cancelados
 ;(async () => {
   // Carregar Firebase compat dinamicamente se necessário e inicializar app
   function loadScript(src){
@@ -109,7 +109,7 @@
     const db = firebase.firestore();
 
     async function consultar(nomeCol, campoId, arrStatus, tipoLista) {
-      const orderField = (nomeCol === 'descartes') ? 'dataEnvio' : 'criadoEm';
+      const orderField = (nomeCol === 'descartes') ? 'dataEnvio' : ((nomeCol === 'agendamentos') ? 'confirmadoEm' : 'criadoEm');
       try {
         const snap = await db.collection(nomeCol)
           .where(campoId, '==', uid)
@@ -131,12 +131,13 @@
 
     const camposMotorista = ['motoristaId','motoristaUid','propostaAceita.motoristaUid'];
     const filtroStatus = {
-      completos: ['finalizada','finalizado','finalizada_pendente','concluida','concluído','concluido','pago','entregue'],
-      cancelados: ['cancelada','cancelado']
+      completos: ['finalizada','finalizado','finalizada_pendente','concluida','concluído','concluido','pago','entregue','finalizado_agendamento'],
+      cancelados: ['cancelada','cancelado','cancelado_agendamento','corrida_agendamento_cancelado']
     };
 
     async function buscarColecao(nomeCol) {
       const isDesc = (nomeCol === 'descartes');
+      const isAgendamento = (nomeCol === 'agendamentos');
       const completosDocs = (await Promise.all(camposMotorista.map(c => consultar(nomeCol, c, filtroStatus.completos, 'completos')))).flat();
       const canceladosDocs = (await Promise.all(camposMotorista.map(c => consultar(nomeCol, c, filtroStatus.cancelados, 'cancelados')))).flat();
       const vistosC = new Set(), vistosX = new Set();
@@ -145,34 +146,38 @@
       completosDocs.forEach(doc => {
         if (vistosC.has(doc.id)) return; vistosC.add(doc.id);
         const d = doc.data()||{};
-        const icone = isDesc ? '<i class="fa-solid fa-recycle" style="color:#28a745"></i>' : '<i class="fa-solid fa-truck" style="color:#ff6c0c"></i>';
-        const titulo = isDesc ? 'Descarte' : (d.tipo || 'Mudança');
+        const icone = isDesc ? '<i class="fa-solid fa-recycle" style="color:#28a745"></i>' : 
+                      isAgendamento ? '<i class="fa-solid fa-calendar-check" style="color:#007bff"></i>' :
+                      '<i class="fa-solid fa-truck" style="color:#ff6c0c"></i>';
+        const titulo = isDesc ? 'Descarte' : (isAgendamento ? 'Agendamento' : (d.tipo || 'Mudança'));
         completos.push({
           id: doc.id,
-          tipo: isDesc ? 'descarte' : (d.tipo || 'mudança'),
-          origem: isDesc ? (d.localRetirada || d.origem?.endereco || d?.origem || '-') : (d.origem?.endereco),
-          destino: isDesc ? (d.localEntrega || d.destino?.endereco || d?.destino || '-') : (d.destino?.endereco),
+          tipo: isDesc ? 'descarte' : (isAgendamento ? 'agendamento' : (d.tipo || 'mudança')),
+          origem: isDesc ? (d.localRetirada || d.origem?.endereco || d?.origem || '-') : (d.origem?.endereco || '-'),
+          destino: isDesc ? (d.localEntrega || d.destino?.endereco || d?.destino || '-') : (d.destino?.endereco || '-'),
           tituloIcone: icone,
-          tituloTxt: `Entrega #${doc.id} – ${titulo}`,
+          tituloTxt: `Entrega #${doc.id} — ${titulo}`,
           statusTxt: 'Concluído',
           statusClasse: 'status-concluido',
-          quandoTxt: `Finalizado: ${fmtData(d.finalizadaEm || d.atualizadoEm || d.criadoEm || d.dataEnvio)}`,
-          sortKey: tsNumber(d.finalizadaEm || d.atualizadoEm || d.criadoEm || d.dataEnvio),
+          quandoTxt: `Finalizado: ${fmtData(d.finalizadaEm || d.atualizadoEm || d.confirmadoEm || d.criadoEm || d.dataEnvio)}`,
+          sortKey: tsNumber(d.finalizadaEm || d.atualizadoEm || d.confirmadoEm || d.criadoEm || d.dataEnvio),
         });
       });
 
       canceladosDocs.forEach(doc => {
         if (vistosX.has(doc.id)) return; vistosX.add(doc.id);
         const d = doc.data()||{};
-        const icone = isDesc ? '<i class="fa-solid fa-recycle" style="color:#28a745"></i>' : '<i class="fa-solid fa-truck" style="color:#ff6c0c"></i>';
-        const titulo = isDesc ? 'Descarte' : (d.tipo || 'Mudança');
+        const icone = isDesc ? '<i class="fa-solid fa-recycle" style="color:#28a745"></i>' : 
+                      isAgendamento ? '<i class="fa-solid fa-calendar-xmark" style="color:#dc3545"></i>' :
+                      '<i class="fa-solid fa-truck" style="color:#ff6c0c"></i>';
+        const titulo = isDesc ? 'Descarte' : (isAgendamento ? 'Agendamento' : (d.tipo || 'Mudança'));
         cancelados.push({
           id: doc.id,
-          tipo: isDesc ? 'descarte' : (d.tipo || 'mudança'),
-          origem: isDesc ? (d.localRetirada || d.origem?.endereco || d?.origem || '-') : (d.origem?.endereco),
-          destino: isDesc ? (d.localEntrega || d.destino?.endereco || d?.destino || '-') : (d.destino?.endereco),
+          tipo: isDesc ? 'descarte' : (isAgendamento ? 'agendamento' : (d.tipo || 'mudança')),
+          origem: isDesc ? (d.localRetirada || d.origem?.endereco || d?.origem || '-') : (d.origem?.endereco || '-'),
+          destino: isDesc ? (d.localEntrega || d.destino?.endereco || d?.destino || '-') : (d.destino?.endereco || '-'),
           tituloIcone: icone,
-          tituloTxt: `Entrega #${doc.id} – ${titulo}`,
+          tituloTxt: `Entrega #${doc.id} — ${titulo}`,
           statusTxt: 'Cancelado',
           statusClasse: 'status-cancelado',
           quandoTxt: `Cancelado em: ${fmtData(d.canceladoEm || d.atualizadoEm || d.criadoEm || d.dataEnvio)}`,
@@ -183,13 +188,14 @@
       return { completos, cancelados };
     }
 
-    const [corridas, descartes] = await Promise.all([
+    const [corridas, descartes, agendamentos] = await Promise.all([
       buscarColecao('corridas'),
-      buscarColecao('descartes')
+      buscarColecao('descartes'),
+      buscarColecao('agendamentos')
     ]);
 
-    const completos = [...(corridas?.completos||[]), ...(descartes?.completos||[])].sort((a,b)=> (b.sortKey||0)-(a.sortKey||0));
-    const cancelados = [...(corridas?.cancelados||[]), ...(descartes?.cancelados||[])].sort((a,b)=> (b.sortKey||0)-(a.sortKey||0));
+    const completos = [...(corridas?.completos||[]), ...(descartes?.completos||[]), ...(agendamentos?.completos||[])].sort((a,b)=> (b.sortKey||0)-(a.sortKey||0));
+    const cancelados = [...(corridas?.cancelados||[]), ...(descartes?.cancelados||[]), ...(agendamentos?.cancelados||[])].sort((a,b)=> (b.sortKey||0)-(a.sortKey||0));
 
     renderLista(listaCompletos, vazioCompletos, completos, 'completos');
     renderLista(listaCancelados, vazioCancelados, cancelados, 'cancelados');

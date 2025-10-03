@@ -7,20 +7,121 @@
   // Referência urbana para fallback (centro da cidade de São Paulo)
   const CENTRO_SP_REF = { lat: -23.55052, lng: -46.633308 };
 
-  // Geocodificação rápida (mesma estratégia do homeM, mas simplificada)
+  // Geocodificação aprimorada com múltiplos provedores e fallbacks
   async function geocodificarEndereco(endereco){
     if (!endereco) return null;
-    try{
-      const searchQuery = (endereco.includes('SP') || endereco.includes('São Paulo')) ? endereco : `${endereco}, São Paulo, Brasil`;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=1&countrycodes=br`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (Array.isArray(data) && data.length>0){
-        const r = data[0];
-        const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng, endereco: r.display_name };
+    
+    // Cache para evitar requisições desnecessárias
+    const cacheKey = `geocode_${endereco}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {}
+    }
+
+    // Normalizar endereço para melhor precisão
+    const normalizeAddress = (addr) => {
+      let normalized = addr.trim();
+      // Adicionar Brasil se não especificado, mas não forçar São Paulo para permitir geocodificação mais ampla
+      if (!normalized.includes("Brasil")) {
+        normalized += ", Brasil";
       }
-    }catch{}
+      return normalized;
+    };
+
+    const searchQuery = normalizeAddress(endereco);
+    
+    // Tentar múltiplos provedores de geocodificação
+    const providers = [
+      // Nominatim OpenStreetMap (gratuito)
+      async () => {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=3&countrycodes=br&bounded=1&viewbox=-46.826,-23.356,-46.365,-23.796`;
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'MoomateApp/1.0', 'Referer': 'https://moomate.com.br/' } // Adicionado Referer para evitar bloqueios
+        });
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          // Priorizar resultados em São Paulo
+          const spResult = data.find(r => r.display_name?.includes('São Paulo')) || data[0];
+          const lat = parseFloat(spResult.lat);
+          const lng = parseFloat(spResult.lon);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            return { lat, lng, endereco: spResult.display_name, provider: 'nominatim' };
+          }
+        }
+        return null;
+      },
+      
+      // Photon (alternativa ao Nominatim)
+      async () => {
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=3&bbox=-46.826,-23.796,-46.365,-23.356`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.features && data.features.length > 0) {
+          const feature = data.features[0];
+          const coords = feature.geometry?.coordinates;
+          if (coords && coords.length >= 2) {
+            const [lng, lat] = coords;
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              return { lat, lng, endereco: feature.properties?.name || endereco, provider: 'photon' };
+            }
+          }
+        }
+        return null;
+      },
+
+    ];
+
+    // Tentar cada provedor sequencialmente com retries
+    const maxRetries = 2;
+    for (let i = 0; i < providers.length; i++) {
+      const provider = providers[i];
+      for (let retry = 0; retry <= maxRetries; retry++) {
+        try {
+          const result = await Promise.race([
+            provider(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000)) // Aumentar timeout para 15 segundos
+          ]);
+          
+          if (result) {
+            // Validar se as coordenadas estão dentro da região de São Paulo
+            const { lat, lng } = result;
+            // Ajustar a validação da bounding box para ser um pouco mais flexível
+            if (lat >= -24.5 && lat <= -22.5 && lng >= -47.5 && lng <= -45.5) {
+              // Salvar no cache
+              sessionStorage.setItem(cacheKey, JSON.stringify(result));
+              return result;
+            }
+          }
+        } catch (error) {
+          console.warn(`Geocoding provider failed (${provider.name || i}, retry ${retry}): ${error.message}`);
+          if (retry === maxRetries) break; // Não tentar novamente se atingiu o limite de retries
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retry + 1))); // Esperar antes de tentar novamente
+        }
+      }
+    }
+
+    // Fallback para endereços conhecidos de São Paulo
+    const fallbackLocations = {
+      'centro': { lat: -23.55052, lng: -46.633308 },
+      'vila madalena': { lat: -23.5505, lng: -46.6889 },
+      'pinheiros': { lat: -23.5629, lng: -46.7006 },
+      'itaim bibi': { lat: -23.5754, lng: -46.6754 },
+      'moema': { lat: -23.6006, lng: -46.6639 },
+      'vila olimpia': { lat: -23.5955, lng: -46.6856 },
+      'brooklin': { lat: -23.6134, lng: -46.6917 }
+    };
+
+    const enderecoLower = endereco.toLowerCase();
+    for (const [bairro, coords] of Object.entries(fallbackLocations)) {
+      if (enderecoLower.includes(bairro)) {
+        const result = { ...coords, endereco: `${bairro}, São Paulo, SP`, provider: 'fallback' };
+        sessionStorage.setItem(cacheKey, JSON.stringify(result));
+        return result;
+      }
+    }
+
     return null;
   }
 
@@ -557,6 +658,57 @@
       }
     }catch{}
 
+    // Função para atualizar distância assincronamente
+    async function atualizarDistanciaAssincrona(solicitacao, cardElement) {
+      try {
+        const origem = solicitacao.origem?.endereco || solicitacao.localRetirada;
+        const destino = solicitacao.destino?.endereco || solicitacao.localEntrega;
+        
+        if (!origem || !destino) return;
+
+        // Geocodificar origem e destino
+        const [coordOrigem, coordDestino] = await Promise.all([
+          geocodificarEndereco(origem),
+          geocodificarEndereco(destino)
+        ]);
+
+        if (coordOrigem && coordDestino) {
+          // Calcular distância real
+          const R = 6371; // Raio da Terra em km
+          const toRad = (deg) => deg * Math.PI / 180;
+          const dLat = toRad(coordDestino.lat - coordOrigem.lat);
+          const dLng = toRad(coordDestino.lng - coordOrigem.lng);
+          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                   Math.cos(toRad(coordOrigem.lat)) * Math.cos(toRad(coordDestino.lat)) *
+                   Math.sin(dLng/2) * Math.sin(dLng/2);
+          const distanciaReal = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+          // Atualizar o card com a distância real
+          const distanciaEl = cardElement.querySelector('[data-distancia]');
+          if (distanciaEl) {
+            distanciaEl.textContent = `${distanciaReal.toFixed(2)} km`;
+            distanciaEl.style.color = '#28a745'; // Verde para indicar que foi atualizada
+          }
+
+          // Atualizar no Firestore para cache futuro
+          try {
+            await db.collection('agendamentos').doc(solicitacao.id).update({
+              'origem.lat': coordOrigem.lat,
+              'origem.lng': coordOrigem.lng,
+              'destino.lat': coordDestino.lat,
+              'destino.lng': coordDestino.lng,
+              distancia: distanciaReal,
+              geocodificadoEm: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } catch (updateError) {
+            console.warn('Falha ao atualizar coordenadas no Firestore:', updateError);
+          }
+        }
+      } catch (error) {
+        console.warn('Falha na geocodificação assíncrona:', error);
+      }
+    }
+
     const agTs = s.dataHoraAgendada?.seconds || s.dataAgendada?.seconds || null;
     let quando = '—';
     let dataLabel = '—';
@@ -600,18 +752,12 @@
             </div>
           </div>
         </div>
-        <div class="ag-info" style="row-gap:8px">
-          <div class="ag-left" style="display:flex;flex-direction:column;gap:6px;min-width:0">
-            <div><strong>Origem:</strong> ${origem}</div>
-            <div><strong>Destino:</strong> ${destino}</div>
-          </div>
-          <div class="ag-mid" style="display:flex;flex-direction:column;gap:6px;min-width:180px">
-            <div><strong>Distância:</strong> ${distanciaLabel}</div>
-            <div><strong>Volumes:</strong> ${volumesLabel}</div>
-            <div><strong>Tipo de veículo:</strong> ${tipoLabel}</div>
-          </div>
-        </div>
-        <div class="ag-footer" style="margin-top:10px;padding-top:10px;border-top:1px dashed #eee;display:flex;gap:24px;flex-wrap:wrap">
+        <div class="ag-info" style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:10px;font-size:.9rem;">
+          <div><strong>Origem:</strong> ${origem}</div>
+          <div><strong>Destino:</strong> ${destino}</div>
+          <div><strong>Distância:</strong> <span data-distancia>${distanciaLabel}</span></div>
+          <div><strong>Volumes:</strong> ${volumesLabel}</div>
+          <div><strong>Tipo de veículo:</strong> ${tipoLabel}</div>
           <div><strong>Data:</strong> ${dataLabel}</div>
           <div><strong>Horário:</strong> ${horaLabel}</div>
         </div>

@@ -1541,3 +1541,12 @@ footer {
   align-items: center;
   justify-content: center;
 }
+/* =============================================== */
+/* CORREÇÃO FINAL PARA EXIBIR A FOTO DO MOTORISTA  */
+/* =============================================== */
+
+.card-proposta-motorista-avatar img {
+  width: 100%;      /* Faz a imagem ocupar toda a largura do círculo */
+  height: 100%;     /* Faz a imagem ocupar toda a altura do círculo */
+  object-fit: cover; /* Garante que a imagem cubra o espaço sem distorcer */
+}

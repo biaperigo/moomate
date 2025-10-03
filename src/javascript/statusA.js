@@ -211,13 +211,11 @@ let unsubSync = () => {};
         });
 
       if (cancelModal) cancelModal.style.display = "none";
-      alert('Agendamento cancelado com sucesso!');
-      setTimeout(() => window.location.href = "homeC.html", 1000);
+          setTimeout(() => window.location.href = "homeC.html", 1000);
 
     } catch (error) {
       console.error("Erro ao cancelar:", error);
-      alert("Erro ao cancelar. Tente novamente.");
-    }
+          }
   }
 
   async function hidratarMotorista(motoristaId, corridaData){
@@ -665,8 +663,7 @@ let unsubSync = () => {};
       if (typeof d.distanciaM === "number") definirTexto(["distanciaInfo","estimated-distance","distPrevista","distancia"], km(d.distanciaM));
       
       if (d.fase === "cancelada" || d.cancelamento) {
-        alert('Agendamento foi cancelado!');
-        localStorage.removeItem("ultimaCorridaCliente");
+          localStorage.removeItem("ultimaCorridaCliente");
         window.location.href = "homeC.html";
         return;
       }
@@ -740,12 +737,12 @@ let unsubSync = () => {};
           );
           
           modal.style.display="none";
-          alert("Avaliação enviada com sucesso!");
+          
           window.location.href = "homeC.html";
           
         } catch (error) {
           console.error("Erro ao enviar avaliação:", error);
-          alert("Erro ao enviar avaliação. Tente novamente.");
+          
         }
       };
     }

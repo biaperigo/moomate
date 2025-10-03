@@ -16,8 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let motoristaUid = null;
   let nomeMotoristaReal = "Motorista";
+  const CENTRO_SP_REF = { lat: -22.1900, lng: -48.7900 };
   
-  // Estima a distância em km 
+  // Cache para geocodificação
+  const geocodingCache = new Map();
+  let geocodingQueue = [];
+  let isProcessingQueue = false;
+
   function estimarDistanciaKm(solicitacao){
     try{
       const distInformada = Number(solicitacao?.distancia);
@@ -43,14 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return 1;
     }catch{ return 1; }
   }
-  function lerSelecaoMotorista(){
-    try {
-      const uid = localStorage.getItem(STORAGE_SEL_UID) || '';
-      const nome = localStorage.getItem(STORAGE_SEL_NOME) || '';
-      return (uid && nome) ? { uid, nome } : null;
-    } catch { return null; }
-  }
-
 
   auth.onAuthStateChanged(async (user) => {
     if (!user) return; 
@@ -82,59 +79,77 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const todasSolicitacoes = new Map();
   let limitesPrecoAtuais = null;
-  // Centro aproximado do Estado de São Paulo (para estimativas rápidas)
-  const CENTRO_SP_REF = { lat: -22.1900, lng: -48.7900 };
 
   (function preencherAjudantes() {
     inputAjudantesProposta.innerHTML = "";
-    for (let i = 0; i <= 10; i++) {
+    for (let i = 0; i <= 5; i++) {
       const opt = document.createElement("option");
       opt.value = String(i);
       opt.textContent = `${i} Ajudante${i === 1 ? "" : "s"}`;
       inputAjudantesProposta.appendChild(opt);
     }
   })();
-async function geocodificarEndereco(endereco) {
-  if (!endereco) return null;
-  
-  try {
-    const searchQuery = endereco.includes('SP') || endereco.includes('São Paulo') ? 
-      endereco : endereco + ', São Paulo, Brasil';
+
+  // Função de geocodificação com fila e delay
+  async function geocodificarEndereco(endereco) {
+    if (!endereco) return null;
     
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=1&countrycodes=br`;
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data && data.length > 0) {
-      const result = data[0];
-      const lat = parseFloat(result.lat);
-      const lng = parseFloat(result.lon);
-      
-      // Verificar se está dentro dos limites de SP
-      if (lat >= -25.30 && lat <= -19.80 && lng >= -53.10 && lng <= -44.20) {
-        return {
-          lat: lat,
-          lng: lng,
-          endereco: result.display_name
-        };
-      }
+    // Verificar cache
+    if (geocodingCache.has(endereco)) {
+      return geocodingCache.get(endereco);
     }
-  } catch (error) {
-    console.error('Erro ao geocodificar endereço:', error);
+    
+    try {
+      // Aguardar 1 segundo entre requisições
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const searchQuery = endereco.includes('SP') || endereco.includes('São Paulo') ? 
+        endereco : endereco + ', São Paulo, Brasil';
+      
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=1&countrycodes=br`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'MoomateApp/1.0'
+        }
+      });
+      
+      if (!response.ok) throw new Error('Geocoding failed');
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const result = data[0];
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        
+        if (lat >= -25.30 && lat <= -19.80 && lng >= -53.10 && lng <= -44.20) {
+          const coords = { lat, lng, endereco: result.display_name };
+          geocodingCache.set(endereco, coords);
+          return coords;
+        }
+      }
+      
+      geocodingCache.set(endereco, null);
+      return null;
+    } catch (error) {
+      console.warn('Erro ao geocodificar (silenciado):', endereco);
+      geocodingCache.set(endereco, null);
+      return null;
+    }
   }
-  
-  return null;
-}
-  // Calcular faixa de preço a partir da distância
-  function calcularLimitesPrecoPorDistancia(distKm) {
+
+  function calcularLimitesPrecoPorDistancia(distKm, isDescarte = false) {
     const dist = Number(distKm) || 0;
-    // preço base por km (mesma lógica para corrida normal e descarte)
-    let base = 24 * dist;
-    // Garantir preço mínimo quando a conta tender a 0
-    if (base < 24) base = 24;
-    // Faixa dinâmica com proteção de mínimo
-    let min = Math.max(24, Math.max(0, base - 150));
+    const fatorBase = isDescarte ? 10 : 24;
+    let base = fatorBase * dist;
+    
+    const minBase = isDescarte ? 20 : 24;
+    if (base < minBase) base = minBase;
+    
+    let min = Math.max(minBase, Math.max(0, base - 50));
     let max = base + 150;
+    
     return {
       base: Math.round(base * 100) / 100,
       min: Math.round(min * 100) / 100,
@@ -155,21 +170,18 @@ async function geocodificarEndereco(endereco) {
     return hint;
   }
 
-  // Função principal p carregar todas as entregas
   function carregarTodasSolicitacoes() {
     console.log('Iniciando listeners para todas as solicitações...');
     
     db.collection('entregas')
       .where('status', 'in', ['aguardando_propostas', 'pendente', 'ativo', 'disponivel'])
       .onSnapshot(snapshot => {
-        console.log(' Mudanças recebidas:', snapshot.size);
         processarSnapshot(snapshot, 'mudanca');
       });
 
     db.collection('descartes')
       .where('status', 'in', ['aguardando_propostas', 'pendente', 'ativo', 'disponivel'])
       .onSnapshot(snapshot => {
-        console.log('Descartes recebidos:', snapshot.size);
         processarSnapshot(snapshot, 'descarte');
       });
   }
@@ -211,6 +223,7 @@ async function geocodificarEndereco(endereco) {
       listaEntregas.appendChild(mensagemCarregando);
       return;
     }
+    
     const solicitacoesOrdenadas = Array.from(todasSolicitacoes.values())
       .sort((a, b) => b.dataOrdenacao - a.dataOrdenacao);
 
@@ -218,8 +231,6 @@ async function geocodificarEndereco(endereco) {
       const card = criarCardEntrega(solicitacao);
       listaEntregas.appendChild(card);
     });
-
-    console.log(`📋 Interface atualizada: ${solicitacoesOrdenadas.length} solicitações`);
   }
 
   function criarCardEntrega(solicitacao) {
@@ -231,6 +242,8 @@ async function geocodificarEndereco(endereco) {
     card.className = 'delivery-card';
     card.dataset.entregaId = solicitacao.id;
     card.dataset.tipoEntrega = solicitacao.tipo;
+    
+    const nomeCliente = solicitacao.clienteNome || solicitacao.clienteId || 'Cliente não informado';
     
     let origem = '';
     if (isDescarte) {
@@ -248,58 +261,28 @@ async function geocodificarEndereco(endereco) {
     
     const complemento = !isDescarte && solicitacao.origem?.complemento ? solicitacao.origem.complemento : '';
 
+    // Calcular distância local com Haversine
     let distancia = '---';
-    if (solicitacao.distancia && solicitacao.distancia > 0) {
-      distancia = `${Number(solicitacao.distancia).toFixed(2)} km`;
-    } else if (isDescarte) {
-      // Calcular localmente com heurística sem chamadas externas
-      const getNum = (v) => (v === undefined || v === null ? null : Number(v));
-      const oLat = getNum(solicitacao.origem?.lat ?? solicitacao.origem?.coordenadas?.lat);
-      const oLng = getNum(solicitacao.origem?.lng ?? solicitacao.origem?.coordenadas?.lng);
-      const dLat = getNum(solicitacao.destino?.lat ?? solicitacao.destino?.coordenadas?.lat);
-      const dLng = getNum(solicitacao.destino?.lng ?? solicitacao.destino?.coordenadas?.lng);
+    const getNum = (v) => (v === undefined || v === null ? null : Number(v));
+    const oLat = getNum(solicitacao.origem?.lat ?? solicitacao.origem?.coordenadas?.lat);
+    const oLng = getNum(solicitacao.origem?.lng ?? solicitacao.origem?.coordenadas?.lng);
+    const dLat = getNum(solicitacao.destino?.lat ?? solicitacao.destino?.coordenadas?.lat);
+    const dLng = getNum(solicitacao.destino?.lng ?? solicitacao.destino?.coordenadas?.lng);
 
-      const R = 6371;
-      const toRad = (deg) => deg * Math.PI / 180;
-      const haversine = (lat1, lon1, lat2, lon2) => {
-        const dPhi = toRad(lat2 - lat1);
-        const dLam = toRad(lon2 - lon1);
-        const a = Math.sin(dPhi/2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLam/2) ** 2;
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-      };
-
-      // Centro aproximado do Estado de São Paulo (lat/lng aproximados)
-      const CENTRO_SP = { lat: -22.1900, lng: -48.7900 };
-
-      if (
-        typeof oLat === 'number' && !Number.isNaN(oLat) &&
+    if (typeof oLat === 'number' && !Number.isNaN(oLat) &&
         typeof oLng === 'number' && !Number.isNaN(oLng) &&
         typeof dLat === 'number' && !Number.isNaN(dLat) &&
-        typeof dLng === 'number' && !Number.isNaN(dLng)
-      ) {
-        const distKm = haversine(oLat, oLng, dLat, dLng);
-        distancia = `${distKm.toFixed(2)} km`;
-      } else if (
-        typeof dLat === 'number' && !Number.isNaN(dLat) &&
-        typeof dLng === 'number' && !Number.isNaN(dLng)
-      ) {
-        // Sem origem: usar centro da cidade -> destino
-        const distKm = haversine(CENTRO_SP.lat, CENTRO_SP.lng, dLat, dLng);
-        distancia = `${distKm.toFixed(2)} km (aprox.)`;
-      } else if (
-        typeof oLat === 'number' && !Number.isNaN(oLat) &&
-        typeof oLng === 'number' && !Number.isNaN(oLng)
-      ) {
-        // Sem destino: usar origem -> centro da cidade
-        const distKm = haversine(oLat, oLng, CENTRO_SP.lat, CENTRO_SP.lng);
-        distancia = `${distKm.toFixed(2)} km (aprox.)`;
-      } else {
-        // Sem nenhuma coord: distância aproximada média intra-SP
-        distancia = `10.00 km (aprox.)`;
-      }
+        typeof dLng === 'number' && !Number.isNaN(dLng)) {
+      const R = 6371;
+      const toRad = (deg) => deg * Math.PI / 180;
+      const dPhi = toRad(dLat - oLat);
+      const dLam = toRad(dLng - oLng);
+      const a = Math.sin(dPhi/2) ** 2 + Math.cos(toRad(oLat)) * Math.cos(toRad(dLat)) * Math.sin(dLam/2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distKm = R * c;
+      distancia = `${distKm.toFixed(2)} km`;
     }
-
+    
     let volumes = '';
     if (isDescarte) {
       volumes = solicitacao.descricao ? 
@@ -315,13 +298,14 @@ async function geocodificarEndereco(endereco) {
     card.innerHTML = `
       <strong>${isDescarte ? 'Descarte' : 'Entrega'} #${solicitacao.id.substring(0, 6)}</strong>
       <div class="tempo-postagem">${tempoPostagem}</div>
+      <p><strong>Cliente:</strong> ${nomeCliente}</p>
       <div class="info-container">
         <div class="info-esquerda">
           <p><strong>Origem:</strong> ${origem} ${complemento ? '- ' + complemento : ''}</p>
           <p><strong>Destino:</strong> ${destino}</p>
         </div>
         <div class="info-meio">
-          <p><strong>Distância:</strong> <span class="distancia-valor" data-id="${solicitacao.id}">${distancia}</span></p>
+          <p><strong>Distância:</strong> <span class="distancia-valor">${distancia}</span></p>
           <p><strong>${isDescarte ? 'Descrição' : 'Volumes'}:</strong> ${volumes}</p>
           <p><strong>Tipo de veículo:</strong> ${tipoVeiculo}</p>
         </div>
@@ -330,91 +314,8 @@ async function geocodificarEndereco(endereco) {
         </div>
       </div>
     `;
-    // Não chamar geocodificação no homeM para evitar erros e lentidão
+    
     return card;
-  }
-
-  
-
-  async function calcularDistanciaDescarteParaCard(solicitacao, cardEl) {
-    try {
-      // Guard: evita chamadas duplicadas para o mesmo card
-      if (cardEl.dataset.calcDistRunning === '1') return;
-      cardEl.dataset.calcDistRunning = '1';
-
-      console.log('[homeM] Calcular distância (card)', {
-        id: solicitacao.id,
-        origemEnd: solicitacao.origem?.endereco || solicitacao.localRetirada,
-        destinoEnd: solicitacao.destino?.endereco || solicitacao.localEntrega
-      });
-
-      const distSpan = cardEl.querySelector('.distancia-valor');
-      if (!distSpan) return;
-
-      // Pegar coordenadas já existentes
-      const getNum = (v) => (v === undefined || v === null ? null : Number(v));
-      let oLat = getNum(solicitacao.origem?.lat ?? solicitacao.origem?.coordenadas?.lat);
-      let oLng = getNum(solicitacao.origem?.lng ?? solicitacao.origem?.coordenadas?.lng);
-      let dLat = getNum(solicitacao.destino?.lat ?? solicitacao.destino?.coordenadas?.lat);
-      let dLng = getNum(solicitacao.destino?.lng ?? solicitacao.destino?.coordenadas?.lng);
-
-      console.log('[homeM] Coords iniciais', { oLat, oLng, dLat, dLng });
-
-      // Se faltar alguma coordenada, tentar geocodificar pelo endereço
-      const precisaOrigem = !(typeof oLat === 'number' && !Number.isNaN(oLat) && typeof oLng === 'number' && !Number.isNaN(oLng));
-      const precisaDestino = !(typeof dLat === 'number' && !Number.isNaN(dLat) && typeof dLng === 'number' && !Number.isNaN(dLng));
-
-      const enderecoOrigem = solicitacao.origem?.endereco || solicitacao.localRetirada || '';
-      const enderecoDestino = solicitacao.destino?.endereco || solicitacao.localEntrega || '';
-
-      // Geocodificar faltantes com orçamento curto
-      const TEMPO_LIMITE_MS = 1200;
-      const comTempoLimite = (promise, ms) => Promise.race([
-        promise,
-        new Promise(resolve => setTimeout(() => resolve(null), ms))
-      ]);
-
-      if (precisaOrigem && enderecoOrigem) {
-        console.log('[homeM] Geocodificando origem…', enderecoOrigem);
-        const geoO = await comTempoLimite(geocodificarEndereco(enderecoOrigem), TEMPO_LIMITE_MS);
-        if (geoO && typeof geoO.lat === 'number' && typeof geoO.lng === 'number') {
-          oLat = geoO.lat; oLng = geoO.lng;
-          console.log('[homeM] Origem geocodificada', { oLat, oLng });
-        }
-      }
-      if (precisaDestino && enderecoDestino) {
-        console.log('[homeM] Geocodificando destino…', enderecoDestino);
-        const geoD = await comTempoLimite(geocodificarEndereco(enderecoDestino), TEMPO_LIMITE_MS);
-        if (geoD && typeof geoD.lat === 'number' && typeof geoD.lng === 'number') {
-          dLat = geoD.lat; dLng = geoD.lng;
-          console.log('[homeM] Destino geocodificado', { dLat, dLng });
-        }
-      }
-
-      if (
-        typeof oLat === 'number' && !Number.isNaN(oLat) &&
-        typeof oLng === 'number' && !Number.isNaN(oLng) &&
-        typeof dLat === 'number' && !Number.isNaN(dLat) &&
-        typeof dLng === 'number' && !Number.isNaN(dLng)
-      ) {
-        const R = 6371;
-        const toRad = (deg) => deg * Math.PI / 180;
-        const dPhi = toRad(dLat - oLat);
-        const dLam = toRad(dLng - oLng);
-        const a = Math.sin(dPhi/2) ** 2 + Math.cos(toRad(oLat)) * Math.cos(toRad(dLat)) * Math.sin(dLam/2) ** 2;
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distKm = R * c;
-        distSpan.textContent = `${distKm.toFixed(2)} km`;
-        console.log('[homeM] Distância calculada', { id: solicitacao.id, km: distKm });
-      } else {
-        console.log('[homeM] Distância não pôde ser calculada (faltam coords válidas)', { oLat, oLng, dLat, dLng });
-      }
-    } catch (e) {
-      // Silenciar erros para não afetar a UI
-      console.warn('[homeM] Falha ao calcular distância do card:', e?.message || e);
-    } finally {
-      delete cardEl.dataset.calcDistRunning;
-    }
   }
 
   function obterTempoPostagem(solicitacao) {
@@ -442,8 +343,9 @@ async function geocodificarEndereco(endereco) {
     const solicitacao = todasSolicitacoes.get(entregaSelecionadaId);
     if (!solicitacao) return alert("Dados da entrega não encontrados.");
 
+    const isDescarte = solicitacao.tipo === 'descarte';
     const distKm = estimarDistanciaKm(solicitacao);
-    limitesPrecoAtuais = calcularLimitesPrecoPorDistancia(distKm);
+    limitesPrecoAtuais = calcularLimitesPrecoPorDistancia(distKm, isDescarte);
 
     inputPrecoProposta.value = "";
     inputPrecoProposta.min = limitesPrecoAtuais.min.toFixed(2);
@@ -490,14 +392,13 @@ async function geocodificarEndereco(endereco) {
     const precoTotalMotorista = precoBase + custoAjudantes;
     const precoFinalCliente = precoTotalMotorista * 1.10;
 
-    // Exigir motorista autenticado – evita gravar ID errado
     const auth = firebase.auth();
     const idParaUsar = auth?.currentUser?.uid || motoristaUid || null;
     if(!idParaUsar){
       alert('Faça login nesta página com a CONTA DE MOTORISTA para enviar propostas.');
       return;
     }
-    // Validar que o UID logado é de motorista e puxar o nome
+    
     try {
       const mSnap = await db.collection('motoristas').doc(idParaUsar).get();
       if (!mSnap.exists) {
@@ -507,7 +408,7 @@ async function geocodificarEndereco(endereco) {
       const mData = mSnap.data()||{};
       nomeMotoristaReal = mData?.nome || mData?.dadosPessoais?.nome || nomeMotoristaReal || 'Motorista';
     } catch(e){ console.warn('[homeM] validação motorista falhou:', e?.message||e); }
-    // Carregar dados do cliente da entrega para anexar (somente leitura)
+    
     const solicitacao = todasSolicitacoes.get(entregaSelecionadaId);
     const collectionName = solicitacao.tipo === 'descarte' ? 'descartes' : 'entregas';
 
@@ -527,7 +428,7 @@ async function geocodificarEndereco(endereco) {
       nomeMotorista: nomeMotoristaReal || 'Motorista',
       gravadoPor: 'motorista'
     };
-    // Tentar agregar dados do cliente (se disponíveis na lista em memória)
+    
     try {
       if (solicitacao?.clienteId) propostaData.clienteId = solicitacao.clienteId;
       if (solicitacao?.clienteNome) propostaData.clienteNome = solicitacao.clienteNome;
@@ -547,7 +448,6 @@ async function geocodificarEndereco(endereco) {
           });
       })
       .then(() => {
-        alert("Proposta enviada com sucesso!");
         fecharModal();
         entregaSelecionadaId = null;
         document.querySelectorAll('.delivery-card').forEach(c => c.classList.remove('selected'));
@@ -571,10 +471,10 @@ async function geocodificarEndereco(endereco) {
         <h3 style="margin:0 0 8px 0;text-align:center;color:#1e1e1e;font-size:1.6rem;font-weight:700">Proposta aceita</h3>
         <p id="mm-nome-cliente" style="margin:.25rem 0 .75rem 0;text-align:center;color:#6b6b6b">Cliente: —</p>
         <div class="mm-info" style="font-size:.95rem;line-height:1.45">
-          <div><strong style=\"color:#ff6b35\">Origem:</strong> <span id="origem-info">—</span></div>
-          <div><strong style=\"color:#ff6b35\">Destino:</strong> <span id="destino-info">—</span></div>
-          <div><strong style=\"color:#ff6b35\">Valor:</strong> R$ <span id="valor-info">0,00</span></div>
-          <div><strong style=\"color:#ff6b35\">Tempo de chegada:</strong> <span id="tempo-info">0</span> min</div>
+          <div><strong style="color:#ff6b35">Origem:</strong> <span id="origem-info">—</span></div>
+          <div><strong style="color:#ff6b35">Destino:</strong> <span id="destino-info">—</span></div>
+          <div><strong style="color:#ff6b35">Valor:</strong> R$ <span id="valor-info">0,00</span></div>
+          <div><strong style="color:#ff6b35">Tempo de chegada:</strong> <span id="tempo-info">0</span> min</div>
         </div>
         <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:14px">
           <button id="btnIniciarCorrida" style="padding:12px 18px;background:linear-gradient(180deg,#ff7a3f 0%,#ff6b35 100%);border:0;color:#fff;border-radius:10px;cursor:pointer;box-shadow:0 6px 16px rgba(255,107,53,.45);font-weight:600">Iniciar corrida</button>
@@ -606,7 +506,6 @@ async function geocodificarEndereco(endereco) {
   function ouvirAceitacaoPropostas() {
     const idParaUsar = motoristaUid || fallbackMotoristaId;
     
-   
     db.collection('entregas')
       .where('status', '==', 'proposta_aceita')
       .onSnapshot(snapshot => {
@@ -624,7 +523,6 @@ async function geocodificarEndereco(endereco) {
         });
       });
 
-  
     db.collection('descartes')
       .where('status', '==', 'aceito')
       .onSnapshot(snapshot => {
@@ -635,17 +533,15 @@ async function geocodificarEndereco(endereco) {
           
           const propostaAceita = descarteData.propostaAceita;
           if (propostaAceita && (propostaAceita.motoristaId === idParaUsar || propostaAceita.motoristaUid === idParaUsar)) {
-          
             todasSolicitacoes.delete(descarteId);
             atualizarInterface();
             mostrarModalPropostaAceitaDescarte(descarteId, descarteData);
           }
         });
       });
-}
+  }
 
-
-function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
+  function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
     const nomeCliente = descarteData.clienteNome || descarteData.clienteId || "Cliente";
     const origem = descarteData.localRetirada || descarteData.origem?.endereco || 'Não informado';
     const destino = descarteData.localEntrega || descarteData.destino?.endereco || 'Não informado';
@@ -653,9 +549,7 @@ function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
     const tempo = descarteData.propostaAceita?.tempoChegada || 0;
 
     const modalExistente = document.getElementById('modalPropostaAceitaDescarte');
-    if (modalExistente) {
-        modalExistente.remove();
-    }
+    if (modalExistente) modalExistente.remove();
 
     const modal = document.createElement('div');
     modal.id = 'modalPropostaAceitaDescarte';
@@ -669,6 +563,7 @@ function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
                 <h3 style="color:#1e1e1e;margin:0;font-size:1.6rem;font-weight:700"><i class="fa-solid fa-check-circle" style="color:#3DBE34;margin-right:8px;"></i> Proposta Aceita</h3>
             </div>
             <div class="modal-body">
+                <p style="margin:8px 0;text-align:center;"><strong style="color:#ff6b35;">Cliente:</strong> <span style="color:#333;">${nomeCliente}</span></p>
                 <div class="proposta-info" style="margin-bottom:14px;font-size:.95rem;line-height:1.45;">
                     <p style="margin:8px 0;"><strong style="color:#ff6b35;">Origem:</strong> <span style="color:#333;">${origem}</span></p>
                     <p style="margin:8px 0;"><strong style="color:#ff6b35;">Destino:</strong> <span style="color:#333;">${destino}</span></p>
@@ -689,7 +584,6 @@ function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
 
     document.body.appendChild(modal);
 
-    
     document.getElementById('btnIniciarCorridaDescarte').onclick = () => iniciarCorridaDescarte(descarteId, descarteData, nomeCliente);
     document.getElementById('btnRecusarCorridaDescarte').onclick = () => recusarCorridaDescarte(descarteId);
     modal.querySelector('button[aria-label="Fechar"]').onclick = () => modal.remove();
@@ -701,45 +595,26 @@ function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
             }
         }
     });
-}
+  }
 
-async function iniciarCorridaDescarte(descarteId, descarteData, nomeCliente) {
+  async function iniciarCorridaDescarte(descarteId, descarteData, nomeCliente) {
     try {
-        console.log('Iniciando corrida de descarte:', descarteId);
-        
-        // Geocodificar origem se não tiver coordenadas
         let origemCoords = null;
         if (descarteData.origem?.coordenadas?.lat && descarteData.origem?.coordenadas?.lng) {
             origemCoords = descarteData.origem.coordenadas;
-        } else if (descarteData.localRetirada) {
-            const geocoded = await geocodificarEndereco(descarteData.localRetirada);
-            if (geocoded) {
-                origemCoords = { lat: geocoded.lat, lng: geocoded.lng };
-                
-                // Atualizar o documento com as coordenadas
-                await db.collection('descartes').doc(descarteId).update({
-                    'origem.coordenadas': origemCoords
-                });
-            }
+        } else if (descarteData.origem?.lat && descarteData.origem?.lng) {
+            origemCoords = { lat: descarteData.origem.lat, lng: descarteData.origem.lng };
         }
         
-        // Geocodificar destino se não tiver coordenadas
         let destinoCoords = null;
         if (descarteData.destino?.coordenadas?.lat && descarteData.destino?.coordenadas?.lng) {
             destinoCoords = descarteData.destino.coordenadas;
-        } else if (descarteData.localEntrega) {
-            const geocoded = await geocodificarEndereco(descarteData.localEntrega);
-            if (geocoded) {
-                destinoCoords = { lat: geocoded.lat, lng: geocoded.lng };
-                
-                await db.collection('descartes').doc(descarteId).update({
-                    'destino.coordenadas': destinoCoords
-                });
-            }
+        } else if (descarteData.destino?.lat && descarteData.destino?.lng) {
+            destinoCoords = { lat: descarteData.destino.lat, lng: descarteData.destino.lng };
         }
         
         const origemData = {
-            endereco: descarteData.localRetirada || '',
+            endereco: descarteData.localRetirada || descarteData.origem?.endereco || '',
             numero: descarteData.numero || '',
             complemento: descarteData.complemento || '',
             cep: descarteData.cep || '',
@@ -748,14 +623,13 @@ async function iniciarCorridaDescarte(descarteId, descarteData, nomeCliente) {
         };
         
         const destinoData = {
-            endereco: descarteData.localEntrega || '',
+            endereco: descarteData.localEntrega || descarteData.destino?.endereco || '',
             numero: '',
             complemento: '',
             lat: destinoCoords?.lat || null,
             lng: destinoCoords?.lng || null,
         };
 
-        // Calcular distância se as coordenadas estiverem disponíveis
         let distancia = null;
         if (origemCoords && destinoCoords) {
             const R = 6371; 
@@ -765,7 +639,7 @@ async function iniciarCorridaDescarte(descarteId, descarteData, nomeCliente) {
                      Math.cos(origemCoords.lat * Math.PI / 180) * Math.cos(destinoCoords.lat * Math.PI / 180) * 
                      Math.sin(dLon/2) * Math.sin(dLon/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            distancia = R * c; // Distância em km
+            distancia = R * c;
         }
 
         const corridaData = {
@@ -787,7 +661,6 @@ async function iniciarCorridaDescarte(descarteId, descarteData, nomeCliente) {
             criadoEm: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-      
         const corridaRef = db.collection('corridas').doc(descarteId);
         await corridaRef.set(corridaData, { merge: true });
         await corridaRef.collection('sync').doc('estado').set({ 
@@ -804,7 +677,6 @@ async function iniciarCorridaDescarte(descarteId, descarteData, nomeCliente) {
             distancia: distancia
         });
 
-
         todasSolicitacoes.delete(descarteId);
         atualizarInterface();
 
@@ -817,12 +689,10 @@ async function iniciarCorridaDescarte(descarteId, descarteData, nomeCliente) {
         console.error('Erro ao iniciar corrida de descarte:', error);
         alert('Erro ao iniciar corrida. Tente novamente.');
     }
-}
+  }
 
-async function recusarCorridaDescarte(descarteId) {
+  async function recusarCorridaDescarte(descarteId) {
     try {
-        console.log('Recusando corrida de descarte:', descarteId);
-        
         await db.collection('descartes').doc(descarteId).update({
             status: 'pendente',
             propostaAceita: null,
@@ -832,14 +702,12 @@ async function recusarCorridaDescarte(descarteId) {
             motoristaRecusou: true
         });
       
-        document.getElementById('modalPropostaAceitaDescarte').remove();
-        
-        alert('Corrida recusada. A solicitação voltará para a lista de disponíveis.');
-        
+        document.getElementById('modalPropostaAceitaDescarte')?.remove();
+                
     } catch (error) {
         console.error('Erro ao recusar corrida de descarte:', error);
     }
-}
+  }
 
   function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
     const nomeCliente = entregaData.clienteNome || "Cliente";
@@ -869,49 +737,27 @@ async function recusarCorridaDescarte(descarteId) {
     document.getElementById('btnRecusarCorrida').onclick = () => recusarCorridaAposAceite(entregaId, collectionName);
   }
 
- async function iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName) {
+  async function iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName) {
     try {
-        let origemData, destinoData;
-        
         if (collectionName === 'descartes') {
-           
             return await iniciarCorridaDescarte(entregaId, entregaData, nomeCliente);
         }
         
-        // Para entregas regulares
         let origemCoords = null;
         if (entregaData.origem?.coordenadas?.lat && entregaData.origem?.coordenadas?.lng) {
             origemCoords = entregaData.origem.coordenadas;
-        } else if (entregaData.origem?.endereco || entregaData.localRetirada) {
-            const endereco = entregaData.origem?.endereco || entregaData.localRetirada;
-            const geocoded = await geocodificarEndereco(endereco);
-            if (geocoded) {
-                origemCoords = { lat: geocoded.lat, lng: geocoded.lng };
-                
-                // Atualizar o documento com as coordenadas
-                await db.collection('entregas').doc(entregaId).update({
-                    'origem.coordenadas': origemCoords
-                });
-            }
+        } else if (entregaData.origem?.lat && entregaData.origem?.lng) {
+            origemCoords = { lat: entregaData.origem.lat, lng: entregaData.origem.lng };
         }
         
         let destinoCoords = null;
         if (entregaData.destino?.coordenadas?.lat && entregaData.destino?.coordenadas?.lng) {
             destinoCoords = entregaData.destino.coordenadas;
-        } else if (entregaData.destino?.endereco || entregaData.localEntrega) {
-            const endereco = entregaData.destino?.endereco || entregaData.localEntrega;
-            const geocoded = await geocodificarEndereco(endereco);
-            if (geocoded) {
-                destinoCoords = { lat: geocoded.lat, lng: geocoded.lng };
-                
-        
-                await db.collection('entregas').doc(entregaId).update({
-                    'destino.coordenadas': destinoCoords
-                });
-            }
+        } else if (entregaData.destino?.lat && entregaData.destino?.lng) {
+            destinoCoords = { lat: entregaData.destino.lat, lng: entregaData.destino.lng };
         }
 
-        origemData = {
+        const origemData = {
             endereco: entregaData.origem?.endereco || entregaData.localRetirada || '',
             numero: entregaData.origem?.numero || '',
             complemento: entregaData.origem?.complemento || '',
@@ -920,7 +766,7 @@ async function recusarCorridaDescarte(descarteId) {
             lng: origemCoords?.lng || null,
         };
         
-        destinoData = {
+        const destinoData = {
             endereco: entregaData.destino?.endereco || entregaData.localEntrega || '',
             numero: entregaData.destino?.numero || '',
             complemento: entregaData.destino?.complemento || '',
@@ -928,7 +774,6 @@ async function recusarCorridaDescarte(descarteId) {
             lng: destinoCoords?.lng || null,
         };
 
-        // Calcular distância
         let distancia = null;
         if (origemCoords && destinoCoords) {
             const R = 6371;
@@ -989,7 +834,8 @@ async function recusarCorridaDescarte(descarteId) {
         console.error('Erro ao iniciar corrida:', error);
         alert('Erro ao iniciar corrida. Tente novamente.');
     }
-}
+  }
+
   async function recusarCorridaAposAceite(entregaId, collectionName) {
     try {
       await db.collection(collectionName).doc(entregaId).update({
@@ -1000,8 +846,6 @@ async function recusarCorridaDescarte(descarteId) {
         recusadaPor: motoristaUid || fallbackMotoristaId,
         motoristaRecusou: true
       });
-      
-      alert('Corrida recusada. A solicitação voltará para a lista de disponíveis.');
     } catch (error) {
       console.error('Erro ao recusar a corrida:', error);
     } finally {
@@ -1009,7 +853,6 @@ async function recusarCorridaDescarte(descarteId) {
     }
   }
 
-  // Event listeners
   listaEntregas.addEventListener('click', e => {
     const card = e.target.closest('.delivery-card');
     if (card) {
@@ -1027,13 +870,11 @@ async function recusarCorridaDescarte(descarteId) {
     if (e.target === modalProposta) fecharModal();
   });
 
-  // Atualizar quando a página volta ao foco
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       setTimeout(atualizarInterface, 1000);
     }
   });
 
-  // Inicializar
   carregarTodasSolicitacoes();
 });
