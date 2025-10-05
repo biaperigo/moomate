@@ -35,44 +35,18 @@
 
   <div class="voltar-box">
     <a href="carteiraM.html" class="btn-voltar">
-      <i class="fa-solid fa-chevron-left"></i> Voltar
     </a>
   </div>
 
   <main class="historico-container">
     <h1>Histórico de transações</h1>
-    
-    <div class="transacao-card recebido">
-      <div class="transacao-info">
-        <div class="texto">
-          <strong>Recebido pela Corrida #2345</strong>
-          <span>27/07/2025 - 14:30</span>
-        </div>
-        <div class="valor">+ R$ 120,00</div>
-      </div>
-    </div>
-    <div class="transacao-card recebido">
-      <div class="transacao-info">
-        <div class="texto">
-          <strong>Recebido pela Corrida #2341</strong>
-          <span>26/07/2025 - 18:10</span>
-        </div>
-        <div class="valor">+ R$ 85,50</div>
-      </div>
-    </div>
-
-    <div class="transacao-card retirada">
-      <div class="transacao-info">
-        <div class="texto">
-          <strong>Transferência para Banco</strong>
-          <span>26/07/2025 - 20:00</span>
-        </div>
-        <div class="valor saida">- R$ 200,00</div>
-      </div>
-    </div>
-
+    <div id="lista-transacoes"></div>
+  
   </main>
-
+  <!-- Firebase compat para leitura do histórico -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="src/javascript/historicotransacoesM.js"></script>
 </body>
 </html>
