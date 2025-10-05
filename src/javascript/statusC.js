@@ -1127,13 +1127,82 @@ async function buscarDadosPagamento(corridaId) {
       } catch {}
     }
     if (!data) throw new Error('Corrida não encontrada');
+
+    // Tentar obter proposta aceita a partir da subcoleção 'propostas' se necessário
+    let proposta = data?.propostaAceita || null;
+    try {
+      if (!proposta) {
+        const ref = db.collection(colecaoAtual).doc(corridaId).collection('propostas');
+        const qs = await ref.get();
+        const list = [];
+        qs.forEach(d => list.push({ id: d.id, ...(d.data()||{}) }));
+        const scoreTs = (x) => {
+          const t = x?.aprovadoEm || x?.enviadoEm || x?.criadoEm || x?.ts || null;
+          try { return t?.toMillis ? t.toMillis() : (t?.seconds ? t.seconds*1000 : (new Date(t)).getTime()); } catch { return 0; }
+        };
+        const isAceita = (x) => {
+          const s = (x?.status||'').toString().toLowerCase();
+          return x?.aceita === true || x?.aprovado === true || s === 'aceita' || s === 'aprovada';
+        };
+        let cand = list.filter(isAceita);
+        if (!cand.length) cand = list;
+        cand.sort((a,b)=> (scoreTs(b)||0)-(scoreTs(a)||0));
+        proposta = cand[0] || null;
+        console.log('[MP] Proposta escolhida (subcoleção)', proposta);
+      }
+    } catch (e) { console.warn('[MP] Falha ao ler subcoleção propostas', e); }
     
+    // Preço base: o que o motorista colocou na proposta
+    const precoBase = (typeof proposta?.preco === 'number')
+      ? Number(proposta.preco)
+      : (typeof data?.propostaAceita?.preco === 'number')
+        ? Number(data.propostaAceita.preco)
+        : Number(data?.precoFinal || data?.valor || data?.preco || data?.total || 50);
+
+    // Quantidade de ajudantes: usar APENAS a proposta aceita (evita contagens erradas)
+    let extras = 0;
+    try {
+      const p = proposta || data?.propostaAceita || {};
+      const count = Number.isFinite(Number(p.ajudante)) ? Number(p.ajudante)
+                   : Number.isFinite(Number(p.ajudantes)) ? Number(p.ajudantes)
+                   : 0;
+      extras = 50 * Math.max(0, count);
+    } catch {}
+
+    // Conversor robusto para números que podem vir como string "816,97" ou "816.97"
+    const toNumber = (v) => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') {
+        const s = v.replace(/\./g, '').replace(/,/g, '.');
+        const n = parseFloat(s);
+        return Number.isFinite(n) ? n : NaN;
+      }
+      return NaN;
+    };
+
+    // total da proposta, se existir, tem prioridade
+    const totalPropRaw = (proposta && (proposta.total ?? proposta.precoTotal ?? proposta.valorTotal));
+    const totalProposta = toNumber(totalPropRaw);
+    const valorBaseTotal = Number.isFinite(totalProposta) && totalProposta > 0
+      ? totalProposta
+      : (Number(precoBase) + Number(extras));
+    // Regra solicitada: cliente paga 90% (desconto de 10%)
+    const valorPagamento = Math.round((valorBaseTotal * 0.9) * 100) / 100;
+    console.log('[MP] Cálculo valor', {
+      precoBase,
+      extras,
+      totalProposta,
+      valorBaseTotal,
+      valorPagamento,
+      ajudaCampos: {
+        ajudante: proposta?.ajudante,
+        ajudantes: proposta?.ajudantes
+      }
+    });
+
     return {
       corridaId,
-      // Valor que o cliente vai pagar (preço da proposta aceita com 10% + ajudantes)
-      valor: (data.propostaAceita && typeof data.propostaAceita.preco === 'number')
-        ? data.propostaAceita.preco
-        : (data.precoFinal || data.valor || data.preco || 50.00),
+      valor: Number.isFinite(valorPagamento) && valorPagamento > 0 ? valorPagamento : 50,
       clienteId: data.clienteId || currentUser?.uid,
       motoristaId: data.motoristaId || data.propostaAceita?.motoristaUid,
       tipo: tipoAtual,
@@ -1146,57 +1215,108 @@ async function buscarDadosPagamento(corridaId) {
 }
 
 async function criarPagamentoMercadoPago(dadosPagamento) {
-  const { corridaId, valor, clienteId, descricao } = dadosPagamento;
-  
+  let { corridaId, valor, clienteId, descricao } = dadosPagamento;
+
   try {
-    // Vercel API: cria a preferência no Mercado Pago
-    const response = await fetch('https://moomate-omrw.vercel.app/api/create_preference', {
+    // Base da API: em produção (Vercel) usa mesmo origin (/api), local usa http://localhost:3000
+    const isVercel = /vercel\.app$/i.test(window.location.hostname);
+    const apiBase = isVercel ? `${window.location.origin}/api` : 'http://localhost:3000';
+
+    // Garantir valor válido
+    if (!Number.isFinite(Number(valor)) || Number(valor) <= 0) {
+      console.warn('[MP] Valor inválido detectado, tentando fallback da URL... valor=', valor);
+      const qsv = Number(new URLSearchParams(location.search).get('valor'));
+      if (Number.isFinite(qsv) && qsv > 0) valor = qsv; else valor = 50;
+      console.warn('[MP] Valor ajustado para', valor);
+    }
+
+    const items = [{
+      title: descricao,
+      quantity: 1,
+      unit_price: Number(valor),
+      currency_id: 'BRL'
+    }];
+
+    const pagesBase = isVercel ? window.location.origin : 'http://localhost:3000';
+    const back_urls = {
+      success: `${pagesBase}/pagamento-sucesso.html?corrida=${encodeURIComponent(corridaId)}&status=approved`,
+      failure: `${pagesBase}/pagamento-erro.html?corrida=${encodeURIComponent(corridaId)}`,
+      pending: `${pagesBase}/pagamento-erro.html?corrida=${encodeURIComponent(corridaId)}`
+    };
+
+    console.log('[MP] Criando preferência', { apiBase, corridaId, valor: Number(valor) });
+    // Monta payer com e-mail do usuário quando disponível (melhora aprovação no checkout)
+    const payer = {
+      email: (firebase.auth?.currentUser?.email) || `${(clienteId||'cliente')}@moomate.app`,
+      name: 'Cliente Moomate'
+    };
+
+    // Quando apiBase termina com /api (Vercel), rota é /api/create_preference. Quando localhost, é direto /create-mercadopago-preference
+    const createUrl = isVercel ? `${apiBase}/create_preference` : `${apiBase}/create-mercadopago-preference`;
+    let resp = await fetch(createUrl, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        corridaId,
-        valor: Number(valor),
-        clienteId,
-        items: [{
-          title: descricao,
-          quantity: 1,
-          unit_price: Number(valor),
-          currency_id: 'BRL'
-        }],
-        back_urls: {
-          success: `${window.location.origin}/pagamento_sucesso.html?corrida=${corridaId}`,
-          failure: `${window.location.origin}/pagamentoC.html?corrida=${corridaId}`,
-          pending: `${window.location.origin}/pagamentoC.html?corrida=${corridaId}`
-        },
-        auto_return: 'approved'
+        items,
+        payer,
+        payment_methods: {},
+        back_urls,
+        external_reference: corridaId
       })
     });
-    
-    if (!response.ok) {
-      throw new Error(`Erro HTTP: ${response.status}`);
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      console.warn('[MP] Backend local falhou, tentando fallback Vercel...', resp.status, txt);
+      // Fallback Vercel
+      resp = await fetch('https://moomate-omrw.vercel.app/api/create_preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          corridaId,
+          valor: Number(valor),
+          clienteId,
+          items,
+          payer,
+          back_urls,
+          auto_return: 'approved'
+        })
+      });
+      if (!resp.ok) {
+        const txt2 = await resp.text();
+        console.error('[MP] Falha também no fallback Vercel', resp.status, txt2);
+        throw new Error(`HTTP ${resp.status}: ${txt2 || 'sem mensagem'}`);
+      }
     }
-    
-    const { init_point, preference_id } = await response.json();
-    
-    // Salvar dados do pagamento no Firebase
-    await db.collection(colecaoAtual).doc(corridaId).update({
-      pagamento: {
-        preferenceId: preference_id,
-        valor: Number(valor),
-        status: 'pendente',
-        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-      },
-      status: 'pagamento_pendente'
-    });
-    
+
+    const data = await resp.json().catch(e => { console.error('[MP] JSON inválido', e); return null; });
+    const init_point = data?.init_point;
+    const preference_id = data?.preference_id;
+    if (!init_point) throw new Error('init_point não retornado');
+
+    // Salvar registro no Firestore
+    try {
+      await db.collection(colecaoAtual).doc(corridaId).update({
+        pagamento: {
+          preferenceId: preference_id || null,
+          valor: Number(valor),
+          status: 'pendente',
+          criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        },
+        status: 'pagamento_pendente'
+      });
+    } catch {}
+
+    // Salvar lastPayment para creditar carteira após retorno
+    try { localStorage.setItem('lastPayment', JSON.stringify({ valor: Number(valor), corridaId })); } catch {}
+
     // Redirecionar para Mercado Pago
     console.log('Redirecionando para pagamento:', init_point);
     window.location.href = init_point;
-    
+
   } catch (error) {
     console.error('Erro ao criar pagamento:', error);
+    alert('Erro ao processar pagamento. Ver console para detalhes. Garanta que o servidor em http://localhost:3000 está rodando.');
     throw error;
   }
 }
