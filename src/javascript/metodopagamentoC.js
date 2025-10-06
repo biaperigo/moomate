@@ -29,7 +29,6 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const metodo = metodoSelect.value;
     const params = new URLSearchParams(location.search);
     const corridaId = params.get('corrida') || localStorage.getItem('ultimaCorridaCliente') || undefined;
@@ -38,35 +37,19 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
     function parseNumeroBR(v){
       if (v === null || v === undefined) return NaN;
       if (typeof v === 'number') return v;
-      const s = String(v).trim();
       if (!s) return NaN;
       // remove separador de milhar e troca vírgula por ponto
       const norm = s.replace(/\./g, '').replace(',', '.');
       const n = Number(norm);
       return Number.isFinite(n) ? n : NaN;
     }
+
     function pickValor(data){
       if (!data || typeof data !== 'object') return NaN;
-      // Prioridade: usar 'preco' (ou 'preço') como valor da corrida
-      const cand = [
-        data.preco,
-        data['preço'],
-        data.valor,
-        data.precoFinal,
-        data.total,
-        data.valorTotal,
-        data.precoTotal,
-        data.valorCorrida,
-        data.precoEstimado,
-        data.valorEstimado,
-        data?.pagamento?.valor,
-        data?.orcamento?.valor,
-        data?.custo?.total,
-      ];
-      for (const v of cand){
-        const n = parseNumeroBR(v);
-        if (Number.isFinite(n) && n > 0) return n;
-      }
+      const p1 = parseNumeroBR(data?.preco);
+      if (Number.isFinite(p1) && p1 > 0) return p1; // usa preco
+      const p2 = parseNumeroBR(data?.['preço']);
+      if (Number.isFinite(p2) && p2 > 0) return p2; // fallback preço (cedilha)
       return NaN;
     }
 
@@ -77,6 +60,7 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
         if (!doc.exists) doc = await db.collection('descartes').doc(corridaId).get();
         const data = doc.exists ? (doc.data()||{}) : {};
         valor = pickValor(data);
+        console.log('[MP] corridaId=', corridaId, 'preco=', data?.preco, 'preço=', data?.['preço'], 'valorUsado=', valor);
       } catch {}
     }
 
@@ -90,7 +74,6 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
       resultado.textContent = 'Não foi possível determinar o valor da corrida.';
       return;
     }
-    // normaliza para 2 casas
     valor = Math.round(valor * 100) / 100;
     
     // Monta itens da preferência
