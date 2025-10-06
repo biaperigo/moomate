@@ -32,6 +32,14 @@ let unsubSync = () => {};
 
   let docRefGlobal = null;
   let motoristaUidAtual = null;
+
+  // Helper para obter a referência do documento do motorista
+  // Usado por salvarAvaliacao() para atualizar agregados (ratingCount, ratingSum, media)
+  function getMotoristaRef(uid) {
+    if (!uid || typeof uid !== 'string') throw new Error('motoristaId inválido');
+    // Centralizamos aqui caso no futuro mude a coleção/base
+    return db.collection('motoristas').doc(uid);
+  }
   async function salvarAvaliacaoMotorista(motoristaUid, nota, comentario = "", corridaIdOverride = null, clienteUidOverride = null){
     const uidMot = motoristaUid || motoristaUidAtual;
     if (!uidMot) throw new Error('motoristaUid inválido');
