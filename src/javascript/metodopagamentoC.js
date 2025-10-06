@@ -47,10 +47,20 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
           console.log('Dados da corrida:', corridaData);
           console.log('Preço encontrado:', corridaData.preco);
           // Busca o campo 'preco' e arredonda para 2 casas decimais
-         if (corridaData.pagamento && corridaData.pagamento.preco !== undefined && corridaData.pagamento.preco !== null) {
-  valor = Math.round(Number(corridaData.pagamento.preco) * 100) / 100;
-  console.log('Valor final:', valor);
+        // Verifica se o campo 'preco' existe e é um número
+if (typeof corridaData.preco === 'number') {
+  // Arredonda para 2 casas decimais
+  valor = Math.round(corridaData.preco * 100) / 100;
+  console.log('Valor final (numérico):', valor);
+} else if (typeof corridaData.preco === 'string') {
+  // Se for string, converte para número antes de arredondar
+  const precoNumerico = parseFloat(corridaData.preco);
+  if (!isNaN(precoNumerico)) {
+    valor = Math.round(precoNumerico * 100) / 100;
+    console.log('Valor final (convertido de string):', valor);
+  }
 }
+
 
         } else {
           console.log('Corrida não encontrada');
