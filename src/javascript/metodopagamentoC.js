@@ -42,7 +42,10 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
         const corridaDoc = await db.collection('corridas').doc(corridaId).get();
         if (corridaDoc.exists) {
           const corridaData = corridaDoc.data();
-          valor = Number(corridaData.preco) || 10;
+          // Busca o campo 'preco' e arredonda para 2 casas decimais
+          if (corridaData.preco !== undefined && corridaData.preco !== null) {
+            valor = Math.round(Number(corridaData.preco) * 100) / 100;
+          }
         }
       }
     } catch (err) {
