@@ -39,14 +39,23 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
     try {
       if (corridaId) {
         resultado.textContent = 'Buscando informações da corrida...';
+        console.log('Buscando corrida com ID:', corridaId);
         const corridaDoc = await db.collection('corridas').doc(corridaId).get();
+        console.log('Corrida existe?', corridaDoc.exists);
         if (corridaDoc.exists) {
           const corridaData = corridaDoc.data();
+          console.log('Dados da corrida:', corridaData);
+          console.log('Preço encontrado:', corridaData.preco);
           // Busca o campo 'preco' e arredonda para 2 casas decimais
           if (corridaData.preco !== undefined && corridaData.preco !== null) {
             valor = Math.round(Number(corridaData.preco) * 100) / 100;
+            console.log('Valor final:', valor);
           }
+        } else {
+          console.log('Corrida não encontrada');
         }
+      } else {
+        console.log('corridaId não encontrado');
       }
     } catch (err) {
       console.error('Erro ao buscar preço:', err);
