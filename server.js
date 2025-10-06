@@ -59,6 +59,12 @@ async function createPreferenceHandler(req, res){
       expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     };
 
+    try {
+      console.log('[MP][create] items recebidos:', JSON.stringify(items));
+      console.log('[MP][create] valor calculado:', valor, 'external_reference:', corridaId || external_reference);
+      console.log('[MP][create] back_urls usadas:', preferenceData.back_urls);
+    } catch {}
+
     const response = await preference.create({ body: preferenceData });
 
     return res.json({

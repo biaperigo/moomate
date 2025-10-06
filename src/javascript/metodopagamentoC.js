@@ -38,42 +38,47 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
     let valor = 10; // valor padrão
     try {
       if (corridaId) {
-        resultado.textContent = 'Buscando informações da corrida...';
-        console.log('Buscando corrida com ID:', corridaId);
-        const corridaDoc = await db.collection('corridas').doc(corridaId).get();
-        console.log('Corrida existe?', corridaDoc.exists);
-        if (corridaDoc.exists) {
-          const corridaData = corridaDoc.data();
-          console.log('Dados da corrida:', corridaData);
-          console.log('Preço encontrado:', corridaData.preco);
-          // Busca o campo 'preco' e arredonda para 2 casas decimais
-        // Verifica se o campo 'preco' existe e é um número
-if (typeof corridaData.preco === 'number') {
-  // Arredonda para 2 casas decimais
-  valor = Math.round(corridaData.preco * 100) / 100;
-  console.log('Valor final (numérico):', valor);
-} else if (typeof corridaData.preco === 'string') {
-  // Se for string, converte para número antes de arredondar
-  const precoNumerico = parseFloat(corridaData.preco);
-  if (!isNaN(precoNumerico)) {
-    valor = Math.round(precoNumerico * 100) / 100;
-    console.log('Valor final (convertido de string):', valor);
-  }
-}
-
-
+        resultado && (resultado.textContent = 'Buscando informações da corrida...');
+        console.log('[Pagamento] Buscando corrida com ID:', corridaId);
+        let doc = await db.collection('corridas').doc(corridaId).get();
+        if (!doc.exists) {
+          console.log('[Pagamento] Documento não está em corridas, tentando descartes...');
+          doc = await db.collection('descartes').doc(corridaId).get();
+        }
+        if (doc.exists) {
+          const data = doc.data() || {};
+          const preco = data.preco ?? data['preço'];
+          let v;
+          if (typeof preco === 'number') {
+            v = preco;
+          } else if (typeof preco === 'string') {
+            const s = preco.trim();
+            if (s.includes(',')) {
+              const norm = s.replace(/\./g, '').replace(',', '.');
+              v = parseFloat(norm);
+            } else {
+              v = parseFloat(s);
+            }
+          } else {
+            v = Number(preco);
+          }
+          if (Number.isFinite(v) && v > 0) {
+            valor = Math.round(v * 100) / 100;
+          }
+          console.log('[Pagamento] Documento encontrado. preco bruto=', preco, 'valor usado=', valor);
         } else {
-          console.log('Corrida não encontrada');
+          console.warn('[Pagamento] Documento de corrida/descartes não encontrado para', corridaId);
         }
       } else {
-        console.log('corridaId não encontrado');
+        console.warn('[Pagamento] corridaId não encontrado');
       }
     } catch (err) {
-      console.error('Erro ao buscar preço:', err);
+      console.error('[Pagamento] Erro ao buscar preço:', err);
       // Mantém valor padrão em caso de erro
     }
     
     // Monta itens da preferência
+    console.log('[Pagamento] Enviando items para MP com valor:', valor);
     const items = [{
       title: 'Corrida Moomate',
       quantity: 1,
@@ -90,11 +95,7 @@ if (typeof corridaData.preco === 'number') {
     }
     
     const base = location.origin && location.origin.startsWith('http') ? location.origin : 'http://localhost:3000';
-    const back_urls = {
-      success: `${base}/pagamento-sucesso.html`,
-      failure: `${base}/pagamento-erro.html`,
-      pending: `${base}/pagamento-sucesso.html`
-    };
+    // back_urls serão definidos no servidor para incluir parametros úteis
 
     try {
       resultado.textContent = 'Criando preferência de pagamento...';
@@ -105,7 +106,6 @@ if (typeof corridaData.preco === 'number') {
         body: JSON.stringify({
           items,
           payment_methods,
-          back_urls,
           external_reference: corridaId,
         })
       });
