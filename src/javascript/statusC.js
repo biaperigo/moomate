@@ -1195,7 +1195,7 @@ async function buscarDadosPagamento(corridaId) {
       ? totalProposta
       : (Number(precoBase) + Number(extras));
     // Regra solicitada: cliente paga 90% (desconto de 10%)
-    const valorPagamento = Math.round((valorBaseTotal * 0.9) * 100) / 100;
+    const valorPagamento = Math.round((valorBaseTotal * 1.0) * 100) / 100;
     console.log('[MP] Cálculo valor', {
       precoBase,
       extras,
