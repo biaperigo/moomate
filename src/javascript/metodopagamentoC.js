@@ -47,14 +47,16 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
     }
     function pickValor(data){
       if (!data || typeof data !== 'object') return NaN;
+      // Prioridade: usar 'preco' (ou 'preço') como valor da corrida
       const cand = [
+        data.preco,
+        data['preço'],
         data.valor,
         data.precoFinal,
         data.total,
         data.valorTotal,
         data.precoTotal,
         data.valorCorrida,
-        data.preco,
         data.precoEstimado,
         data.valorEstimado,
         data?.pagamento?.valor,
