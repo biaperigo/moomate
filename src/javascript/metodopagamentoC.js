@@ -32,8 +32,64 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
 
     const metodo = metodoSelect.value;
     const params = new URLSearchParams(location.search);
-    const valor = Number(params.get('valor')) || 10; // valor padrão caso não venha na URL
     const corridaId = params.get('corrida') || localStorage.getItem('ultimaCorridaCliente') || undefined;
+
+    // Busca 100% do valor direto do Firestore
+    function parseNumeroBR(v){
+      if (v === null || v === undefined) return NaN;
+      if (typeof v === 'number') return v;
+      const s = String(v).trim();
+      if (!s) return NaN;
+      // remove separador de milhar e troca vírgula por ponto
+      const norm = s.replace(/\./g, '').replace(',', '.');
+      const n = Number(norm);
+      return Number.isFinite(n) ? n : NaN;
+    }
+    function pickValor(data){
+      if (!data || typeof data !== 'object') return NaN;
+      const cand = [
+        data.valor,
+        data.precoFinal,
+        data.total,
+        data.valorTotal,
+        data.precoTotal,
+        data.valorCorrida,
+        data.preco,
+        data.precoEstimado,
+        data.valorEstimado,
+        data?.pagamento?.valor,
+        data?.orcamento?.valor,
+        data?.custo?.total,
+      ];
+      for (const v of cand){
+        const n = parseNumeroBR(v);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      return NaN;
+    }
+
+    let valor = NaN;
+    if (corridaId){
+      try {
+        let doc = await db.collection('corridas').doc(corridaId).get();
+        if (!doc.exists) doc = await db.collection('descartes').doc(corridaId).get();
+        const data = doc.exists ? (doc.data()||{}) : {};
+        valor = pickValor(data);
+      } catch {}
+    }
+
+    if (!Number.isFinite(valor) || valor <= 0) {
+      // fallback: tenta por querystring/localStorage, senão avisa o usuário
+      const qValor = params.get('valor') || localStorage.getItem('valorCorrida') || localStorage.getItem('valor');
+      valor = parseNumeroBR(qValor);
+    }
+
+    if (!Number.isFinite(valor) || valor <= 0) {
+      resultado.textContent = 'Não foi possível determinar o valor da corrida.';
+      return;
+    }
+    // normaliza para 2 casas
+    valor = Math.round(valor * 100) / 100;
     
     // Monta itens da preferência
     const items = [{

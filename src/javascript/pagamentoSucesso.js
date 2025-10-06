@@ -69,7 +69,6 @@
       const motoristaId = corrida.motoristaId || corrida.propostaAceita?.motoristaUid;
       if (!motoristaId) {
         ui.append('Motorista da corrida não definido.');
-        return;
       }
 
       // Transação idempotente: só credita se a corrida ainda não estiver marcada como creditada
@@ -80,13 +79,11 @@
         const ja = !!(corridaSnap.exists && corridaSnap.data()?.pagamento?.creditado === true);
         if (ja) return { already:true };
         const saldoAtual = Number((motSnap.exists? (motSnap.data().saldo||0):0)) || 0;
-        const novo = saldoAtual + valor;
+        const novo = saldoAtual + Math.round(Number(valor) * 0.90 * 100) / 100; // credita 90%
         tx.set(motRef, { saldo: novo, saldoAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
         tx.set(corridaRef, { pagamento: { ...(corridaSnap.data()?.pagamento||{}), creditado: true, creditadoEm: firebase.firestore.FieldValue.serverTimestamp() } }, { merge: true });
         return { already:false };
       });
-
-      // Registrar histórico apenas se acabou de creditar
       if (!txResult?.already) {
         try {
           await db.collection('motoristas').doc(motoristaId)
