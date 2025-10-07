@@ -695,7 +695,7 @@ let unsubSync = () => {};
       });
   }
 
-  function abrirModalAvaliacao(){
+ function abrirModalAvaliacao(){
     const modal = pegarEl("driver-rating-modal","user-rating-modal");
     if (!modal) return;
     
@@ -728,21 +728,38 @@ let unsubSync = () => {};
         }
         
         try {
-          await salvarAvaliacaoMotorista(
-            C?.motoristaId || C?.propostaAceita?.motoristaUid,
+          const motoristaUid = C?.motoristaId || C?.propostaAceita?.motoristaUid;
+          
+          if (!motoristaUid) {
+            alert("Erro: ID do motorista não encontrado.");
+            return;
+          }
+          
+          console.log("[AVALIAÇÃO] Salvando:", {
+            motoristaUid,
             nota,
-            comentario?.value||"",
+            agendamentoId: corridaId,
+            clienteUid: currentUser?.uid
+          });
+          
+          // USAR A FUNÇÃO CORRETA que atualiza os agregados
+          await salvarAvaliacaoMotorista(
+            motoristaUid,
+            nota,
+            comentario?.value || "",
             corridaId,
             currentUser?.uid
           );
           
+          console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
           modal.style.display="none";
           
+          alert("Avaliação enviada com sucesso!");
           window.location.href = "homeC.html";
           
         } catch (error) {
-          console.error("Erro ao enviar avaliação:", error);
-          
+          console.error("[AVALIAÇÃO] Erro ao enviar:", error);
+          alert("Erro ao enviar avaliação. Tente novamente.");
         }
       };
     }

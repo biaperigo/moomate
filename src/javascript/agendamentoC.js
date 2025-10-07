@@ -905,29 +905,41 @@ async function ouvirPropostasAgendamento(id) {
     const cacheMotoristas = {};
 
     // Função para buscar dados do motorista (copiada e adaptada de homeC.js)
-    async function getMotorista(uid) {
+     async function getMotorista(uid) {
+        console.log("[AGENDAMENTO] Buscando motorista:", uid);
         if (!uid) return { nome: "Motorista", foto: null, nota: 0 };
         if (cacheMotoristas[uid]) return cacheMotoristas[uid];
 
         try {
             const snap = await db.collection("motoristas").doc(uid).get();
             if (!snap.exists) {
+                console.log("[AGENDAMENTO] Motorista não encontrado:", uid);
                 return { nome: "Motorista", foto: null, nota: 0 };
             }
             
             const data = snap.data() || {};
             
-            // Lógica robusta para encontrar o nome e a foto
             const nome = data?.dadosPessoais?.nome || data?.nome || "Motorista";
             const foto = data?.dadosPessoais?.fotoPerfilUrl || data?.fotoPerfilUrl || null;
-            const nota = data?.media || 0; // No seu DB de agendamento, o campo é 'media'
+            
+            // PRIORIDADE: avaliacaoMedia > media > cálculo manual
+            let nota = 0;
+            if (typeof data.avaliacaoMedia === 'number') {
+                nota = data.avaliacaoMedia;
+            } else if (typeof data.media === 'number') {
+                nota = data.media;
+            } else if (data.ratingSum && data.ratingCount) {
+                nota = Number(data.ratingSum) / Number(data.ratingCount);
+            }
+
+            console.log(`[AGENDAMENTO] ${nome}: nota=${nota.toFixed(1)} (avaliacaoMedia=${data.avaliacaoMedia}, media=${data.media})`);
 
             const motoristaInfo = { nome, foto, nota: Number(nota) || 0 };
             cacheMotoristas[uid] = motoristaInfo;
             return motoristaInfo;
 
         } catch (error) {
-            console.error("Erro ao carregar dados do motorista:", error);
+            console.error("[AGENDAMENTO] Erro ao carregar motorista:", error);
             return { nome: "Motorista", foto: null, nota: 0 };
         }
     }

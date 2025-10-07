@@ -419,48 +419,46 @@ async function ouvirPropostas(entregaId) {
         const pedidoSnap = await db.collection('entregas').doc(entregaId).get();
         pedido = pedidoSnap.exists ? (pedidoSnap.data()||{}) : {};
       } catch {}
-      async function getMotorista(uid) {
-    console.log("Buscando motorista com ID:", uid); 
+            async function getMotorista(uid) {
+    console.log("[MOTORISTA] Buscando dados do UID:", uid); 
     if (!uid) return { nome: "Motorista", foto: null, nota: 0 };
 
-    // Usa o cache para evitar buscas repetidas
-    if (cacheMotoristas[uid]) return cacheMotoristas[uid];
+    // NÃO usar cache para garantir dados em tempo real
+    // if (cacheMotoristas[uid]) return cacheMotoristas[uid];
 
     try {
         const snap = await db.collection("motoristas").doc(uid).get();
         if (!snap.exists) {
-            console.log("Motorista não encontrado com ID:", uid); 
+            console.log("[MOTORISTA] ❌ Não encontrado:", uid); 
             return { nome: "Motorista", foto: null, nota: 0 };
         }
         
         const data = snap.data() || {};
         
-        // Lógica robusta para encontrar nome e foto
         const nome = data.dadosPessoais?.nome || data.nome || "Motorista";
         const foto = data.dadosPessoais?.fotoPerfilUrl || data.fotoPerfilUrl || null;
         
-        // **A CORREÇÃO ESTÁ AQUI**
-        // Prioriza o campo 'media', que é o correto para a sua estrutura de dados.
-        const nota = data.media || data.avaliacoesNota || 0;
+        // PRIORIDADE: avaliacaoMedia > media > ratingSum/ratingCount > 0
+        let nota = 0;
+        if (typeof data.avaliacaoMedia === 'number') {
+          nota = data.avaliacaoMedia;
+        } else if (typeof data.media === 'number') {
+          nota = data.media;
+        } else if (data.ratingSum && data.ratingCount) {
+          nota = Number(data.ratingSum) / Number(data.ratingCount);
+        }
 
-        console.log(`Dados encontrados para ${nome}: Foto=${foto}, Nota=${nota}`);
+        console.log(`[MOTORISTA] ✓ ${nome} - Nota: ${nota.toFixed(2)} (avaliacaoMedia: ${data.avaliacaoMedia}, media: ${data.media})`);
 
         const motoristaInfo = { nome, foto, nota: Number(nota) || 0 };
-        cacheMotoristas[uid] = motoristaInfo;
+        cacheMotoristas[uid] = motoristaInfo; // Atualiza cache
         return motoristaInfo;
 
     } catch (error) {
-        console.error("Erro ao carregar dados do motorista:", error);
+        console.error("[MOTORISTA] ❌ Erro ao carregar:", error);
         return { nome: "Motorista", foto: null, nota: 0 };
     }
 }
-      const fmtData = (v) => {
-        try {
-          if (v && typeof v.toDate === "function") return v.toDate().toLocaleString();
-          if (typeof v === "string") return new Date(v).toLocaleString();
-        } catch {}
-        return "";
-      };
 
       lista.innerHTML = "";
       for (const doc of snapshot.docs) {

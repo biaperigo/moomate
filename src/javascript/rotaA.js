@@ -662,84 +662,93 @@
     }
   })
 
-  salvarAvaliacaoBtn?.addEventListener("click", async () => {
+ salvarAvaliacaoBtn?.addEventListener("click", async () => {
     try {
       const comentario = comentarioEl ? comentarioEl.value || "" : ""
       const rating = window.ratingAtual || 0
       
-      if (corridaRef && rating > 0) {
-        const novoStatus = 'finalizada'
+      if (!rating || rating < 1 || rating > 5) {
+        alert("Por favor, selecione uma avaliação de 1 a 5 estrelas.");
+        return;
+      }
+
+      const clienteUid = dadosCorrida?.clienteId || null;
+      if (!clienteUid) {
+        alert("Erro: ID do cliente não encontrado.");
+        return;
+      }
+
+      console.log("[AVALIAÇÃO] Salvando:", {
+        clienteUid,
+        nota: rating,
+        corridaId,
+        motoristaUid: firebase.auth()?.currentUser?.uid
+      });
+
+      // 1. Salvar na subcoleção de avaliações do cliente
+      const motoristaUid = firebase.auth()?.currentUser?.uid || null;
+      const avId = `${corridaId||'sem'}_${motoristaUid||'anon'}`;
+      
+      await db.collection('usuarios').doc(clienteUid)
+        .collection('avaliacoes').doc(avId)
+        .set({ 
+          nota: rating, 
+          estrelas: rating, 
+          comentario: comentario || "", 
+          corridaId, 
+          agendamentoId: corridaId,
+          motoristaUid,
+          avaliadoPor: 'motorista',
+          criadoEm: firebase.firestore.FieldValue.serverTimestamp() 
+        }, { merge: true });
+
+      // 2. Salvar na coleção global de avaliações
+      await db.collection('avaliacoes').doc(avId)
+        .set({ 
+          nota: rating, 
+          estrelas: rating, 
+          comentario: comentario || "", 
+          corridaId,
+          agendamentoId: corridaId,
+          clienteUid, 
+          motoristaUid,
+          tipo: 'cliente',
+          criadoEm: firebase.firestore.FieldValue.serverTimestamp() 
+        }, { merge: true });
+
+      // 3. Atualizar campos agregados usando transação
+      const userRef = db.collection('usuarios').doc(clienteUid);
+      await db.runTransaction(async (tx) => {
+        const userSnap = await tx.get(userRef);
+        const userData = userSnap.exists ? (userSnap.data() || {}) : {};
+        
+        const soma = Number(userData.avaliacaoSoma || 0) + rating;
+        const count = Number(userData.avaliacaoCount || 0) + 1;
+        const media = soma / count;
+        
+        tx.set(userRef, { 
+          avaliacaoSoma: soma, 
+          avaliacaoCount: count, 
+          avaliacaoMedia: media,
+          // Manter compatibilidade com campos antigos
+          ratingSum: soma,
+          ratingCount: count,
+          ratingMedia: media
+        }, { merge: true });
+      });
+
+      console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
+      
+      // 4. Atualizar status da corrida
+      if (corridaRef) {
         await corridaRef.set({
           avaliacao: {
             nota: rating,
             comentario: comentario,
             avaliadoEm: firebase.firestore.FieldValue.serverTimestamp()
           },
-          status: novoStatus
-        }, { merge: true })
-        
-        try {
-          const clienteUid = dadosCorrida?.clienteId || null;
-          if (clienteUid) {
-            const userRef = db.collection('usuarios').doc(clienteUid);
-            const motId = firebase.auth()?.currentUser?.uid || null;
-            let motNome = null;
-            try {
-              if (motId) {
-                const mSnap = await db.collection('motoristas').doc(motId).get();
-                const m = mSnap.exists ? (mSnap.data()||{}) : {};
-                motNome = m.nome || m.dadosPessoais?.nome || null;
-              }
-            } catch {}
-            
-            if (motId) {
-              const contRef = userRef.collection('avaliacoes').doc(motId);
-              await contRef.collection('avaliacoes').add({
-                corridaId: corridaId,
-                motoristaId: motId,
-                motoristaNome: motNome || null,
-                nota: rating,
-                comentario: comentario,
-                avaliadoPor: 'motorista',
-                criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-              });
-              
-              await contRef.set({
-                motoristaId: motId,
-                motoristaNome: motNome || null,
-                lastNota: rating,
-                lastComentario: comentario || '',
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge: true });
-            } else {
-              await userRef.collection('avaliacoes').add({
-                corridaId: corridaId,
-                motoristaId: motId,
-                motoristaNome: motNome || null,
-                nota: rating,
-                comentario: comentario,
-                avaliadoPor: 'motorista',
-                criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-              });
-            }
-            
-            await userRef.set({
-              ratingCount: firebase.firestore.FieldValue.increment(1),
-              ratingSum: firebase.firestore.FieldValue.increment(Number(rating) || 0)
-            }, { merge: true });
-            
-            try {
-              const aggSnap = await userRef.get();
-              const d = aggSnap.exists ? (aggSnap.data()||{}) : {};
-              const count = Number(d.ratingCount || 0);
-              const sum = Number(d.ratingSum || 0);
-              const media = count > 0 ? (sum / count) : 0;
-              await userRef.set({ ratingMedia: media }, { merge: true });
-            } catch {}
-          }
-        } catch (e) {
-          console.warn('Falha ao salvar avaliação no perfil do cliente:', e?.message||e);
-        }
+          status: 'finalizada'
+        }, { merge: true });
       }
       
       $closeModal()
@@ -749,7 +758,7 @@
         window.location.href = "carteiraM.html"
       }, 500)
     } catch (error) {
-      console.error("Erro ao salvar avaliação:", error)
+      console.error("[AVALIAÇÃO] Erro:", error)
       alert("Erro ao finalizar. Tente novamente.")
     }
   })

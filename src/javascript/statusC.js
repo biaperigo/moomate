@@ -983,7 +983,7 @@ async function pickCorridaId(uid){
     };
   }
 
-  function abrirModalAvaliacao(){
+ function abrirModalAvaliacao(){
     const modal = getEl("driver-rating-modal","user-rating-modal");
     if (!modal) return;
     
@@ -1016,18 +1016,33 @@ async function pickCorridaId(uid){
         }
         
         try {
-          // 1. Salvar avaliação (como antes)
-          await salvarAvaliacao({
+          const motoristaUid = C?.motoristaId || C?.propostaAceita?.motoristaUid;
+          
+          if (!motoristaUid) {
+            alert("Erro: ID do motorista não encontrado.");
+            return;
+          }
+          
+          console.log("Salvando avaliação:", {
+            motoristaUid,
+            nota,
             corridaId,
-            motoristaId: C?.motoristaId || C?.propostaAceita?.motoristaUid,
-            clienteId: currentUser?.uid || null,
-            nota: Number(nota)||0,
-            comentario: comentario?.value||""
+            clienteUid: currentUser?.uid
           });
           
+          // USAR A FUNÇÃO CORRETA que atualiza os agregados
+          await salvarAvaliacaoMotorista(
+            motoristaUid,
+            nota,
+            comentario?.value || "",
+            corridaId,
+            currentUser?.uid
+          );
+          
+          console.log("✅ Avaliação salva com sucesso!");
           modal.style.display="none";
           
-          // 2. NOVA LÓGICA: Processar pagamento (SUBSTITUIR A LINHA ANTIGA)
+          // Processar pagamento
           setTimeout(async () => {
             try {
               const dadosPagamento = await buscarDadosPagamento(corridaId);
@@ -1035,7 +1050,6 @@ async function pickCorridaId(uid){
             } catch (error) {
               console.error('Erro ao processar pagamento:', error);
               alert('Erro ao processar pagamento. Redirecionando...');
-              // Fallback para página antiga
               window.location.href = `pagamentoC.html?corrida=${encodeURIComponent(corridaId)}`;
             }
           }, 500);
@@ -1194,8 +1208,7 @@ async function buscarDadosPagamento(corridaId) {
     const valorBaseTotal = Number.isFinite(totalProposta) && totalProposta > 0
       ? totalProposta
       : (Number(precoBase) + Number(extras));
-    // Regra solicitada: cliente paga 90% (desconto de 10%)
-    const valorPagamento = Math.round((valorBaseTotal * 1.0) * 100) / 100;
+        const valorPagamento = Math.round((valorBaseTotal * 1.0) * 100) / 100;
     console.log('[MP] Cálculo valor', {
       precoBase,
       extras,

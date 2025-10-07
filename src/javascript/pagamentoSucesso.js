@@ -35,9 +35,10 @@
       }
       const qs2 = new URLSearchParams(location.search);
       const last = JSON.parse(localStorage.getItem('lastPayment')||'{}');
-      const valor = Number(last.valor ?? qs2.get('valor') ?? 0);
+      const valorTotal = Number(last.valor ?? qs2.get('valor') ?? 0);
       const corridaId = last.corridaId || qs2.get('corrida');
-      if (!valor || valor <= 0) {
+      
+      if (!valorTotal || valorTotal <= 0) {
         ui.append('Valor do pagamento ausente.');
         return;
       }
@@ -58,40 +59,69 @@
         return;
       }
       const corrida = corridaDoc.data()||{};
+      
       // Inferir tipo do serviço
       const tipoInferido = (()=>{
         const t = (corrida?.tipo||'').toString().toLowerCase();
-        if (t) return t; // 'descarte' | 'mudanca' | 'agendamento' (se já existir)
+        if (t) return t;
         if (origemColecao === 'descartes') return 'descarte';
         if (corrida?.agendamento === true) return 'agendamento';
         return 'mudanca';
       })();
+      
       const motoristaId = corrida.motoristaId || corrida.propostaAceita?.motoristaUid;
       if (!motoristaId) {
         ui.append('Motorista da corrida não definido.');
+        return;
       }
+
+      // Calcular valores: motorista recebe 90%, plataforma fica com 10%
+      const valorMotorista = Math.round(valorTotal * 0.90 * 100) / 100;
+      const taxaPlataforma = Math.round(valorTotal * 0.10 * 100) / 100;
 
       // Transação idempotente: só credita se a corrida ainda não estiver marcada como creditada
       const motRef = db.collection('motoristas').doc(motoristaId);
       const corridaRef = db.collection(origemColecao).doc(corridaId);
+      
       const txResult = await db.runTransaction(async (tx)=>{
-        const [motSnap, corridaSnap] = await Promise.all([ tx.get(motRef), tx.get(corridaRef) ]);
+        const [motSnap, corridaSnap] = await Promise.all([tx.get(motRef), tx.get(corridaRef)]);
         const ja = !!(corridaSnap.exists && corridaSnap.data()?.pagamento?.creditado === true);
+        
         if (ja) return { already:true };
-        const saldoAtual = Number((motSnap.exists? (motSnap.data().saldo||0):0)) || 0;
-        const novo = saldoAtual + Math.round(Number(valor) * 0.90 * 100) / 100; // credita 90%
-        tx.set(motRef, { saldo: novo, saldoAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(corridaRef, { pagamento: { ...(corridaSnap.data()?.pagamento||{}), creditado: true, creditadoEm: firebase.firestore.FieldValue.serverTimestamp() } }, { merge: true });
+        
+        const saldoAtual = Number((motSnap.exists ? (motSnap.data().saldo||0) : 0)) || 0;
+        const novoSaldo = saldoAtual + valorMotorista;
+        
+        tx.set(motRef, { 
+          saldo: novoSaldo, 
+          saldoAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp() 
+        }, { merge: true });
+        
+        tx.set(corridaRef, { 
+          pagamento: { 
+            ...(corridaSnap.data()?.pagamento||{}), 
+            creditado: true, 
+            creditadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+            valorTotal: valorTotal,
+            valorMotorista: valorMotorista,
+            taxaPlataforma: taxaPlataforma
+          } 
+        }, { merge: true });
+        
         return { already:false };
       });
+      
       if (!txResult?.already) {
+        // Registrar no histórico do motorista
         try {
           await db.collection('motoristas').doc(motoristaId)
             .collection('historico').add({
               tipo: 'credito_pagamento',
               origem: 'mercado_pago',
               corridaId,
-              valor,
+              valor: valorMotorista,
+              valorOriginal: valorTotal,
+              taxaPlataforma: taxaPlataforma,
               moeda: 'BRL',
               status: 'aprovado',
               tipoServico: tipoInferido,
@@ -99,11 +129,14 @@
             });
         } catch (e) { console.warn('Falha ao registrar histórico:', e); }
 
+        // Registrar na coleção global
         try {
           await db.collection('historicotransacoesM').add({
             motoristaId,
             corridaId,
-            valor,
+            valor: valorMotorista,
+            valorOriginal: valorTotal,
+            taxaPlataforma: taxaPlataforma,
             moeda: 'BRL',
             status: 'aprovado',
             origem: 'mercado_pago',
@@ -114,8 +147,9 @@
         } catch(e) { console.warn('Falha ao registrar na coleção global:', e); }
       }
 
-      ui.append(`Saldo do motorista (${motoristaId}) creditado: R$ ${valor.toFixed(2)}.`);
+      ui.append(`Saldo do motorista (${motoristaId}) creditado: R$ ${valorMotorista.toFixed(2)} (90% de R$ ${valorTotal.toFixed(2)}).`);
       try { localStorage.removeItem('lastPayment'); } catch{}
+      
     } catch (e) {
       console.error(e);
       ui.append('Falha ao creditar saldo.');

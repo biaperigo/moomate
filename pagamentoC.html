@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento Aprovado - Moomate</title>
+    <link rel="stylesheet" href="src/styles/homeC.css">
+    <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+    <style>
+        :root{
+          --orange:#ff6c0c; --orange2:#ff8a35; --bg:#fff4ec; --text:#2a2a2a;
+        }
+        *{box-sizing:border-box}
+        body{
+          margin:0; padding:32px; font-family: Inter, system-ui, Arial, sans-serif;
+          background: radial-gradient(1200px 700px at 20% 10%, #ffe0c8 0%, transparent 60%),
+                      radial-gradient(1000px 700px at 80% 10%, #ffd1b3 0%, transparent 60%),
+                      linear-gradient(160deg, #fff0e4 0%, #ffe6d6 50%, #ffd7be 100%);
+          color: var(--text);
+          min-height:100vh; display:flex; align-items:center; justify-content:center;
+        }
+        .card{
+          width:min(980px, 94vw); background:#fff; border-radius:18px; display:grid; gap:0;
+          grid-template-columns: 1.2fr 1fr; overflow:hidden; box-shadow:0 26px 60px rgba(0,0,0,.15);
+          border:1px solid rgba(255,108,12,.15);
+        }
+        .hero{
+          background: linear-gradient(135deg, #ffe6d1 0%, #fff 40%);
+          padding:28px; display:flex; align-items:center; justify-content:center;
+        }
+        .hero img{max-width:100%; height:auto; border-radius:12px; box-shadow:0 18px 40px rgba(255,108,12,.25)}
+        .content{ padding:36px 28px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+        .badge{display:inline-flex; align-items:center; gap:10px; background:#fff7f0; border:1px solid #ffe0c4; color:#b84e00; padding:8px 14px; border-radius:999px; font-weight:700; letter-spacing:.2px}
+        body, button, p, h1, h2, h3{ font-family:'Quicksand', sans-serif; }
+        h1{ margin:18px 0 8px; font-size:30px; color:#1f1f1f; font-weight:800 }
+        p{ margin:6px 0 2px; color:#5b5b5b; line-height:1.5 }
+        .actions{ margin-top:22px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center }
+        .btn{ padding:14px 24px; border-radius:12px; border:0; cursor:pointer; font-weight:800; letter-spacing:.2px; transition: transform .08s ease, box-shadow .2s ease }
+        .btn-primary{ background: linear-gradient(180deg, var(--orange2), var(--orange)); color:#fff; box-shadow:0 10px 24px rgba(255,108,12,.35)}
+        .btn:hover{ transform: translateY(-1px); box-shadow:0 14px 28px rgba(255,108,12,.40) }
+        @media (max-width: 860px){ .card{ grid-template-columns:1fr } .hero{ padding:18px } }
+    </style>
+</head>
+<body>
+    <main class="card">
+      <div class="hero">
+        <img src="src/images/pagamentoefetuado2.png" alt="Pagamento aprovado">
+      </div>
+      <div class="content">
+        <span class="badge">✔ Pagamento aprovado</span>
+        <h1>Pagamento confirmado!</h1>
+        <p>Seu pagamento foi processado com sucesso. Obrigado por usar o Moomate!</p>
+        <div class="actions">
+          <button id="btnVoltarInicio" class="btn btn-primary">Voltar ao início</button>
+        </div>
+      </div>
+    </main>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <!-- Script que credita o saldo -->
+    <script src="src/javascript/pagamentoSucesso.js"></script>
+    <script>
+      // Gatilho manual para creditar quando estiver testando
+      document.getElementById('btnVoltarInicio')?.addEventListener('click', async ()=>{
+        try {
+          if (window.PagamentoSucesso && typeof window.PagamentoSucesso.creditarAgora === 'function') {
+            await window.PagamentoSucesso.creditarAgora();
+          }
+        } catch(e){ console.warn(e); }
+        location.href = 'homeC.html';
+      });
+    </script>
+</body>
+</html>

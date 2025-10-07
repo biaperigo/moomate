@@ -1490,29 +1490,38 @@ const exibirProposta = async (proposta, descarteData) => {
     const origem = descarteData.localRetirada || 'N/A';
     const destino = descarteData.localEntrega || 'N/A';
 
-    // --- Lógica de busca de dados do motorista (VERSÃO CORRIGIDA) ---
+    // --- Lógica de busca de dados do motorista ---
     let motoristaNome = proposta.nomeMotorista || 'Motorista';
     let motoristaFotoUrl = null;
     let motoristaAvaliacao = 0.0;
 
-    // A proposta DEVE ter o motoristaUid para funcionar
     if (proposta.motoristaUid) {
         try {
             const motoristaDoc = await db.collection('motoristas').doc(proposta.motoristaUid).get();
             if (motoristaDoc.exists) {
                 const motoristaData = motoristaDoc.data();
                 
-                // **CORREÇÃO 1: Acessando os campos corretos**
-                // Acessa o nome dentro de 'dadosPessoais' ou no nível principal
+                console.log('[PROPOSTA] Dados do motorista:', motoristaData);
+                
+                // Nome
                 motoristaNome = motoristaData.dadosPessoais?.nome || motoristaData.nome || motoristaNome;
-                // Acessa a foto dentro de 'dadosPessoais' ou no nível principal
+                
+                // Foto
                 motoristaFotoUrl = motoristaData.dadosPessoais?.fotoPerfilUrl || motoristaData.fotoPerfilUrl || null;
                 
-                // **CORREÇÃO 2: O campo de avaliação é 'media'**
-                motoristaAvaliacao = motoristaData.media || 0; 
+                // AVALIAÇÃO: Priorizar avaliacaoMedia > media > cálculo manual
+                if (typeof motoristaData.avaliacaoMedia === 'number') {
+                    motoristaAvaliacao = motoristaData.avaliacaoMedia;
+                } else if (typeof motoristaData.media === 'number') {
+                    motoristaAvaliacao = motoristaData.media;
+                } else if (motoristaData.ratingSum && motoristaData.ratingCount) {
+                    motoristaAvaliacao = Number(motoristaData.ratingSum) / Number(motoristaData.ratingCount);
+                }
+                
+                console.log(`[PROPOSTA] ${motoristaNome}: nota=${motoristaAvaliacao.toFixed(1)} (avaliacaoMedia=${motoristaData.avaliacaoMedia}, media=${motoristaData.media})`);
             }
         } catch (error) {
-            console.error("Erro ao buscar dados do motorista:", error);
+            console.error("[PROPOSTA] Erro ao buscar motorista:", error);
         }
     }
     // --- Fim da lógica de busca ---
