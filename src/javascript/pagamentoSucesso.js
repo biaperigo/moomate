@@ -47,9 +47,13 @@
         return;
       }
 
-      // Buscar corrida em 'corridas' e, se não houver, em 'descartes'
-      let corridaDoc = await db.collection('corridas').doc(corridaId).get();
-      let origemColecao = 'corridas';
+      // Buscar corrida priorizando 'agendamentos', depois 'corridas' e 'descartes'
+      let origemColecao = 'agendamentos';
+      let corridaDoc = await db.collection('agendamentos').doc(corridaId).get();
+      if (!corridaDoc.exists) {
+        corridaDoc = await db.collection('corridas').doc(corridaId).get();
+        origemColecao = corridaDoc.exists ? 'corridas' : origemColecao;
+      }
       if (!corridaDoc.exists) {
         corridaDoc = await db.collection('descartes').doc(corridaId).get();
         origemColecao = corridaDoc.exists ? 'descartes' : origemColecao;
@@ -104,7 +108,8 @@
             creditadoEm: firebase.firestore.FieldValue.serverTimestamp(),
             valorTotal: valorTotal,
             valorMotorista: valorMotorista,
-            taxaPlataforma: taxaPlataforma
+            taxaPlataforma: taxaPlataforma,
+            status: 'aprovado'
           } 
         }, { merge: true });
         
@@ -146,6 +151,12 @@
           });
         } catch(e) { console.warn('Falha ao registrar na coleção global:', e); }
       }
+
+      // Marcar corrida como finalizada e sync como finalizada
+      try {
+        await corridaRef.set({ status: 'finalizada' }, { merge: true });
+        await corridaRef.collection('sync').doc('estado').set({ fase: 'finalizada' }, { merge: true });
+      } catch(e) { console.warn('Falha ao marcar finalizada:', e); }
 
       ui.append(`Saldo do motorista (${motoristaId}) creditado: R$ ${valorMotorista.toFixed(2)} (90% de R$ ${valorTotal.toFixed(2)}).`);
       try { localStorage.removeItem('lastPayment'); } catch{}

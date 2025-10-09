@@ -1,4 +1,4 @@
-﻿﻿(() => {
+(() => {
   const pick = (...ids) => ids.map((id) => document.getElementById(id)).find((el) => !!el) || null
 
 
@@ -795,7 +795,7 @@
 
       console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
       
-      // 4. Atualizar status da corrida
+      // 4. Atualizar status da corrida para pendente do cliente (não finalizar ainda)
       if (corridaRef) {
         await corridaRef.set({
           avaliacao: {
@@ -803,7 +803,7 @@
             comentario: comentario,
             avaliadoEm: firebase.firestore.FieldValue.serverTimestamp()
           },
-          status: 'finalizada'
+          status: 'finalizada_pendente'
         }, { merge: true });
       }
       
