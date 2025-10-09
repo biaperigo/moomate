@@ -663,9 +663,16 @@ let unsubSync = () => {};
       if (typeof d.distanciaM === "number") definirTexto(["distanciaInfo","estimated-distance","distPrevista","distancia"], km(d.distanciaM));
       
       if (d.fase === "cancelada" || d.cancelamento) {
+        const por = d.cancelamento?.canceladoPor || null;
+        if (por === "cliente") {
           localStorage.removeItem("ultimaCorridaCliente");
-        window.location.href = "homeC.html";
-        return;
+          window.location.href = "homeC.html";
+          return;
+        } else {
+          // Corrida foi cancelada por motorista/sistema: não redirecionar o cliente automaticamente
+          // Mantemos a tela para permitir avaliação/pagamento ou exibir estado final
+          atualizarVisibilidadeBotaoCancelar("cancelada");
+        }
       }
       
       updateTimeline(S.fase);
