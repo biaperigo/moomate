@@ -438,12 +438,18 @@
       }
 
 
-      const latlngs = route.geometry.coordinates.map(([lng, lat]) => {
-        if (validarCoordenadas(lat, lng)) {
-          return [lat, lng]
-        }
-        return null
-      }).filter(coord => coord !== null)
+      // Para a linha da rota, aceitamos qualquer coordenada numérica válida
+      // (sem a restrição regional de validarCoordenadas), pois a polilinha
+      // pode conter pontos fora do retângulo de SP dependendo do provedor.
+      const latlngs = route.geometry.coordinates
+        .map(([lng, lat]) => {
+          const la = parseFloat(lat), lo = parseFloat(lng)
+          if (Number.isFinite(la) && Number.isFinite(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180) {
+            return [la, lo]
+          }
+          return null
+        })
+        .filter(Boolean)
       
       if (latlngs.length === 0) {
         console.error("Nenhuma coordenada válida na rota")
