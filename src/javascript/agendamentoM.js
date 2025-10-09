@@ -38,11 +38,10 @@
       async () => {
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=3&countrycodes=br&bounded=1&viewbox=-46.826,-23.356,-46.365,-23.796`;
         const res = await fetch(url, {
-          headers: { 'User-Agent': 'MoomateApp/1.0', 'Referer': 'https://moomate.com.br/' } // Adicionado Referer para evitar bloqueios
+          headers: { 'User-Agent': 'MoomateApp/1.0', 'Referer': 'https://moomate.com.br/' }
         });
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          // Priorizar resultados em São Paulo
           const spResult = data.find(r => r.display_name?.includes('São Paulo')) || data[0];
           const lat = parseFloat(spResult.lat);
           const lng = parseFloat(spResult.lon);
@@ -81,23 +80,20 @@
         try {
           const result = await Promise.race([
             provider(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000)) // Aumentar timeout para 15 segundos
+            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000))
           ]);
           
           if (result) {
-            // Validar se as coordenadas estão dentro da região de São Paulo
             const { lat, lng } = result;
-            // Ajustar a validação da bounding box para ser um pouco mais flexível
             if (lat >= -24.5 && lat <= -22.5 && lng >= -47.5 && lng <= -45.5) {
-              // Salvar no cache
               sessionStorage.setItem(cacheKey, JSON.stringify(result));
               return result;
             }
           }
         } catch (error) {
           console.warn(`Geocoding provider failed (${provider.name || i}, retry ${retry}): ${error.message}`);
-          if (retry === maxRetries) break; // Não tentar novamente se atingiu o limite de retries
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retry + 1))); // Esperar antes de tentar novamente
+          if (retry === maxRetries) break;
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retry + 1)));
         }
       }
     }
@@ -137,7 +133,6 @@
       const ms = ts.getTime() - now.getTime();
       const fire = async ()=>{
         try{
-          // Criar/atualizar corridaagendamento antes de redirecionar (espelha dados essenciais)
           const agRef = db.collection('agendamentos').doc(String(v.id));
           const agSnap = await agRef.get();
           const ag = agSnap.exists ? (agSnap.data()||{}) : {};
@@ -168,7 +163,7 @@
     }catch{}
   }
   
-  // Modal informativo reutilizável (recriado após correção)
+  // Modal informativo reutilizável
   function ensureInfoModal(){
     let modal = document.getElementById('mm-info-modal');
     if (modal) return modal;
@@ -216,11 +211,11 @@
     modal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:10000;';
     modal.innerHTML = `
       <div class="modal-content" style="background:#fff;border-radius:8px;min-width:300px;max-width:92vw;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.2);transform:scale(.96);transition:transform .2s ease,opacity .2s ease;opacity:0">
-        <h3 style=\"margin:0 0 6px 0;color:#333\">Está na hora do seu agendamento</h3>
-        <p id=\"ag-start-text-m\" style=\"margin:4px 0 12px 0;color:#555\">Inicie a corrida agora.</p>
-        <div style=\"display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap\">
-          <button id=\"ag-start-cancel-m\" style=\"background:#e7e7e7;border:0;color:#111;border-radius:8px;padding:8px 12px;cursor:pointer\">Depois</button>
-          <button id=\"ag-start-go-m\" style=\"background:#ff6b35;border:0;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600\">Iniciar</button>
+        <h3 style="margin:0 0 6px 0;color:#333">Está na hora do seu agendamento</h3>
+        <p id="ag-start-text-m" style="margin:4px 0 12px 0;color:#555">Inicie a corrida agora.</p>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <button id="ag-start-cancel-m" style="background:#e7e7e7;border:0;color:#111;border-radius:8px;padding:8px 12px;cursor:pointer">Depois</button>
+          <button id="ag-start-go-m" style="background:#ff6b35;border:0;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600">Iniciar</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -251,7 +246,6 @@
   const botaoFecharModal = document.getElementById('modalClose');
   const botaoConfirmarProposta = document.getElementById('sendProposalBtn');
   const inputPrecoProposta = document.getElementById('proposalPrice');
-  const inputTempoProposta = document.getElementById('proposalTime');
   const inputAjudantesProposta = document.getElementById('proposalHelpers');
   const inputVeiculoProposta = document.getElementById('proposalVehicle');
 
@@ -314,7 +308,7 @@
   }
 
   // Cache simples para nomes/fotos
-  const cachePerfil = new Map(); // uid -> { nome, foto }
+  const cachePerfil = new Map();
   async function preencherNomeEAvatar(card, uid){
     try{
       if (!uid || !firebase || !firebase.apps?.length) return;
@@ -365,7 +359,6 @@
           container.appendChild(empty);
           return;
         }
-        // Monta o mesmo modelo de objeto do cliente
         const viagens = confirmados.map(d=>{
           const dt = d.dataHoraAgendada?.toDate ? d.dataHoraAgendada.toDate() : (d.dataHoraAgendada?.seconds? new Date(d.dataHoraAgendada.seconds*1000): null);
           const confDt = d.confirmadoEm?.toDate ? d.confirmadoEm.toDate() : (d.confirmadoEm?.seconds? new Date(d.confirmadoEm.seconds*1000): null);
@@ -375,7 +368,6 @@
           const destino = d?.destino?.endereco || d?.localEntrega || '-';
           const veiculo = d?.tipoVeiculo ? (String(d.tipoVeiculo).charAt(0).toUpperCase()+String(d.tipoVeiculo).slice(1)) : (d?.propostaAceita?.veiculo || '-');
           const volumes = d?.volumes || '-';
-          // Para o motorista, exibiremos dados do CLIENTE
           const clienteUid = d?.clienteId || d?.clienteUid || null;
           const nomeCliente = d?.clienteNome || '—';
           const emailCliente = d?.clienteEmail || '—';
@@ -385,7 +377,6 @@
 
         const list = document.createElement('div');
         list.style.display='flex'; list.style.flexDirection='column'; list.style.gap='16px';
-        // Limpa listeners antigos
         try{ if(!window.__agCardUnsubsM) window.__agCardUnsubsM = {}; Object.values(window.__agCardUnsubsM).forEach(fn=>{ try{fn();}catch{} }); window.__agCardUnsubsM = {}; }catch{}
 
         viagens.forEach(v=> { 
@@ -401,76 +392,55 @@
       });
   }
 
-  // Mantido para listas antigas, não usado após unificar design
-  function criarCardAgendado(d){
-    const card = document.createElement('div');
-    card.className = 'delivery-card';
-    const titulo = d.titulo || 'Serviço Agendado';
-    const quando = (()=>{
-      try{
-        const ts = d.dataHoraAgendada?.seconds? new Date(d.dataHoraAgendada.seconds*1000) : null;
-        if (!ts) return '';
-        const dia = ts.toLocaleDateString('pt-BR', { weekday:'long' });
-        const horas = ts.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-        return `${dia.charAt(0).toUpperCase()+dia.slice(1)} ${horas}`;
-      }catch{ return ''; }
-    })();
-    const origem = d.origem?.endereco || d.localRetirada || '—';
-    const destino = d.destino?.endereco || d.localEntrega || '—';
-    const cliente = d.clienteNome || 'Cliente';
-    const clienteUid = d.clienteId || d.clienteUid || null;
-    const valor = (d.propostaAceita?.preco!=null) ? `R$ ${Number(d.propostaAceita.preco).toFixed(2)}` : '';
-    card.innerHTML = `
-      <div class="ag-card">
-        <div class="ag-top">
-          <div class="ag-title">${titulo}</div>
-          <div class="ag-when">${quando}</div>
-        </div>
-        <div class="ag-info">
-          <div class="ag-left">
-            <div><i class="fa-solid fa-map-marker-alt"></i> ${origem}</div>
-            <div><i class="fa-solid fa-arrow-right"></i> ${destino}</div>
-          </div>
-          <div class="ag-mid">
-            <div><i class="fa-solid fa-user"></i> ${cliente}</div>
-            <div><i class="fa-solid fa-dollar-sign"></i> ${valor}</div>
-          </div>
-        </div>
-      </div>`;
-    // Se não temos nome mas temos UID, buscar e preencher
-    if (!d.clienteNome && clienteUid) preencherNomeEAvatar(card, clienteUid);
-    return card;
-  }
+  // Função para atualizar distância assincronamente
+  async function atualizarDistanciaAssincrona(solicitacao, cardElement) {
+    try {
+      const origem = solicitacao.origem?.endereco || solicitacao.localRetirada;
+      const destino = solicitacao.destino?.endereco || solicitacao.localEntrega;
+      
+      if (!origem || !destino) return;
 
-  async function atualizarDistanciaAssincrona(s, cardEl){
-    try{
-      if (cardEl.dataset.distCalcRunning==='1') return; cardEl.dataset.distCalcRunning='1';
-      const origemEnd = s.origem?.endereco || s.localRetirada || '';
-      const destinoEnd = s.destino?.endereco || s.localEntrega || '';
-      let oLat = Number(s.origem?.coordenadas?.lat ?? s.origem?.lat);
-      let oLng = Number(s.origem?.coordenadas?.lng ?? s.origem?.lng);
-      let dLat = Number(s.destino?.coordenadas?.lat ?? s.destino?.lat);
-      let dLng = Number(s.destino?.coordenadas?.lng ?? s.destino?.lng);
-      const precisaOrigem = !(Number.isFinite(oLat) && Number.isFinite(oLng));
-      const precisaDestino = !(Number.isFinite(dLat) && Number.isFinite(dLng));
-      const TEMPO_LIMITE_MS = 1000;
-      const limit = (p)=> Promise.race([p, new Promise(r=>setTimeout(()=>r(null),TEMPO_LIMITE_MS))]);
-      if (precisaOrigem && origemEnd){ const g = await limit(geocodificarEndereco(origemEnd)); if (g){ oLat=g.lat; oLng=g.lng; } }
-      if (precisaDestino && destinoEnd){ const g = await limit(geocodificarEndereco(destinoEnd)); if (g){ dLat=g.lat; dLng=g.lng; } }
-      if ([oLat,oLng,dLat,dLng].every(Number.isFinite)){
-        const R=6371, toRad=(deg)=>deg*Math.PI/180;
-        const dPhi=toRad(dLat-oLat), dLam=toRad(dLng-oLng);
-        const a=Math.sin(dPhi/2)**2 + Math.cos(toRad(oLat))*Math.cos(toRad(dLat))*Math.sin(dLam/2)**2;
-        const dist = 2*R*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        const distEl = cardEl.querySelector('.ag-mid')?.querySelector('div');
-        // Atualiza o primeiro item da coluna do meio que mostra Distância
-        const label = cardEl.querySelector('.ag-mid');
-        if (label){
-          const distRow = label.querySelector('div');
-          if (distRow) distRow.innerHTML = `<strong>Distância:</strong> ${dist.toFixed(2)} km`;
+      // Geocodificar origem e destino
+      const [coordOrigem, coordDestino] = await Promise.all([
+        geocodificarEndereco(origem),
+        geocodificarEndereco(destino)
+      ]);
+
+      if (coordOrigem && coordDestino) {
+        // Calcular distância real
+        const R = 6371; // Raio da Terra em km
+        const toRad = (deg) => deg * Math.PI / 180;
+        const dLat = toRad(coordDestino.lat - coordOrigem.lat);
+        const dLng = toRad(coordDestino.lng - coordOrigem.lng);
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                 Math.cos(toRad(coordOrigem.lat)) * Math.cos(toRad(coordDestino.lat)) *
+                 Math.sin(dLng/2) * Math.sin(dLng/2);
+        const distanciaReal = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        // Atualizar o card com a distância real
+        const distanciaEl = cardElement.querySelector('[data-distancia]');
+        if (distanciaEl) {
+          distanciaEl.textContent = `${distanciaReal.toFixed(2)} km`;
+          distanciaEl.style.color = '#28a745'; // Verde para indicar que foi atualizada
+        }
+
+        // Atualizar no Firestore para cache futuro
+        try {
+          await db.collection('agendamentos').doc(solicitacao.id).update({
+            'origem.lat': coordOrigem.lat,
+            'origem.lng': coordOrigem.lng,
+            'destino.lat': coordDestino.lat,
+            'destino.lng': coordDestino.lng,
+            distancia: distanciaReal,
+            geocodificadoEm: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (updateError) {
+          console.warn('Falha ao atualizar coordenadas no Firestore:', updateError);
         }
       }
-    }catch{} finally{ delete cardEl.dataset.distCalcRunning; }
+    } catch (error) {
+      console.warn('Falha na geocodificação assíncrona:', error);
+    }
   }
 
   // ====== Card igual ao cliente ======
@@ -579,7 +549,7 @@
     }catch{ return String(dateString||''); }
   }
 
-  // Cancelamento para motorista (mesmo handler, opcional)
+  // Cancelamento para motorista
   window.cancelViagem = async function(agendamentoId) {
     try{
       if (!window.firebase || !firebase.apps.length) return alert('Serviço indisponível.');
@@ -611,7 +581,6 @@
     }
     const ordenadas = Array.from(todasSolicitacoes.values()).sort((a,b)=>b.dataOrdenacao-a.dataOrdenacao);
     ordenadas.forEach(s=> listaEntregas.appendChild(criarCardEntrega(s)) );
-    // Quando houver apenas 1 card, centraliza para não ficar estranho; múltiplos permanecem ancorados à direita
     if (listaEntregas && listaEntregas.classList) {
       listaEntregas.classList.toggle('single', ordenadas.length === 1);
     }
@@ -651,63 +620,12 @@
         return 1;
       }catch{ return 1; }
     })();
-    // Se a distância está em fallback (1 km) ou NaN, tentar geocodificar e atualizar o card de forma assíncrona
+    
     try{
       if (!Number.isFinite(distKm) || distKm === 1 || usouFallbackCentro){
         atualizarDistanciaAssincrona(s, card);
       }
     }catch{}
-
-    // Função para atualizar distância assincronamente
-    async function atualizarDistanciaAssincrona(solicitacao, cardElement) {
-      try {
-        const origem = solicitacao.origem?.endereco || solicitacao.localRetirada;
-        const destino = solicitacao.destino?.endereco || solicitacao.localEntrega;
-        
-        if (!origem || !destino) return;
-
-        // Geocodificar origem e destino
-        const [coordOrigem, coordDestino] = await Promise.all([
-          geocodificarEndereco(origem),
-          geocodificarEndereco(destino)
-        ]);
-
-        if (coordOrigem && coordDestino) {
-          // Calcular distância real
-          const R = 6371; // Raio da Terra em km
-          const toRad = (deg) => deg * Math.PI / 180;
-          const dLat = toRad(coordDestino.lat - coordOrigem.lat);
-          const dLng = toRad(coordDestino.lng - coordOrigem.lng);
-          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                   Math.cos(toRad(coordOrigem.lat)) * Math.cos(toRad(coordDestino.lat)) *
-                   Math.sin(dLng/2) * Math.sin(dLng/2);
-          const distanciaReal = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-          // Atualizar o card com a distância real
-          const distanciaEl = cardElement.querySelector('[data-distancia]');
-          if (distanciaEl) {
-            distanciaEl.textContent = `${distanciaReal.toFixed(2)} km`;
-            distanciaEl.style.color = '#28a745'; // Verde para indicar que foi atualizada
-          }
-
-          // Atualizar no Firestore para cache futuro
-          try {
-            await db.collection('agendamentos').doc(solicitacao.id).update({
-              'origem.lat': coordOrigem.lat,
-              'origem.lng': coordOrigem.lng,
-              'destino.lat': coordDestino.lat,
-              'destino.lng': coordDestino.lng,
-              distancia: distanciaReal,
-              geocodificadoEm: firebase.firestore.FieldValue.serverTimestamp()
-            });
-          } catch (updateError) {
-            console.warn('Falha ao atualizar coordenadas no Firestore:', updateError);
-          }
-        }
-      } catch (error) {
-        console.warn('Falha na geocodificação assíncrona:', error);
-      }
-    }
 
     const agTs = s.dataHoraAgendada?.seconds || s.dataAgendada?.seconds || null;
     let quando = '—';
@@ -727,7 +645,6 @@
       }
     }catch{}
 
-    // Informações ao centro como no HomeM
     const distanciaLabel = (Number.isFinite(distKm) && distKm>0) ? `${distKm.toFixed(2)} km` : '---';
     const volumesLabel = volsNum>0 ? `${volsNum} itens` : '---';
     const tipoLabel = tipoV || '---';
@@ -782,24 +699,36 @@
     const s = todasSolicitacoes.get(entregaSelecionadaId);
     const distKm = distanciaEstimativaKmFromDoc(s);
     limitesPrecoAtuais = calcularLimitesPrecoPorDistancia(distKm);
-    inputPrecoProposta.value=''; inputTempoProposta.value=''; inputAjudantesProposta.value='0'; inputVeiculoProposta.value='pequeno';
+    inputPrecoProposta.value=''; 
+    inputAjudantesProposta.value='0'; 
+    inputVeiculoProposta.value='pequeno';
     inputPrecoProposta.min = limitesPrecoAtuais.min.toFixed(2);
     inputPrecoProposta.max = limitesPrecoAtuais.max.toFixed(2);
     garantirElementoDicaPreco().textContent = `Faixa permitida: R$ ${limitesPrecoAtuais.min.toFixed(2)} a R$ ${limitesPrecoAtuais.max.toFixed(2)} (base: R$ ${limitesPrecoAtuais.base.toFixed(2)})`;
-    modalProposta.style.display='flex'; setTimeout(()=>{ modalProposta.style.opacity='1'; modalProposta.querySelector('.modal-content').style.transform='scale(1)'; },10);
+    modalProposta.style.display='flex'; 
+    setTimeout(()=>{ 
+      modalProposta.style.opacity='1'; 
+      modalProposta.querySelector('.modal-content').style.transform='scale(1)'; 
+    },10);
   }
-  function fecharModal(){ modalProposta.style.opacity='0'; modalProposta.querySelector('.modal-content').style.transform='scale(0.9)'; setTimeout(()=> modalProposta.style.display='none',300); }
+  
+  function fecharModal(){ 
+    modalProposta.style.opacity='0'; 
+    modalProposta.querySelector('.modal-content').style.transform='scale(0.9)'; 
+    setTimeout(()=> modalProposta.style.display='none',300); 
+  }
 
   async function enviarProposta(){
     const precoBase = Number((inputPrecoProposta.value||'').replace(',','.'));
-    const tempo = parseInt(inputTempoProposta.value,10);
     const ajud = parseInt(inputAjudantesProposta.value,10);
     const veic = inputVeiculoProposta.value;
+    
     if(!entregaSelecionadaId) return alert('Selecione um agendamento.');
     if(!limitesPrecoAtuais) return alert('Faixa de preço indisponível.');
-    if(!precoBase || precoBase<limitesPrecoAtuais.min || precoBase>limitesPrecoAtuais.max) return alert(`Valor fora da faixa (R$ ${limitesPrecoAtuais.min.toFixed(2)} - ${limitesPrecoAtuais.max.toFixed(2)})`);
-    if(!tempo || tempo<=0) return alert('Informe o tempo até a retirada (min).');
-    if(ajud<0||ajud>10) return alert('Número de ajudantes inválido.');
+    if(!precoBase || precoBase<limitesPrecoAtuais.min || precoBase>limitesPrecoAtuais.max) {
+      return alert(`Valor fora da faixa (R$ ${limitesPrecoAtuais.min.toFixed(2)} - ${limitesPrecoAtuais.max.toFixed(2)})`);
+    }
+    if(ajud<0||ajud>5) return alert('Número de motoristas inválido (0 a 5).');
 
     const auth = firebase.auth();
     const idParaUsar = auth?.currentUser?.uid || null;
@@ -808,7 +737,7 @@
     const s = todasSolicitacoes.get(entregaSelecionadaId) || {};
     const collectionName = 'agendamentos';
 
-    // cálculo alinhado ao HomeM: custo ajudantes + 10% taxa
+    // cálculo: custo motoristas + 10% taxa
     const custoAjud = ajud*50;
     const precoTotalMotorista = precoBase + custoAjud;
     const taxaPlataforma = 0.10;
@@ -830,10 +759,14 @@
 
     const propostaData = {
       preco: precoCliente,
-      tempoChegada: tempo,
       ajudantes: ajud,
       veiculo: veic,
-      precoOriginal: { base: Number(precoBase.toFixed(2)), ajudantes: Number(custoAjud.toFixed(2)), totalMotorista: Number(precoTotalMotorista.toFixed(2)), taxa: taxaPlataforma },
+      precoOriginal: { 
+        base: Number(precoBase.toFixed(2)), 
+        ajudantes: Number(custoAjud.toFixed(2)), 
+        totalMotorista: Number(precoTotalMotorista.toFixed(2)), 
+        taxa: taxaPlataforma 
+      },
       motoristaUid: idParaUsar,
       motoristaId: idParaUsar,
       nomeMotorista,
@@ -842,13 +775,19 @@
       dataEnvio: firebase.firestore.FieldValue.serverTimestamp(),
       gravadoPor: 'motorista'
     };
+    
     try{
       await db.collection(collectionName).doc(entregaSelecionadaId)
         .collection('propostas').doc(idParaUsar).set(propostaData);
       await db.collection(collectionName).doc(entregaSelecionadaId)
         .set({ [`propostas.${idParaUsar}`]: propostaData, ultimaPropostaEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
-      alert('Proposta enviada com sucesso!'); fecharModal(); botaoEnviar.disabled=true;
-    }catch(e){ console.error(e); alert('Falha ao enviar proposta.'); }
+      alert('Proposta enviada com sucesso!'); 
+      fecharModal(); 
+      botaoEnviar.disabled=true;
+    }catch(e){ 
+      console.error(e); 
+      alert('Falha ao enviar proposta.'); 
+    }
   }
 
   // Solicitações: apenas status aguardando_propostas_agendamento
@@ -871,7 +810,7 @@
       });
   }
 
-  // Escuta propostas ACEITAS para este motorista com status 'agendado' e dispara popup próximo da hora
+  // Escuta propostas ACEITAS para este motorista
   function ouvirAgendamentosAceitos(){
     if (!motoristaUid) return;
     db.collection('agendamentos')
@@ -886,65 +825,12 @@
             modal.classList.add('show');
             setTimeout(()=>{
               modal.classList.remove('show');
-              // troca para aba Agendados
               const link = document.querySelector('.tab-link[data-tab="agendados"]');
               if (link) link.click();
             }, 1200);
           }
         });
       });
-  }
-
-  function abrirPopupAgendamento(id, colecao, d){
-    const modal = document.getElementById('modal-proposta-motorista');
-    if (!modal) return;
-    document.getElementById('mm-nome-cliente').textContent = `Cliente: ${d.clienteNome || d.clienteId || 'Cliente'}`;
-    const origem = d.origem?.endereco || d.localRetirada || '—';
-    const destino = d.destino?.endereco || d.localEntrega || '—';
-    const valor = Number(d.propostaAceita?.preco||0).toFixed(2);
-    const tempo = d.propostaAceita?.tempoChegada || 0;
-    const info = document.getElementById('mm-info-corrida');
-    if (info) info.innerHTML = `
-      <div><strong style="color:#ff6b35">Origem:</strong> ${origem}</div>
-      <div><strong style="color:#ff6b35">Destino:</strong> ${destino}</div>
-      <div><strong style="color:#ff6b35">Valor:</strong> R$ ${valor}</div>
-      <div><strong style="color:#ff6b35">Tempo de chegada:</strong> ${tempo} min</div>`;
-    modal.classList.remove('hidden');
-    // ações
-    const btnIniciar = document.getElementById('mm-iniciar');
-    const btnCancelar = document.getElementById('mm-cancelar');
-    if (btnIniciar) btnIniciar.onclick = ()=> iniciarCorridaAgendada(id, colecao, d);
-    if (btnCancelar) btnCancelar.onclick = ()=> modal.classList.add('hidden');
-  }
-
-  async function iniciarCorridaAgendada(id, colecao, d){
-    try{
-      // Criar/atualizar corridas/{id}
-      const corridaData = {
-        tipo: colecao === 'descartes' ? 'descarte' : 'mudanca',
-        clienteId: d.clienteId || null,
-        motoristaId: motoristaUid,
-        origem: d.origem || { endereco: d.localRetirada||'' },
-        destino: d.destino || { endereco: d.localEntrega||'' },
-        propostaAceita: d.propostaAceita || null,
-        status: 'indo_retirar',
-        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      await db.collection('corridas').doc(id).set(corridaData, { merge:true });
-      await db.collection('corridas').doc(id).collection('sync').doc('estado')
-        .set({ fase:'indo_retirar', corridaId:id, tipo:corridaData.tipo }, { merge:true });
-      // Atualizar doc de origem para em_corrida
-      await db.collection(colecao).doc(id).set({ status:'em_corrida_agendamento', corridaIniciada:true, corridaIniciadaEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
-
-      localStorage.setItem('corridaSelecionada', id);
-      localStorage.setItem('ultimaCorridaMotorista', id);
-      const modal = document.getElementById('modal-proposta-motorista');
-      if (modal) modal.classList.add('hidden');
-      window.location.href = `rotaM.html?corrida=${encodeURIComponent(id)}`;
-    }catch(e){
-      console.error('Falha ao iniciar corrida agendada:', e);
-      alert('Não foi possível iniciar a corrida.');
-    }
   }
 
   listaEntregas.addEventListener('click', e=>{
@@ -960,6 +846,7 @@
   botaoEnviar.addEventListener('click', abrirModal);
   botaoFecharModal.addEventListener('click', fecharModal);
   botaoConfirmarProposta.addEventListener('click', enviarProposta);
+  
   // Autenticação e listeners
   firebase.auth().onAuthStateChanged(u=>{
     motoristaUid = u?.uid || null;
@@ -986,18 +873,14 @@ document.addEventListener('DOMContentLoaded', function() {
     link.addEventListener('click', function(e) {
       e.preventDefault();
       
-      // Remove active class from all tabs and contents
       tabLinks.forEach(l => l.classList.remove('active'));
       tabContents.forEach(content => content.classList.remove('active'));
       
-      // Add active class to clicked tab
       this.classList.add('active');
       
-      // Show corresponding content
       const tabId = this.getAttribute('data-tab');
       document.getElementById(tabId).classList.add('active');
       
-      // Update button text based on active tab
       const submitBtn = document.getElementById('submitBtn');
       if (tabId === 'solicitacoes') {
         submitBtn.textContent = 'MANDAR PROPOSTA DE VALOR';
@@ -1012,15 +895,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // Delivery card selection
 document.addEventListener('click', function(e) {
   if (e.target.closest('.delivery-card')) {
-    // Remove selected class from all cards
     document.querySelectorAll('.delivery-card').forEach(card => {
       card.classList.remove('selected');
     });
     
-    // Add selected class to clicked card
     e.target.closest('.delivery-card').classList.add('selected');
     
-    // Enable submit button
     document.getElementById('submitBtn').disabled = false;
   }
 });
@@ -1053,8 +933,6 @@ function closeModal() {
     modal.style.display = 'none';
   }, 300);
 }
-
-// O envio real da proposta está no handler enviarProposta()
 
 // Simulate real-time updates
 setInterval(function() {

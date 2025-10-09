@@ -1,4 +1,4 @@
-﻿let currentCorridaId = null;
+﻿﻿let currentCorridaId = null;
 let unsubCorrida = () => {};
 let unsubSync = () => {};
 
