@@ -663,9 +663,16 @@ let unsubSync = () => {};
       if (typeof d.distanciaM === "number") definirTexto(["distanciaInfo","estimated-distance","distPrevista","distancia"], km(d.distanciaM));
       
       if (d.fase === "cancelada" || d.cancelamento) {
+        const por = d.cancelamento?.canceladoPor || null;
+        if (por === "cliente") {
           localStorage.removeItem("ultimaCorridaCliente");
-        window.location.href = "homeC.html";
-        return;
+          window.location.href = "homeC.html";
+          return;
+        } else {
+          // Corrida foi cancelada por motorista/sistema: não redirecionar o cliente automaticamente
+          // Mantemos a tela para permitir avaliação/pagamento ou exibir estado final
+          atualizarVisibilidadeBotaoCancelar("cancelada");
+        }
       }
       
       updateTimeline(S.fase);
@@ -754,8 +761,17 @@ let unsubSync = () => {};
           console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
           modal.style.display="none";
           
-          alert("Avaliação enviada com sucesso!");
-          window.location.href = "homeC.html";
+          // Processar pagamento
+          setTimeout(async () => {
+            try {
+              const dadosPagamento = await buscarDadosPagamento(corridaId);
+              await criarPagamentoMercadoPago(dadosPagamento);
+            } catch (error) {
+              console.error("Erro ao processar pagamento:", error);
+              alert("Erro ao processar pagamento. Redirecionando...");
+              window.location.href = `pagamentoC.html?corrida=${encodeURIComponent(corridaId)}`;
+            }
+          }, 500);
           
         } catch (error) {
           console.error("[AVALIAÇÃO] Erro ao enviar:", error);
@@ -972,3 +988,202 @@ let unsubSync = () => {};
     watchActiveCorridaCliente(user.uid);
   });
 })()
+
+// Expor referência global ao Firestore para as funções de pagamento abaixo
+// (o `db` definido dentro do IIFE acima não está no escopo destas funções)
+const db = (window.firebase && window.firebase.firestore && window.firebase.firestore()) || null;
+
+// FUNÇÕES DO MERCADO PAGO - Adicionar antes da inicialização principal
+async function buscarDadosPagamento(corridaId) {
+  try {
+    let data = null;
+    try {
+      const snap = await db.collection('agendamentos').doc(corridaId).get();
+      data = snap.exists ? (snap.data() || null) : null;
+    } catch {}
+    if (!data) {
+      try {
+        const snap2 = await db.collection('corridas').doc(corridaId).get();
+        data = snap2.exists ? (snap2.data() || null) : null;
+      } catch {}
+    }
+    if (!data) throw new Error('Corrida não encontrada');
+
+    let proposta = data?.propostaAceita || null;
+    try {
+      if (!proposta) {
+        const ref = db.collection('agendamentos').doc(corridaId).collection('propostas');
+        const qs = await ref.get();
+        const list = [];
+        qs.forEach(d => list.push({ id: d.id, ...(d.data()||{}) }));
+        const scoreTs = (x) => {
+          const t = x?.aprovadoEm || x?.enviadoEm || x?.criadoEm || x?.ts || null;
+          try { return t?.toMillis ? t.toMillis() : (t?.seconds ? t.seconds*1000 : (new Date(t)).getTime()); } catch { return 0; }
+        };
+        const isAceita = (x) => {
+          const s = (x?.status||" ").toString().toLowerCase();
+          return x?.aceita === true || x?.aprovado === true || s === 'aceita' || s === 'aprovada';
+        };
+        let cand = list.filter(isAceita);
+        if (!cand.length) cand = list;
+        cand.sort((a,b)=> (scoreTs(b)||0)-(scoreTs(a)||0));
+        proposta = cand[0] || null;
+        console.log('[MP] Proposta escolhida (subcoleção)', proposta);
+      }
+    } catch (e) { console.warn('[MP] Falha ao ler subcoleção propostas', e); }
+    
+    const precoBase = (typeof proposta?.preco === 'number')
+      ? Number(proposta.preco)
+      : (typeof data?.propostaAceita?.preco === 'number')
+        ? Number(data.propostaAceita.preco)
+        : Number(data?.precoFinal || data?.valor || data?.preco || data?.total || 50);
+
+    let extras = 0;
+    try {
+      const p = proposta || data?.propostaAceita || {};
+      const count = Number.isFinite(Number(p.ajudante)) ? Number(p.ajudante)
+                   : Number.isFinite(Number(p.ajudantes)) ? Number(p.ajudantes)
+                   : 0;
+      extras = 50 * Math.max(0, count);
+    } catch {}
+
+    const toNumber = (v) => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') {
+        const s = v.replace(/\./g, '').replace(/,/g, '.');
+        const n = parseFloat(s);
+        return Number.isFinite(n) ? n : NaN;
+      }
+      return NaN;
+    };
+
+    const totalPropRaw = (proposta && (proposta.total ?? proposta.precoTotal ?? proposta.valorTotal));
+    const totalProposta = toNumber(totalPropRaw);
+    const valorBaseTotal = Number.isFinite(totalProposta) && totalProposta > 0
+      ? totalProposta
+      : (Number(precoBase) + Number(extras));
+    const valorPagamento = Math.round((valorBaseTotal * 1.0) * 100) / 100;
+    console.log('[MP] Cálculo valor', {
+      precoBase,
+      extras,
+      totalProposta,
+      valorBaseTotal,
+      valorPagamento,
+      ajudaCampos: {
+        ajudante: proposta?.ajudante,
+        ajudantes: proposta?.ajudantes
+      }
+    });
+
+    return {
+      corridaId,
+      valor: Number.isFinite(valorPagamento) && valorPagamento > 0 ? valorPagamento : 50,
+      clienteId: data.clienteId || currentUser?.uid,
+      motoristaId: data.motoristaId || data.propostaAceita?.motoristaUid,
+      tipo: 'agendamento',
+      descricao: `Serviço de Agendamento - ${corridaId.substring(0, 8)}`
+    };
+  } catch (error) {
+    console.error('Erro ao buscar dados do pagamento:', error);
+    throw error;
+  }
+}
+
+async function criarPagamentoMercadoPago(dadosPagamento) {
+  let { corridaId, valor, clienteId, descricao } = dadosPagamento;
+
+  try {
+    const isVercel = /vercel\.app$/i.test(window.location.hostname);
+    const apiBase = isVercel ? `${window.location.origin}/api` : 'http://localhost:3000';
+
+    if (!Number.isFinite(Number(valor)) || Number(valor) <= 0) {
+      console.warn('[MP] Valor inválido detectado, tentando fallback da URL... valor=', valor);
+      const qsv = Number(new URLSearchParams(location.search).get('valor'));
+      if (Number.isFinite(qsv) && qsv > 0) valor = qsv; else valor = 50;
+      console.warn('[MP] Valor ajustado para', valor);
+    }
+
+    const items = [{
+      title: descricao,
+      quantity: 1,
+      unit_price: Number(valor),
+      currency_id: 'BRL'
+    }];
+
+    const pagesBase = isVercel ? window.location.origin : 'http://localhost:3000';
+    const back_urls = {
+      success: `${pagesBase}/pagamento-sucesso.html?corrida=${encodeURIComponent(corridaId)}&status=approved`,
+      failure: `${pagesBase}/pagamento-erro.html?corrida=${encodeURIComponent(corridaId)}`,
+      pending: `${pagesBase}/pagamento-erro.html?corrida=${encodeURIComponent(corridaId)}`
+    };
+
+    console.log('[MP] Criando preferência', { apiBase, corridaId, valor: Number(valor) });
+    const payer = {
+      email: (firebase.auth?.currentUser?.email) || `${(clienteId||"cliente")}@moomate.app`,
+      name: 'Cliente Moomate'
+    };
+
+    const createUrl = isVercel ? `${apiBase}/create_preference` : `${apiBase}/create-mercadopago-preference`;
+    let resp = await fetch(createUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items,
+        payer,
+        payment_methods: {},
+        back_urls,
+        external_reference: corridaId
+      })
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      console.warn('[MP] Backend local falhou, tentando fallback Vercel...', resp.status, txt);
+      resp = await fetch('https://moomate-omrw.vercel.app/api/create_preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          corridaId,
+          valor: Number(valor),
+          clienteId,
+          items,
+          payer,
+          back_urls,
+          auto_return: 'approved'
+        })
+      });
+      if (!resp.ok) {
+        const txt2 = await resp.text();
+        console.error('[MP] Falha também no fallback Vercel', resp.status, txt2);
+        throw new Error(`HTTP ${resp.status}: ${txt2 || 'sem mensagem'}`);
+      }
+    }
+
+    const data = await resp.json().catch(e => { console.error('[MP] JSON inválido', e); return null; });
+    const init_point = data?.init_point;
+    const preference_id = data?.preference_id;
+    if (!init_point) throw new Error('init_point não retornado');
+
+    try {
+      await db.collection('agendamentos').doc(corridaId).update({
+        pagamento: {
+          preferenceId: preference_id || null,
+          valor: Number(valor),
+          status: 'pendente',
+          criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        },
+        status: 'pagamento_pendente'
+      });
+    } catch {}
+
+    try { localStorage.setItem('lastPayment', JSON.stringify({ valor: Number(valor), corridaId })); } catch {}
+
+    console.log('Redirecionando para pagamento:', init_point);
+    window.location.href = init_point;
+
+  } catch (error) {
+    console.error('Erro ao criar pagamento:', error);
+    alert('Erro ao processar pagamento. Ver console para detalhes. Garanta que o servidor em http://localhost:3000 está rodando.');
+    throw error;
+  }
+}

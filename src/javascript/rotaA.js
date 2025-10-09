@@ -1,18 +1,22 @@
-(() => {
+﻿﻿(() => {
   const pick = (...ids) => ids.map((id) => document.getElementById(id)).find((el) => !!el) || null
+
 
   const origemInfoEl = pick("origemInfo")
   const destinoInfoEl = pick("destinoInfo")
   const nomeClienteMainEl = pick("clienteInfo")
   const nomeClienteModalEl = pick("modal-client-name")
 
+
   const distEl = pick("distanciaInfo")
   const tempoEl = pick("tempoInfo")
   const btnTudoPronto = pick("btnSeguirDestino")
   const btnFinalizar = pick("btnFinalizar")
 
+
   const instrWrap = pick("route-instructions")
   const instrList = pick("directionsList")
+
 
   const modal = pick("user-rating-modal")
   const salvarAvaliacaoBtn = pick("submit-user-rating")
@@ -20,15 +24,18 @@
   const fecharModalBtn = pick("close-user-modal")
   const comentarioEl = pick("user-rating-comment")
 
+
   const $openModal = () => modal && (modal.style.display = "flex")
   const $closeModal = () => modal && (modal.style.display = "none")
   ;[cancelarAvaliacaoBtn, fecharModalBtn].forEach((b) => b?.addEventListener("click", $closeModal))
   if (cancelarAvaliacaoBtn) cancelarAvaliacaoBtn.style.display = "none"
 
+
   if (!window.firebase) {
     console.error("Firebase não está carregado!")
     return
   }
+
 
   const firebase = window.firebase
   const db = firebase.firestore()
@@ -37,10 +44,12 @@
   let corridaRef = null
   let syncRef = null
 
+
   async function resolverNomeCliente({ docData, corridaId }) {
     try {
       let nome = docData?.clienteNome || dadosCorrida?.clienteNome || null;
       if (nome && typeof nome === 'string' && nome.trim() && nome.toLowerCase() !== 'cliente') return nome;
+
 
       if (docData?.clienteId) {
         const uNome = await obterNome(docData.clienteId);
@@ -50,11 +59,13 @@
     return null;
   }
 
+
   function criarModalCancelamento() {
     let modal = document.getElementById('client-cancel-modal');
     if (modal) {
       modal.remove();
     }
+
 
     modal = document.createElement('div');
     modal.id = 'client-cancel-modal';
@@ -155,7 +166,9 @@
       </style>
     `;
 
+
     document.body.appendChild(modal);
+
 
     const okBtn = document.getElementById('ok-cancel-btn');
     if (okBtn) {
@@ -176,12 +189,14 @@
       });
     }
 
+
     setTimeout(() => {
       if (document.getElementById('client-cancel-modal')) {
         okBtn?.click();
       }
     }, 10000);
   }
+
 
   function validarCoordenadas(lat, lng) {
     if (lat === null || lng === null || lat === undefined || lng === undefined) {
@@ -206,12 +221,15 @@
     return true
   }
 
+
   async function geocodificarEndereco(endereco) {
     if (!endereco || typeof endereco !== 'string') {
       return null;
     }
 
+
     let searchQuery = endereco;
+
 
     if (searchQuery.toLowerCase().includes('ecoponto')) {
       const partes = searchQuery.split('–');
@@ -222,11 +240,13 @@
       searchQuery = searchQuery.replace(/\s+/g, ' ').trim();
     }
 
+
     const queries = [
       searchQuery + ', São Paulo, SP, Brasil',
       searchQuery + ', São Paulo, Brasil',
       searchQuery.split(',')[0] + ', São Paulo, Brasil'
     ];
+
 
     for (const query of queries) {
       try {
@@ -234,10 +254,12 @@
         const response = await fetch(url);
         const data = await response.json();
 
+
         if (data && data.length > 0) {
           const result = data[0];
           const lat = parseFloat(result.lat);
           const lng = parseFloat(result.lon);
+
 
           if (validarCoordenadas(lat, lng)) {
             return { lat, lng, endereco: result.display_name };
@@ -248,8 +270,10 @@
       }
     }
 
+
     return null;
   }
+
 
   async function obterNome(uid) {
     if (!uid) return "—"
@@ -270,6 +294,7 @@
     }
     return "—"
   }
+
 
   async function obterCorridaAtiva(uid) {
     try {
@@ -309,10 +334,12 @@
     return null
   }
 
+
   if (!window.L) {
     console.error("Leaflet não está carregado!")
     return
   }
+
 
   const L = window.L
   const MAPTILER_KEY = "lRS4UV8yOp62RauVV5D7"
@@ -329,12 +356,15 @@
     maxZoom: 20,
   }).addTo(map)
 
+
   let motoristaMarker = null, origemMarker = null, destinoMarker = null, routeLayer = null
   let posMotorista = null
   let fase = "indo_retirar"
 
+
   const km = (m) => (m / 1000).toFixed(2) + " km"
   const min = (s) => Math.max(1, Math.round(s / 60)) + " min"
+
 
   function ptTurn(type, modifier) {
     const m = (modifier || "").toLowerCase()
@@ -354,6 +384,7 @@
     return "Siga a via indicada"
   }
 
+
   function renderInstrucoes(steps) {
     if (!instrWrap || !instrList) return
     instrWrap.style.display = "block"
@@ -372,6 +403,7 @@
       instrList.appendChild(li)
     })
   }
+
 
   async function desenharRota(from, to) {
     if (!from || !to) {
@@ -405,6 +437,7 @@
         return
       }
 
+
       const latlngs = route.geometry.coordinates.map(([lng, lat]) => {
         if (validarCoordenadas(lat, lng)) {
           return [lat, lng]
@@ -421,6 +454,7 @@
       routeLayer = L.polyline(latlngs, { weight: 6, opacity: 0.95, color: "#ff6c0c" }).addTo(map)
       map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] })
 
+
       if (distEl) distEl.textContent = km(route.distance || 0)
       if (tempoEl) tempoEl.textContent = min(route.duration || 0)
       renderInstrucoes(route.legs && route.legs[0] ? route.legs[0].steps || [] : [])
@@ -429,6 +463,7 @@
       console.error("Erro ao buscar rota:", error)
     }
   }
+
 
   function desenharMarcadores() {
     if (posMotorista && validarCoordenadas(posMotorista.lat, posMotorista.lng)) {
@@ -445,6 +480,7 @@
       }
     }
 
+
     if (dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
       const origemIcon = `<div style="width:22px;height:22px;background:#1E3A8A;border:3px solid #fff;border-radius:50%;"></div>`
       
@@ -459,6 +495,7 @@
         origemMarker.setLatLng([dadosCorrida.origem.lat, dadosCorrida.origem.lng])
       }
     }
+
 
     if (fase === "a_caminho_destino" && dadosCorrida?.destino && validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
       const destinoIcon = `<div style="width:22px;height:22px;background:#FF6C0C;border:3px solid #fff;border-radius:50%;"></div>`
@@ -476,7 +513,9 @@
     }
   }
 
+
   const getTexto = (el) => (el && el.textContent && el.textContent.trim()) || ""
+
 
   async function upsertCorridaBase() {
     if (!corridaRef || !dadosCorrida) return
@@ -485,9 +524,11 @@
       const snap = await corridaRef.get()
       const base = snap.exists ? (snap.data() || {}) : {}
 
+
       const payload = {}
       if (dadosCorrida?.clienteId) payload.clienteId = dadosCorrida.clienteId
       if (dadosCorrida?.motoristaId) payload.motoristaId = dadosCorrida.motoristaId
+
 
       if (dadosCorrida?.origem) {
         if (validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
@@ -513,6 +554,7 @@
           }
         }
       }
+
 
       if (dadosCorrida?.destino) {
         if (validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
@@ -541,6 +583,7 @@
       
       if (!base.status) payload.status = "indo_retirar"
 
+
       if (Object.keys(payload).length) {
         await corridaRef.set(payload, { merge: true })
       }
@@ -549,11 +592,13 @@
     }
   }
 
+
   function publicarPosicao(lat, lng, heading) {
     if (!validarCoordenadas(lat, lng)) {
       console.warn("Coordenadas inválidas para posição do motorista:", { lat, lng })
       return
     }
+
 
     posMotorista = { lat: parseFloat(lat), lng: parseFloat(lng) }
     desenharMarcadores()
@@ -579,6 +624,7 @@
     }
   }
 
+
   function startGeolocation() {
     if (!navigator.geolocation) {
       console.error("Geolocalização indisponível")
@@ -598,6 +644,7 @@
     )
   }
 
+
   btnTudoPronto?.addEventListener("click", async () => {
     if (!dadosCorrida) return
     
@@ -615,6 +662,7 @@
       btnTudoPronto.innerHTML = '<i class="fas fa-check"></i> Tudo pronto, seguir até o destino'
       btnTudoPronto.style.display = "none"
       if (btnFinalizar) btnFinalizar.style.display = "inline-block"
+
 
       const updatePromises = []
       if (syncRef) {
@@ -646,6 +694,7 @@
     }
   })
 
+
   btnFinalizar?.addEventListener("click", async () => {
     try {
       $openModal()
@@ -662,6 +711,7 @@
     }
   })
 
+
  salvarAvaliacaoBtn?.addEventListener("click", async () => {
     try {
       const comentario = comentarioEl ? comentarioEl.value || "" : ""
@@ -672,11 +722,13 @@
         return;
       }
 
+
       const clienteUid = dadosCorrida?.clienteId || null;
       if (!clienteUid) {
         alert("Erro: ID do cliente não encontrado.");
         return;
       }
+
 
       console.log("[AVALIAÇÃO] Salvando:", {
         clienteUid,
@@ -684,6 +736,7 @@
         corridaId,
         motoristaUid: firebase.auth()?.currentUser?.uid
       });
+
 
       // 1. Salvar na subcoleção de avaliações do cliente
       const motoristaUid = firebase.auth()?.currentUser?.uid || null;
@@ -702,6 +755,7 @@
           criadoEm: firebase.firestore.FieldValue.serverTimestamp() 
         }, { merge: true });
 
+
       // 2. Salvar na coleção global de avaliações
       await db.collection('avaliacoes').doc(avId)
         .set({ 
@@ -715,6 +769,7 @@
           tipo: 'cliente',
           criadoEm: firebase.firestore.FieldValue.serverTimestamp() 
         }, { merge: true });
+
 
       // 3. Atualizar campos agregados usando transação
       const userRef = db.collection('usuarios').doc(clienteUid);
@@ -736,6 +791,7 @@
           ratingMedia: media
         }, { merge: true });
       });
+
 
       console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
       
@@ -762,6 +818,7 @@
       alert("Erro ao finalizar. Tente novamente.")
     }
   })
+
 
   firebase.auth().onAuthStateChanged(async (user) => {
     if(!user){console.error("Usuário não logado.")
@@ -790,14 +847,17 @@
       window.CHAT.attach(corridaId);
     }
 
+
     corridaRef = db.collection('agendamentos').doc(corridaId)
     syncRef = corridaRef.collection("sync").doc("estado")
+
 
     if (syncRef) {
       syncRef.set({ fase: "indo_retirar" }, { merge: true }).catch(error => 
         console.error("Erro ao definir fase inicial:", error)
       )
     }
+
 
     const unsubscribeCorreda = db.collection('agendamentos')
       .doc(corridaId)
@@ -817,6 +877,7 @@
             console.warn("Documento sem dados!")
             return
           }
+
 
           if (docData.status === "cancelado_agendamento" || docData.canceladoPor === "cliente") {
             console.log("🚫 AGENDAMENTO CANCELADO PELO CLIENTE!")
@@ -844,6 +905,7 @@
             }
           }
 
+
           if (!validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng) && docData.origem?.endereco) {
             try {
               const coordsOrigem = await geocodificarEndereco(docData.origem.endereco)
@@ -859,6 +921,7 @@
             }
           }
 
+
           if (!validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng) && docData.destino?.endereco) {
             try {
               const coordsDestino = await geocodificarEndereco(docData.destino.endereco)
@@ -873,6 +936,7 @@
               console.warn("Erro ao geocodificar destino:", error)
             }
           }
+
 
           console.log("Dados da corrida processados:", dadosCorrida)
           
@@ -906,11 +970,13 @@
             } catch (e) { console.warn('Falha ao persistir clienteNome:', e?.message||e); }
           }
 
+
           console.log("Chamando upsertCorridaBase...")
           await upsertCorridaBase()
           
           console.log("Chamando desenharMarcadores...")
           desenharMarcadores()
+
 
           if (posMotorista && validarCoordenadas(posMotorista.lat, posMotorista.lng)) {
             console.log("Motorista tem posição válida, verificando rotas...")
@@ -933,10 +999,12 @@
         console.error("Erro no listener:", error)
       })
 
+
     const unsubscribeSync = syncRef.onSnapshot((syncDoc) => {
       try {
         const syncData = syncDoc.data() || {}
         console.log("Dados do sync:", syncData)
+
 
         if (syncData.fase === "cancelada" || syncData.cancelamento) {
           console.log("🚫 CANCELAMENTO DETECTADO NO SYNC!")
@@ -947,6 +1015,7 @@
           return
         }
 
+
         if (syncData.fase) fase = syncData.fase
         if (syncData.motorista) {
           posMotorista = {
@@ -956,6 +1025,7 @@
           desenharMarcadores()
         }
 
+
       } catch (error) {
         console.error("Erro ao processar sync:", error)
       }
@@ -963,10 +1033,12 @@
       console.error("Erro no listener do sync:", error)
     })
 
+
     window.cancelamentoListeners = {
       unsubscribeCorreda,
       unsubscribeSync
     }
+
 
     console.log("Iniciando geolocalização...")
     startGeolocation()
@@ -980,6 +1052,7 @@
     alert("Erro ao inicializar o sistema: " + error.message)
   }
 })
+
 
 const style = document.createElement("style")
 style.innerHTML = `
@@ -1015,14 +1088,18 @@ style.innerHTML = `
 document.head.appendChild(style)
 })()
 
+
 let ratingAtual = 0
 window.ratingAtual = 0
+
 
 ;(() => {
 const stars = document.querySelectorAll(".rating-stars .star")
 if (!stars || stars.length === 0) return
 
+
 const forEach = (list, cb) => Array.prototype.forEach.call(list, cb)
+
 
 forEach(stars, (star, i) => {
   star.addEventListener("click", () => {
@@ -1036,10 +1113,12 @@ forEach(stars, (star, i) => {
 })
 })()
 
+
 ;(() => {
 const { firebase } = window
 if (!firebase || !firebase.apps.length) return
 const db = firebase.firestore()
+
 
 function ensureStyles() {
   if (document.getElementById("mm-chat-styles")) return
@@ -1066,6 +1145,7 @@ function ensureStyles() {
   document.head.appendChild(s)
 }
 
+
 function ensureModal() {
   if (document.getElementById("mm-chat-modal")) return
   const el = document.createElement("div")
@@ -1086,6 +1166,7 @@ function ensureModal() {
   document.body.appendChild(el)
 }
 
+
 function ensureButton() {
   let btn = document.getElementById("openChat")
   if (!btn) {
@@ -1104,6 +1185,7 @@ function ensureButton() {
   })
 }
 
+
 const esc = (s) => (s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))
 const fmtHora = (ts) => {
   try { 
@@ -1120,6 +1202,7 @@ const autodCorrida = () =>
   localStorage.getItem("ultimaCorridaMotorista") ||
   localStorage.getItem("corridaSelecionada")
 
+
 const CHAT = {
   _db: db, _uid: null, _role: "cliente", _corridaId: null, _unsub: () => {},
   
@@ -1129,6 +1212,7 @@ const CHAT = {
     ensureButton()
     this._role = role || "cliente"
     this._uid = firebase.auth().currentUser?.uid || null
+
 
     const closeBtn = document.getElementById("mm-chat-close")
     const sendBtn = document.getElementById("mm-chat-send")
@@ -1155,8 +1239,10 @@ const CHAT = {
     }
     this._corridaId = id
 
+
     const ttl = document.getElementById("mm-chat-title")
     if (ttl) ttl.textContent = this._role === "motorista" ? "Chat com Cliente" : "Chat com Motorista"
+
 
     try {
       const ref = this._db.collection("agendamentos").doc(id).collection("chat").orderBy("ts","asc").limit(500)
@@ -1228,7 +1314,9 @@ const CHAT = {
   }
 }
 
+
 window.CHAT = CHAT
+
 
 firebase.auth().onAuthStateChanged(() => {
   try {
