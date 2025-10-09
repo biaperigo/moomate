@@ -664,13 +664,14 @@ let unsubSync = () => {};
       
       if (d.fase === "cancelada" || d.cancelamento) {
         const por = d.cancelamento?.canceladoPor || null;
-        if (por === "cliente") {
+        const porUid = d.cancelamento?.canceladoPorUid || null;
+        // Só redireciona se este cliente foi quem cancelou
+        if (por === "cliente" && porUid && currentUser?.uid && porUid === currentUser.uid) {
           localStorage.removeItem("ultimaCorridaCliente");
           window.location.href = "homeC.html";
           return;
         } else {
-          // Corrida foi cancelada por motorista/sistema: não redirecionar o cliente automaticamente
-          // Mantemos a tela para permitir avaliação/pagamento ou exibir estado final
+          // Cancelado por motorista/sistema/ou outro usuário: permanece na tela
           atualizarVisibilidadeBotaoCancelar("cancelada");
         }
       }

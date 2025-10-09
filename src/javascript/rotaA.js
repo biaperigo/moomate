@@ -811,6 +811,9 @@
           },
           status: 'finalizada_pendente'
         }, { merge: true });
+        try {
+          await corridaRef.collection('sync').doc('estado').set({ fase: 'finalizada_pendente' }, { merge: true });
+        } catch(e) { console.warn('Falha ao atualizar fase do sync:', e); }
       }
       
       $closeModal()
