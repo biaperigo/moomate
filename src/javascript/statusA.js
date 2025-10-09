@@ -1,4 +1,4 @@
-﻿let currentCorridaId = null;
+let currentCorridaId = null;
 let unsubCorrida = () => {};
 let unsubSync = () => {};
 
@@ -981,6 +981,10 @@ let unsubSync = () => {};
     watchActiveCorridaCliente(user.uid);
   });
 })()
+
+// Expor referência global ao Firestore para as funções de pagamento abaixo
+// (o `db` definido dentro do IIFE acima não está no escopo destas funções)
+const db = (window.firebase && window.firebase.firestore && window.firebase.firestore()) || null;
 
 // FUNÇÕES DO MERCADO PAGO - Adicionar antes da inicialização principal
 async function buscarDadosPagamento(corridaId) {
