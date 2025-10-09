@@ -721,12 +721,14 @@
       await db.runTransaction(async (tx) => {
         const userSnap = await tx.get(userRef);
         const userData = userSnap.exists ? (userSnap.data() || {}) : {};
+        
         const soma = Number(userData.avaliacaoSoma || 0) + rating;
         const count = Number(userData.avaliacaoCount || 0) + 1;
         const media = soma / count;
-        tx.set(userRef, {
-          avaliacaoSoma: soma,
-          avaliacaoCount: count,
+        
+        tx.set(userRef, { 
+          avaliacaoSoma: soma, 
+          avaliacaoCount: count, 
           avaliacaoMedia: media,
           // Manter compatibilidade com campos antigos
           ratingSum: soma,
@@ -736,8 +738,8 @@
       });
 
       console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
-
-      // 4. Atualizar status da corrida para pendente de cliente (não finalizar ainda)
+      
+      // 4. Atualizar status da corrida
       if (corridaRef) {
         await corridaRef.set({
           avaliacao: {
@@ -745,16 +747,16 @@
             comentario: comentario,
             avaliadoEm: firebase.firestore.FieldValue.serverTimestamp()
           },
-          status: 'finalizada_pendente'
+          status: 'finalizada'
         }, { merge: true });
       }
-
-      $closeModal();
-
+      
+      $closeModal()
+      
       setTimeout(() => {
-        alert('Agendamento finalizado com sucesso!');
-        window.location.href = "carteiraM.html";
-      }, 500);
+        alert('Agendamento finalizado com sucesso!')
+        window.location.href = "carteiraM.html"
+      }, 500)
     } catch (error) {
       console.error("[AVALIAÇÃO] Erro:", error)
       alert("Erro ao finalizar. Tente novamente.")
