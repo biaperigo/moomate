@@ -663,16 +663,27 @@ let unsubSync = () => {};
       if (typeof d.distanciaM === "number") definirTexto(["distanciaInfo","estimated-distance","distPrevista","distancia"], km(d.distanciaM));
       
       if (d.fase === "cancelada" || d.cancelamento) {
-        const por = d.cancelamento?.canceladoPor || null;
-        const porUid = d.cancelamento?.canceladoPorUid || null;
-        // Só redireciona se este cliente foi quem cancelou
-        if (por === "cliente" && porUid && currentUser?.uid && porUid === currentUser.uid) {
-          localStorage.removeItem("ultimaCorridaCliente");
-          window.location.href = "homeC.html";
-          return;
+        console.log("[SYNC] Cancelamento detectado:", JSON.stringify(d.cancelamento||{}, null, 2));
+        // NUNCA redirecionar se estamos aguardando pagamento/avaliação do cliente
+        if (S.fase === 'finalizada_pendente' || C?.status === 'finalizada_pendente') {
+          console.log('[SYNC] Ignorando cancelamento pois status/fase = finalizada_pendente');
+          atualizarVisibilidadeBotaoCancelar('finalizada_pendente');
+          // fica na tela
+          
         } else {
-          // Cancelado por motorista/sistema/ou outro usuário: permanece na tela
-          atualizarVisibilidadeBotaoCancelar("cancelada");
+          const por = d.cancelamento?.canceladoPor || null;
+          const porUid = d.cancelamento?.canceladoPorUid || null;
+          console.log('[SYNC] Verificação de redirecionamento:', { por, porUid, uid: currentUser?.uid });
+          // Só redireciona se ESTE cliente foi quem cancelou
+          if (por === 'cliente' && porUid && currentUser?.uid && porUid === currentUser.uid) {
+            console.log('[SYNC] Redirecionando: cancelamento efetuado por este cliente.');
+            localStorage.removeItem('ultimaCorridaCliente');
+            window.location.href = 'homeC.html';
+            return;
+          } else {
+            console.log('[SYNC] Permanecendo na tela: cancelado por outro ou sistema/motorista.');
+            atualizarVisibilidadeBotaoCancelar('cancelada');
+          }
         }
       }
       
