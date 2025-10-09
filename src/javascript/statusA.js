@@ -668,11 +668,9 @@ let unsubSync = () => {};
           localStorage.removeItem("ultimaCorridaCliente");
           window.location.href = "homeC.html";
           return;
-        } else {
-          // Corrida foi cancelada por motorista/sistema: não redirecionar o cliente automaticamente
-          // Mantemos a tela para permitir avaliação/pagamento ou exibir estado final
-          atualizarVisibilidadeBotaoCancelar("cancelada");
         }
+        // Se cancelado por motorista/sistema (ou sem origem), não redireciona o cliente.
+        atualizarVisibilidadeBotaoCancelar("cancelada");
       }
       
       updateTimeline(S.fase);
