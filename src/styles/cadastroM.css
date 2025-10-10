@@ -231,5 +231,29 @@ hr {
   color: #ff6c0c;
   text-decoration: none;
 }
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;            /* ajuste conforme quiser */
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 1rem;
+  text-align: left;
+  line-height: 1.3;
+}
 
+.checkbox-container input[type="checkbox"] {
+  width: auto !important;   /* remove o width:100% herdado */
+  height: auto;
+  margin: 0;
+  flex: 0 0 auto;           /* garante que não cresça no flex */
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  -moz-appearance: checkbox;
+}
+
+.checkbox-container span {
+  display: inline-block;
+  line-height: 1.3;
+}
 

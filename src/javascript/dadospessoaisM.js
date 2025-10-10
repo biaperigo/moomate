@@ -95,6 +95,22 @@ async function uploadImagemCloudinary(file) {
   }
 }
 
+// Upload genérico (auto) para suportar PDFs/imagens
+async function uploadArquivoCloudinary(file) {
+  if (!file) return null;
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', 'moomate');
+  formData.append('cloud_name', 'dal3nktmy');
+  const response = await fetch('https://api.cloudinary.com/v1_1/dal3nktmy/auto/upload', {
+    method: 'POST',
+    body: formData
+  });
+  const data = await response.json();
+  if (data.secure_url) return data.secure_url;
+  throw new Error('Erro ao fazer upload do arquivo');
+}
+
 async function carregarDadosUsuario() {
   try {
     const user = auth.currentUser;
@@ -144,7 +160,13 @@ function preencherCampos(dados) {
   if (dados.dadosPessoais) {
     document.getElementById('rg').textContent = dados.dadosPessoais.rg || '';
     document.getElementById('cnh').textContent = dados.dadosPessoais.cnh || '';
-    document.getElementById('antecedentes').textContent = dados.dadosPessoais.antecedentes || '';
+
+    // Exibir Certidão de Nada Consta como imagem no quadrado
+    const certUrl = dados.dadosPessoais.certidaoNadaConstaUrl || '';
+    const certImg = document.getElementById('certidaoImg');
+    if (certImg && certUrl) {
+      certImg.src = certUrl;
+    }
   }
   
   if (dados.veiculo) {
@@ -421,6 +443,39 @@ document.addEventListener("DOMContentLoaded", function () {
   if (inputFotoVeiculo) {
     inputFotoVeiculo.addEventListener('change', function() {
       handleImageUpload(this, fotoVeiculo, false);
+    });
+  }
+  // Certidão de Nada Consta: upload imediato como no foto do veículo
+  const inputCertidao = document.getElementById('inputCertidaoNadaConsta');
+  if (inputCertidao) {
+    inputCertidao.addEventListener('change', async function() {
+      const file = this.files && this.files[0];
+      if (!file) return;
+      try {
+        // Preview temporário
+        try {
+          const reader = new FileReader();
+          reader.onload = function(e){
+            const prev = document.getElementById('previewCertidao');
+            if (prev) { prev.src = e.target.result; prev.style.display = 'block'; }
+          };
+          reader.readAsDataURL(file);
+        } catch {}
+
+        const url = await uploadArquivoCloudinary(file);
+        await db.collection('motoristas').doc(currentUserId).update({
+          'dadosPessoais.certidaoNadaConstaUrl': url
+        });
+        const img = document.getElementById('certidaoImg');
+        if (img) img.src = url;
+        const prev = document.getElementById('previewCertidao');
+        if (prev) prev.style.display = 'none';
+        this.value = '';
+        console.log('Certidão de Nada Consta atualizada com sucesso');
+      } catch (e) {
+        console.error('Erro ao enviar certidão:', e);
+        alert('Erro ao enviar Certidão de Nada Consta: ' + (e?.message||e));
+      }
     });
   }
   

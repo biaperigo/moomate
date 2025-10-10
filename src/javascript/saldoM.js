@@ -38,6 +38,21 @@
     return localStorage.getItem('motoristaUid') || localStorage.getItem('uid') || null;
   }
 
+  async function getIdToken(){
+    try { const u = firebase.auth?.().currentUser; if (u) return await u.getIdToken(); } catch{}
+    return null;
+  }
+
+  async function obterWithdrawEndpoint(){
+    try { if (window.MP_WITHDRAW_ENDPOINT) return String(window.MP_WITHDRAW_ENDPOINT); } catch{}
+    try {
+      const snap = await db.collection('config').doc('mercadopago').get();
+      const d = snap.exists ? (snap.data()||{}) : {};
+      if (d.withdrawEndpoint) return String(d.withdrawEndpoint);
+    } catch{}
+    return null;
+  }
+
   async function carregarSaldo(uid){
     try{
       const snap = await db.collection('motoristas').doc(uid).get();
@@ -75,6 +90,31 @@
           return;
         }
       }
+
+      let provider = null, providerId = null, providerStatus = 'pendente', providerInfo = {};
+      if (metodo === 'pix'){
+        const endpoint = await obterWithdrawEndpoint();
+        const token = await getIdToken();
+        if (!endpoint || !token){ mostrar('Saque PIX indisponível no momento.', true); return; }
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ valor })
+        });
+        if (!res.ok){
+          const txt = await res.text().catch(()=> '');
+          console.warn('Withdraw PIX falhou:', res.status, txt);
+          mostrar('Falha ao iniciar saque PIX. Tente novamente mais tarde.', true);
+          return;
+        }
+        const data = await res.json().catch(()=>({}));
+        provider = 'mercado_pago';
+        providerId = data.id || data.transfer_id || null;
+        providerStatus = data.status || 'processando';
+        providerInfo = { pix_copy_paste: data.pix_copy_paste||null, pix_qr_base64: data.pix_qr_base64||null };
+      }
+
+      // Executa débito do saldo somente após iniciar a ordem externa (no caso PIX)
       await db.runTransaction(async (tx)=>{
         const snap = await tx.get(motRef);
         const saldoAtual = Number(snap.exists ? (snap.data().saldo||0) : 0) || 0;
@@ -85,27 +125,31 @@
         });
       });
 
-      // Criar registro da solicitação de saque (pendente)
-      const saqueRef = await db.collection('saques').add({
+      // Criar registro da solicitação de saque
+      const payloadSaque = {
         motoristaId: uid,
         valor,
         metodo, // 'pix' ou 'conta'
         dadosBancarios: metodo==='conta' ? dadosBancarios : null,
-        status: 'pendente',
+        status: metodo==='pix' ? (providerStatus||'processando') : 'pendente',
+        provider: provider,
+        providerId: providerId,
+        providerInfo: providerInfo,
         criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      };
+      const saqueRef = await db.collection('saques').add(payloadSaque);
 
       // Histórico do motorista
       await db.collection('motoristas').doc(uid).collection('historico').add({
         tipo: 'solicitacao_saque',
         valor,
         metodo,
-        status: 'pendente',
+        status: payloadSaque.status,
         saqueId: saqueRef.id,
         ts: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      mostrar(`Solicitação de saque criada (${metodo}) no valor de ${formatBRL(valor)}.`, false);
+      mostrar(`Saque ${metodo.toUpperCase()} iniciado no valor de ${formatBRL(valor)}.`, false);
       // Atualiza saldo exibido
       const novoSaldo = await carregarSaldo(uid);
       if (saldoEl) saldoEl.textContent = `Saldo disponível: ${formatBRL(novoSaldo)}`;

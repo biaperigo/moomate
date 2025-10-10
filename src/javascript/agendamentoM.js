@@ -781,12 +781,11 @@
         .collection('propostas').doc(idParaUsar).set(propostaData);
       await db.collection(collectionName).doc(entregaSelecionadaId)
         .set({ [`propostas.${idParaUsar}`]: propostaData, ultimaPropostaEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
-      alert('Proposta enviada com sucesso!'); 
-      fecharModal(); 
+            fecharModal(); 
       botaoEnviar.disabled=true;
     }catch(e){ 
       console.error(e); 
-      alert('Falha ao enviar proposta.'); 
+
     }
   }
 

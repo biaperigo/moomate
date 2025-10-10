@@ -380,6 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
   <div class="card-actions">
     <button class="btn-cancel" title="Cancelar agendamento" onclick="cancelViagem('${viagem.id}')"><i class="fa-solid fa-times"></i></button>
+    <button class="btn-start" title="Iniciar agora" onclick="iniciarAgendamentoAgora('${viagem.id}')"><i class="fa-solid fa-play"></i></button>
   </div>
 </div>
 
@@ -440,6 +441,53 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return card;
   }
+
+  // Iniciar imediatamente o agendamento: prepara estrutura e redireciona
+  window.iniciarAgendamentoAgora = async function(agendamentoId){
+    try{
+      const { firebase } = window; if (!firebase?.apps?.length) return alert('Serviço indisponível.');
+      const db = firebase.firestore();
+      const uid = firebase.auth()?.currentUser?.uid || null;
+      if (!uid) { alert('Entre para iniciar sua corrida.'); return; }
+
+      const agRef = db.collection('agendamentos').doc(String(agendamentoId));
+      const agSnap = await agRef.get();
+      const ag = agSnap.exists ? (agSnap.data()||{}) : {};
+      const base = {
+        clienteId: ag.clienteId || ag.clienteUid || uid,
+        motoristaId: ag.motoristaId || ag.propostaAceita?.motoristaUid || null,
+        propostaAceita: ag.propostaAceita || null,
+        tipoVeiculo: ag.tipoVeiculo || null,
+        volumes: ag.volumes || null,
+        origem: ag.origem || (ag.localRetirada ? { endereco: ag.localRetirada } : null),
+        destino: ag.destino || (ag.localEntrega ? { endereco: ag.localEntrega } : null),
+        agendamentoId: agendamentoId,
+        status: 'indo_retirar',
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      // Atualiza o próprio agendamento para o fluxo ativo
+      await agRef.set({ status: 'indo_retirar', confirmadoEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      await agRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
+
+      // Espelha para compatibilidade (corridaagendamento e corridas)
+      const corridaAgRef = db.collection('corridaagendamento').doc(String(agendamentoId));
+      await corridaAgRef.set(base, { merge: true });
+      await corridaAgRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
+
+      const corridaRef = db.collection('corridas').doc(String(agendamentoId));
+      await corridaRef.set(base, { merge: true });
+      await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
+
+      try{ localStorage.setItem('ultimaCorridaCliente', String(agendamentoId)); }catch{}
+
+      // Navega para a tela de status com a corrida indicada
+      window.location.href = `statusA.html?corrida=${encodeURIComponent(agendamentoId)}`;
+    }catch(e){
+      console.error('[agendamentoC] Falha ao iniciar agora:', e);
+      alert('Não foi possível iniciar a corrida agora. Tente novamente.');
+    }
+  };
 
   // Busca nome e telefone do motorista no Firestore e atualiza o card
   async function preencherContatoMotorista(cardEl, motoristaUid){

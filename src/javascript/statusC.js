@@ -220,7 +220,7 @@ let unsubSync = () => {};
         });
 
       if (cancelModal) cancelModal.style.display = "none";
-      alert(`${tipoAtual === 'descarte' ? 'Descarte' : 'Corrida'} cancelada com sucesso!`);
+      
       setTimeout(() => window.location.href = "homeC.html", 1000);
 
     } catch (error) {
@@ -908,8 +908,7 @@ async function pickCorridaId(uid){
     if (typeof d.distanciaM === "number") setText(["distanciaInfo","estimated-distance","distPrevista","distancia"], km(d.distanciaM));
     
     if (d.fase === "cancelada" || d.cancelamento) {
-      console.log(" Corrida cancelada detectada!");
-      alert(`${tipoAtual === 'descarte' ? 'Descarte' : 'Corrida'} foi cancelado!`);
+    
       localStorage.removeItem("ultimaCorridaCliente");
       window.location.href = "homeC.html";
       return;
