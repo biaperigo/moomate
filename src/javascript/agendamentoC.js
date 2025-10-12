@@ -644,6 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cepInput = document.getElementById('cep');
     const localRetirada = document.getElementById('localRetirada');
     const localEntrega = document.getElementById('localEntrega');
+    const cepEntregaInput = document.getElementById('cepEntrega');
     const dataAgendamento = document.getElementById('dataAgendamento');
     const horaAgendamento = document.getElementById('horaAgendamento');
     const btnConfirmar = document.getElementById('confirmarAgendamento');
@@ -691,7 +692,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return false;
     }
 
-    // CEP mask already set by original; add SP validation and sync to retirada
+    // CEP mask já existente; validar SP e sincronizar retirada
     if (cepInput){
       cepInput.addEventListener('blur', async function(){
         const cep = this.value.replace(/\D/g,'');
@@ -709,7 +710,31 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 
-    // Autocomplete SP using Nominatim
+    // CEP (entrega): máscara, validação SP e sincronização para endereço de entrega
+    if (cepEntregaInput){
+      // máscara 99999-999
+      cepEntregaInput.addEventListener('input', function(e){
+        let v = String(e.target.value||'').replace(/\D/g,'');
+        if (v.length > 8) v = v.slice(0,8);
+        if (v.length >= 6) e.target.value = `${v.slice(0,5)}-${v.slice(5)}`; else e.target.value = v;
+      });
+      cepEntregaInput.addEventListener('blur', async function(){
+        const cep = this.value.replace(/\D/g,'');
+        if (cep.length !== 8) return;
+        if (!isCEPSaoPaulo(cep)) { alert('Por favor, informe um CEP do estado de São Paulo.'); this.value=''; return; }
+        try{
+          const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+          const data = await res.json();
+          if (data.erro || data.uf !== 'SP') { alert('CEP não pertence ao estado de São Paulo.'); this.value=''; return; }
+          if (localEntrega){
+            localEntrega.value = `${data.logradouro}, ${data.bairro} - ${data.localidade}, ${data.uf}`;
+            try{ if (data.uf === 'SP') setSpHint('localEntrega', true); }catch{}
+          }
+        }catch(e){ console.error('Erro ao consultar CEP (entrega):', e); }
+      });
+    }
+
+    // Autocomplete SP usando Nominatim
     let autocompleteTimers = {};
     // Inject styles to match descarte dropdown look
     (function injectAutocompleteStyles(){
@@ -752,6 +777,27 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
       document.head.appendChild(style);
     })();
+
+    // Quando usuário preencher endereço de entrega, tentar descobrir CEP de SP e preencher #cepEntrega
+    if (localEntrega){
+      localEntrega.addEventListener('blur', async function(){
+        try{
+          const txt = String(localEntrega.value||'').trim();
+          if (!txt) return;
+          const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&countrycodes=br&q=${encodeURIComponent(txt)}`;
+          const resp = await fetch(url, { headers: { 'Accept-Language':'pt-BR','User-Agent':'MoomateApp/1.0' } });
+          if (!resp.ok) return;
+          const arr = await resp.json();
+          const hit = Array.isArray(arr) ? arr[0] : null;
+          if (!hit) return;
+          const addr = hit.address || {};
+          const postcode = String(addr.postcode||'').replace(/\D/g,'');
+          if (postcode && isCEPSaoPaulo(postcode) && cepEntregaInput){
+            cepEntregaInput.value = formatarCEP(postcode);
+          }
+        }catch(e){ console.warn('Falha ao obter CEP por endereço de entrega:', e?.message||e); }
+      });
+    }
     function fecharAutocomplete(campo){ const c = document.getElementById(`autocomplete-list-${campo}`); if (c) c.style.display='none'; }
     function mostrarListaAutocomplete(campo, data){
       let container = document.getElementById(`autocomplete-list-${campo}`);
@@ -1043,7 +1089,6 @@ async function ouvirPropostasAgendamento(id) {
                             <div class="rota"><strong>Para:</strong> ${destinoTxt}</div>
                             <div class="specs">
                                 <span><strong>Veículo:</strong> ${veic}</span>
-                                <span><strong>Chegada:</strong> ${tempo} min</span>
                                 <span><strong>Ajudantes:</strong> ${ajud}</span>
                             </div>
                         </div>

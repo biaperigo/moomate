@@ -2,6 +2,7 @@ let currentCorridaId = null;
 let unsubCorrida = () => {};
 let unsubSync = () => {};
 let corridaFinalizadaPeloMotorista = false; // Flag para controlar finalização
+let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
 
 (() => {
   const { firebase, L } = window;
@@ -433,17 +434,11 @@ let corridaFinalizadaPeloMotorista = false; // Flag para controlar finalização
       el(ids.indo_retirar)?.classList.add("completed");
       el(ids.a_caminho_destino)?.classList.add("completed");
       el(ids.finalizada_pendente)?.classList.add("active");
-      
-      // 🎯 DETECTAR FINALIZAÇÃO E ABRIR MODAL
-      if (!corridaFinalizadaPeloMotorista) {
-        console.log("🎯 MOTORISTA FINALIZOU - Abrindo modal de avaliação");
+      // Abrir modal automaticamente (sem botão) apenas uma vez
+      if (!__ratingOpenedOnceAg) {
+        __ratingOpenedOnceAg = true;
         corridaFinalizadaPeloMotorista = true;
-        ensureChegouButton();
-        
-        // Abrir modal automaticamente após 1 segundo
-        setTimeout(() => {
-          abrirModalAvaliacao();
-        }, 1000);
+        try { abrirModalAvaliacao(); } catch(e) { console.warn('Falha ao abrir modal auto:', e?.message||e); }
       }
     }
 
@@ -740,7 +735,7 @@ let corridaFinalizadaPeloMotorista = false; // Flag para controlar finalização
     });
 
     const closeBtn = $("close-driver-modal"); 
-    if (closeBtn) closeBtn.onclick = ()=> modal.style.display="none";
+    if (closeBtn) { closeBtn.onclick = null; closeBtn.style.display = "none"; }
     
     const enviar = $("submit-driver-rating");
     const comentario = $("driver-rating-comment");
@@ -801,17 +796,7 @@ let corridaFinalizadaPeloMotorista = false; // Flag para controlar finalização
     modal.style.display = "flex";
   }
   
-  function ensureChegouButton(){
-    let b = $("btnChegou");
-    if (!b) {
-      b = document.createElement("button");
-      b.id="btnChegou"; 
-      b.textContent = "Motorista chegou";
-      b.className="track-btn destaque-chegada";
-      document.querySelector(".ride-status")?.appendChild(b);
-    }
-    b.onclick = abrirModalAvaliacao;
-  }
+  function ensureChegouButton(){ /* não exibir botão quando auto-abrindo modal */ }
 
   (function injetarCss(){
     if (document.getElementById("css-destaque-chegada")) return;

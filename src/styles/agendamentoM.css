@@ -714,7 +714,7 @@ footer {
   background: transparent; 
 }
 
-/* Harmonizar container com o form do agendamentoC */
+
 .delivery-section { 
   max-width: 1000px; 
   margin: 2rem auto; 
@@ -724,29 +724,19 @@ footer {
   box-shadow: 0 0 25px rgba(0,0,0,0.08); 
   border: none; 
 }
-/* ======================================================= */
-/* AJUSTES PARA CENTRALIZAR CARDS E REMOVER FUNDO BRANCO */
-/* ======================================================= */
 
-/* 
-  Passo 1: Remove o fundo branco APENAS na aba "Agendados".
-  Isso mantém o fundo branco na aba "Solicitações", que parece correto.
 */
 #agendados {
-  background-color: transparent; /* Remove o fundo branco */
-  padding: 0; /* Remove preenchimento extra */
-  border: none; /* Remove bordas, se houver */
-  box-shadow: none; /* Remove sombras, se houver */
+  background-color: transparent; 
+  padding: 0; 
+  border: none; 
+  box-shadow: none; 
 }
 
-/* 
-  Passo 2: Centraliza os cards na lista de agendados.
-  Isso fará com que tanto um único card quanto múltiplos cards
-  fiquem alinhados ao centro da página.
-*/
+
 #scheduled-list {
   display: flex;
   flex-direction: column;
-  align-items: center; /* A mágica acontece aqui! */
-  gap: 16px; /* Adiciona um espaço vertical entre os cards */
+  align-items: center; 
+  gap: 16px; 
 }
