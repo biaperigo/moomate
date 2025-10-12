@@ -32,6 +32,8 @@ let unsubSync = () => {};
 
   let docRefGlobal = null;
   let motoristaUidAtual = null;
+  // Evita abrir o modal de avaliação múltiplas vezes por snapshots
+  let __ratingOpenedOnce = false;
 
   // Helper para obter a referência do documento do motorista
   // Usado por salvarAvaliacao() para atualizar agregados (ratingCount, ratingSum, media)
@@ -475,7 +477,11 @@ let unsubSync = () => {};
       el(ids.indo_retirar)?.classList.add("completed");
       el(ids.a_caminho_destino)?.classList.add("completed");
       el(ids.finalizada_pendente)?.classList.add("active");
-      ensureChegouButton();
+      // Abre automaticamente o modal de avaliação para o cliente
+      if (!__ratingOpenedOnce) {
+        __ratingOpenedOnce = true;
+        try { abrirModalAvaliacao(); } catch(e) { console.warn('Falha ao abrir modal auto:', e?.message||e); }
+      }
     }
 
     updateCancelButtonVisibility(fase);
@@ -1002,7 +1008,10 @@ async function pickCorridaId(uid){
     });
 
     const closeBtn = $("close-driver-modal"); 
-    if (closeBtn) closeBtn.onclick = ()=> modal.style.display="none";
+    if (closeBtn) {
+      closeBtn.onclick = null;
+      closeBtn.style.display = "none";
+    }
     
     const enviar = $("submit-driver-rating");
     const comentario = $("driver-rating-comment");

@@ -24,8 +24,9 @@
 
   const $openModal = () => modal && (modal.style.display = "flex")
   const $closeModal = () => modal && (modal.style.display = "none")
-  ;[cancelarAvaliacaoBtn, fecharModalBtn].forEach((b) => b?.addEventListener("click", $closeModal))
+  ;[cancelarAvaliacaoBtn].forEach((b) => b?.addEventListener("click", $closeModal))
   if (cancelarAvaliacaoBtn) cancelarAvaliacaoBtn.style.display = "none"
+  if (fecharModalBtn) fecharModalBtn.style.display = "none"
 
   // Verificar se Firebase está disponível
   if (!window.firebase) {
