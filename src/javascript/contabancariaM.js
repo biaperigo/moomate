@@ -1,4 +1,4 @@
-// contabancariaM.js — salva/recupera dados bancários do motorista
+// contabancariaM.js — salva/recupera dados bancários do motorista (com import do Mercado Pago)
 (function(){
   // Menu
   try{
@@ -32,15 +32,77 @@
     return localStorage.getItem('motoristaUid') || localStorage.getItem('uid') || null;
   }
 
+  async function getIdToken(){
+    try { const u = firebase.auth?.().currentUser; if (u) return await u.getIdToken(); } catch{}
+    return null;
+  }
+
+  // Obtém endpoint seguro do backend que integra com a API do Mercado Pago.
+  // Priorizamos window.MP_BANK_ENDPOINT; caso ausente, tentamos Firestore em 'config/mercadopago.bankEndpoint'.
+  async function obterEndpointMP(){
+    try { if (window.MP_BANK_ENDPOINT) return String(window.MP_BANK_ENDPOINT); } catch{}
+    try {
+      const snap = await db.collection('config').doc('mercadopago').get();
+      const d = snap.exists ? (snap.data()||{}) : {};
+      if (d.bankEndpoint) return String(d.bankEndpoint);
+    } catch{}
+    return null;
+  }
+
+  // Chama o backend para buscar dados bancários da conta Mercado Pago vinculada ao motorista logado.
+  // O backend deve validar o ID Token e usar as credenciais secretas do MP. Resposta esperada:
+  // { banco: 'NUBANK', agencia: '0001', conta: '123456-7', cpf: '00000000000' }
+  async function carregarDeMercadoPago(){
+    const uid = getUid(); if (!uid) return false;
+    const endpoint = await obterEndpointMP(); if (!endpoint) return false;
+    const idToken = await getIdToken(); if (!idToken) return false;
+    try{
+      const res = await fetch(endpoint, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${idToken}`, 'Accept': 'application/json' },
+        credentials: 'include'
+      });
+      if (!res.ok) { console.warn('MP endpoint retornou', res.status); return false; }
+      const data = await res.json();
+      const mp = data || {};
+      const vBanco = mp.banco || mp.bank || mp.bank_name || '';
+      const vAgencia = mp.agencia || mp.branch || mp.bank_branch || '';
+      const vConta = mp.conta || mp.account || mp.bank_account_number || '';
+      const vCpf = mp.cpf || mp.holder_document || mp.tax_id || '';
+      if (vBanco) banco.value = vBanco;
+      if (vAgencia) agencia.value = vAgencia;
+      if (vConta) conta.value = vConta;
+      if (vCpf) cpf.value = vCpf;
+      // Persistir no Firestore para uso offline
+      try{
+        await db.collection('motoristas').doc(uid).set({
+          dadosBancarios: {
+            banco: (banco.value||'').trim(),
+            agencia: (agencia.value||'').trim(),
+            conta: (conta.value||'').trim(),
+            cpf: (cpf.value||'').trim(),
+            origem: 'mercado_pago',
+            atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+          }
+        }, { merge: true });
+      }catch(e){ console.warn('Falha ao salvar retorno MP no Firestore:', e); }
+      return true;
+    }catch(e){ console.warn('Falha ao consultar MP:', e); return false; }
+  }
+
   async function carregar(){
     const uid = getUid(); if (!uid) return;
     try{
-      const snap = await db.collection('motoristas').doc(uid).get();
-      const d = snap.exists ? (snap.data().dadosBancarios||{}) : {};
-      if (d.banco) banco.value = d.banco;
-      if (d.agencia) agencia.value = d.agencia;
-      if (d.conta) conta.value = d.conta;
-      if (d.cpf) cpf.value = d.cpf;
+      // Tenta importar do Mercado Pago primeiro
+      const ok = await carregarDeMercadoPago();
+      if (!ok){
+        const snap = await db.collection('motoristas').doc(uid).get();
+        const d = snap.exists ? (snap.data().dadosBancarios||{}) : {};
+        if (d.banco) banco.value = d.banco;
+        if (d.agencia) agencia.value = d.agencia;
+        if (d.conta) conta.value = d.conta;
+        if (d.cpf) cpf.value = d.cpf;
+      }
     }catch(e){ console.warn('Falha ao carregar dados bancários:', e); }
   }
 

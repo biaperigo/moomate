@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const senhaInput = document.querySelector('input[placeholder="Senha"]');
   const btnGoogle = document.querySelector(".btn-google");
   const togglePass = document.querySelector(".toggle-password");
+  const forgotLink = document.querySelector(".forgot-password");
 
   if (togglePass) {
     togglePass.addEventListener("click", () => {
@@ -26,6 +27,28 @@ document.addEventListener("DOMContentLoaded", () => {
       senhaInput.type = tipo;
       togglePass.classList.toggle("fa-eye");
       togglePass.classList.toggle("fa-eye-slash");
+    });
+  }
+
+  // Esqueci a senha
+  if (forgotLink) {
+    forgotLink.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const email = (emailInput?.value || "").trim();
+      if (!email) {
+        alert("Informe seu e-mail para redefinir a senha");
+        return;
+      }
+      try {
+        await auth.sendPasswordResetEmail(email);
+      } catch (err) {
+        console.error("Erro ao enviar e-mail de redefinição:", err);
+        if (err.code === "auth/invalid-email") {
+          alert("Informe um e-mail válido.");
+          return;
+        }
+      }
+      alert("Verifique seu e-mail para redefinir a senha");
     });
   }
 

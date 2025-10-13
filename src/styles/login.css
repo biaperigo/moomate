@@ -85,6 +85,30 @@ h2 {
   cursor: pointer;
 }
 
+/* Link "Esqueci a senha?" dentro do formulário */
+.cadastro-form .forgot-password {
+  display: block;
+  text-align: right;
+  margin: 0.25rem 0 0.8rem;
+  font-size: 0.85rem;
+  color: #ff6c0c;
+  text-decoration: none;
+}
+
+.cadastro-form .forgot-password:hover {
+  color: #e55b00;
+  text-decoration: underline;
+}
+
+/* Garante espaço para o ícone de mostrar/ocultar senha */
+.senha-container input[placeholder="Senha"] {
+  padding-right: 44px;
+}
+
+.senha-container i {
+  z-index: 1;
+}
+
 .checkbox-container {
   display: flex;
   align-items: center;

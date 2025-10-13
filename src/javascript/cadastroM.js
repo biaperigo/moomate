@@ -99,6 +99,39 @@ function validarCEP(cep) {
   return regex.test(cep);
 }
 
+function validarCodigoBanco(cod) {
+  const only = String(cod || '').replace(/\D/g, '');
+  return /^\d{3}$/.test(only);
+}
+
+const BANCOS_BR = {
+  '001': 'Banco do Brasil',
+  '033': 'Banco Santander (Brasil) S.A.',
+  '041': 'Banrisul',
+  '070': 'BRB Banco de Brasília',
+  '077': 'Banco Inter',
+  '104': 'Caixa Econômica Federal',
+  '212': 'Banco Original',
+  '218': 'BS2',
+  '237': 'Bradesco',
+  '260': 'Nubank (Itaú IP)',
+  '290': 'PagBank - PagSeguro',
+  '323': 'Mercado Pago Bank',
+  '336': 'C6 Bank',
+  '341': 'Itaú Unibanco',
+  '380': 'PicPay Bank',
+  '422': 'Banco Safra',
+  '623': 'Banco Pan',
+  '655': 'Banco Votorantim (BV)',
+  '748': 'Sicredi',
+  '756': 'Sicoob'
+};
+
+function nomeDoBanco(cod) {
+  const only = String(cod || '').replace(/\D/g, '').padStart(3, '0');
+  return BANCOS_BR[only] || null;
+}
+
 function validarTelefone(telefone) {
   const numeros = telefone.replace(/\D/g, "");
   return numeros.length >= 10 && numeros.length <= 11;
@@ -114,9 +147,7 @@ function validarCRLV(crlv) {
   return crlv.length === 11;
 }
 
-function validarAntecedentes(antecedentes) {
-  return antecedentes.trim().length > 0 && antecedentes.trim().length <= 255;
-}
+// certidão (arquivo) será validada pela presença do arquivo no input
 
 // api cep
 async function buscarCEP(cep) {
@@ -200,6 +231,7 @@ async function salvarDados(dados) {
   try {
     let fotoPerfilUrl = null;
     let fotoVeiculoUrl = null;
+    let certidaoNadaConstaUrl = null;
 
     if (dados.dadosPessoais.fotoPerfil) {
       fotoPerfilUrl = await uploadImagemCloudinary(dados.dadosPessoais.fotoPerfil);
@@ -209,14 +241,22 @@ async function salvarDados(dados) {
       fotoVeiculoUrl = await uploadImagemCloudinary(dados.veiculo.fotoVeiculo);
     }
 
+    if (dados.dadosPessoais.certidaoArquivo) {
+      certidaoNadaConstaUrl = await uploadImagemCloudinary(dados.dadosPessoais.certidaoArquivo);
+    }
+
     delete dados.dadosPessoais.fotoPerfil;
     delete dados.veiculo.fotoVeiculo;
+    delete dados.dadosPessoais.certidaoArquivo;
 
     if (fotoPerfilUrl) {
       dados.dadosPessoais.fotoPerfilUrl = fotoPerfilUrl;
     }
     if (fotoVeiculoUrl) {
       dados.veiculo.fotoVeiculoUrl = fotoVeiculoUrl;
+    }
+    if (certidaoNadaConstaUrl) {
+      dados.dadosPessoais.certidaoNadaConstaUrl = certidaoNadaConstaUrl;
     }
 
     const email = dados.dadosPessoais.email.trim();
@@ -264,7 +304,6 @@ function validarFormulario() {
     cidade: document.getElementById("cidade").value,
     rg: document.getElementById("rg").value,
     cnh: document.getElementById("cnh").value,
-    antecedentes: document.getElementById("antecedentes").value,
     tipoVeiculo: document.getElementById("tipo-veiculo").value,
     placa: document.getElementById("placa").value,
     crlv: document.getElementById("crlv").value,
@@ -289,7 +328,10 @@ function validarFormulario() {
 
   if (!validarCNH(campos.cnh)) { alert("CNH inválida. Deve conter 11 dígitos numéricos."); return false; }
   if (!validarCRLV(campos.crlv)) { alert("CRLV inválido. Deve conter 11 dígitos numéricos."); return false; }
-  if (!validarAntecedentes(campos.antecedentes)) { alert("Antecedentes criminais: campo obrigatório e deve ter entre 1 e 255 caracteres."); return false; }
+  const certidaoEl = document.getElementById('certidao-nada-consta');
+  if (!certidaoEl || !certidaoEl.files || certidaoEl.files.length === 0) { alert('Envie a Certidão de Nada Consta (PDF ou imagem).'); return false; }
+  if (!validarCodigoBanco(campos.banco)) { alert('Número do banco inválido. Informe exatamente 3 dígitos.'); return false; }
+  if (!nomeDoBanco(campos.banco)) { alert('Código de banco não reconhecido no Brasil. Verifique o número do banco.'); return false; }
 
   return true;
 }
@@ -404,6 +446,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const fotoPerfil = document.getElementById("foto-perfil").files[0];
       const fotoVeiculo = document.getElementById("foto-veiculo").files[0];
+      const certidaoArquivo = document.getElementById("certidao-nada-consta").files[0];
 
       const dados = {
   dadosPessoais: {
@@ -423,7 +466,7 @@ document.addEventListener("DOMContentLoaded", function () {
     fotoPerfil: fotoPerfil,
     rg: document.getElementById("rg").value,  
     cnh: document.getElementById("cnh").value,  
-    antecedentes: document.getElementById("antecedentes").value  
+    certidaoArquivo: certidaoArquivo
   },
   veiculo: {
     tipo: document.getElementById("tipo-veiculo").value,
@@ -433,7 +476,8 @@ document.addEventListener("DOMContentLoaded", function () {
     fotoVeiculo: fotoVeiculo
   },
   dadosBancarios: {
-    banco: document.getElementById("banco").value,
+    banco: document.getElementById("banco").value.replace(/\D/g, '').slice(0,3),
+    bancoNome: nomeDoBanco(document.getElementById("banco").value) || null,
     tipoConta: tipoConta,
     agencia: document.getElementById("agencia").value,
     numeroConta: document.getElementById("numero-conta").value,
@@ -444,14 +488,15 @@ document.addEventListener("DOMContentLoaded", function () {
 };
 
       const docId = await salvarDados(dados);
-      alert("Cadastro realizado com sucesso! ID: " + docId);
-    
+          
       document.getElementById("cadastro-form").reset();
       
       const previewPerfil = document.getElementById("preview-foto-perfil");
       const previewVeiculo = document.getElementById("preview-foto-veiculo");
       if (previewPerfil) previewPerfil.style.display = 'none';
       if (previewVeiculo) previewVeiculo.style.display = 'none';
+      const certidaoInput = document.getElementById('certidao-nada-consta');
+      if (certidaoInput) certidaoInput.value = '';
       
       verificarCampos();
 
@@ -459,8 +504,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      alert("Erro ao salvar dados: " + (error.message || "Tente novamente."));
-    } finally {
+         } finally {
       loader.style.display = "none";
       botaoSalvar.disabled = false;
       botaoSalvar.textContent = "SALVAR DADOS";
@@ -474,6 +518,24 @@ document.addEventListener("DOMContentLoaded", function () {
     const campo = document.getElementById(id);
     if (campo) campo.addEventListener("input", e => e.target.value = apenasNumeros(e.target.value));
   });
+
+  const campoBanco = document.getElementById("banco");
+  if (campoBanco) {
+    campoBanco.addEventListener("input", e => {
+      e.target.value = apenasNumeros(e.target.value).slice(0,3);
+      const code = e.target.value;
+      const small = document.getElementById('banco-nome');
+      const nome = validarCodigoBanco(code) ? nomeDoBanco(code) : null;
+      if (small) small.textContent = nome ? `Banco detectado: ${nome}` : (code ? 'Código não reconhecido' : '');
+      if (nome) {
+        e.target.setCustomValidity('');
+      } else if (code && code.length === 3) {
+        e.target.setCustomValidity('Informe um código de banco brasileiro válido');
+      } else {
+        e.target.setCustomValidity('');
+      }
+    });
+  }
 
   const campoNome = document.getElementById("nome");
   if (campoNome) campoNome.addEventListener("input", e => e.target.value = apenasLetras(e.target.value));
@@ -490,4 +552,3 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
-

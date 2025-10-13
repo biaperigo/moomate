@@ -45,6 +45,10 @@ body {
 .btn-cancel { background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: #fff; border: none; border-radius: 20px; padding: 8px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 8px rgba(244,67,54,.35); cursor: pointer; }
 .btn-cancel i { font-size: .95rem; }
 .btn-cancel::after { content: 'Cancelar'; font-weight: 700; font-size: .9rem; }
+/* Remover botão iniciar, deixar só cancelar */
+.btn-start { display: none !important; }
+/* Evitar quaisquer setas nativas em botões */
+.btn-cancel, .btn-start { appearance: none; -webkit-appearance: none; background-image: none; }
 .btn-cancel:hover { filter: brightness(.95); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(244,67,54,.45); }
 
 .propostas-section p {

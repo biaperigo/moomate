@@ -1,6 +1,8 @@
 let currentCorridaId = null;
 let unsubCorrida = () => {};
 let unsubSync = () => {};
+let corridaFinalizadaPeloMotorista = false; // Flag para controlar finalização
+let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
 
 (() => {
   const { firebase, L } = window;
@@ -211,11 +213,11 @@ let unsubSync = () => {};
         });
 
       if (cancelModal) cancelModal.style.display = "none";
-          setTimeout(() => window.location.href = "homeC.html", 1000);
+      setTimeout(() => window.location.href = "homeC.html", 1000);
 
     } catch (error) {
       console.error("Erro ao cancelar:", error);
-          }
+    }
   }
 
   async function hidratarMotorista(motoristaId, corridaData){
@@ -432,7 +434,12 @@ let unsubSync = () => {};
       el(ids.indo_retirar)?.classList.add("completed");
       el(ids.a_caminho_destino)?.classList.add("completed");
       el(ids.finalizada_pendente)?.classList.add("active");
-      ensureChegouButton();
+      // Abrir modal automaticamente (sem botão) apenas uma vez
+      if (!__ratingOpenedOnceAg) {
+        __ratingOpenedOnceAg = true;
+        corridaFinalizadaPeloMotorista = true;
+        try { abrirModalAvaliacao(); } catch(e) { console.warn('Falha ao abrir modal auto:', e?.message||e); }
+      }
     }
 
     atualizarVisibilidadeBotaoCancelar(fase);
@@ -498,7 +505,7 @@ let unsubSync = () => {};
     try{ 
       const qAg=await db.collection("agendamentos")
         .where("clienteId","==",uid)
-        .where("status","in",["agendamento_confirmado","corrida_agendamento_confirmado","indo_retirar","a_caminho_destino"])
+        .where("status","in",["agendamento_confirmado","corrida_agendamento_confirmado","indo_retirar","a_caminho_destino","finalizada_pendente"])
         .orderBy("confirmadoEm","desc")
         .limit(10)
         .get(); 
@@ -599,6 +606,12 @@ let unsubSync = () => {};
       if(s.fase) {
         S.fase = s.fase;
         console.log("[SYNC] Fase inicial:", S.fase);
+        
+        // Verificar se já está finalizada ao carregar
+        if (s.fase === "finalizada_pendente" && !corridaFinalizadaPeloMotorista) {
+          console.log("🎯 Corrida já estava finalizada - Preparando modal");
+          corridaFinalizadaPeloMotorista = true;
+        }
       }
       
       if(s.motorista && validarCoordenadas(s.motorista.lat, s.motorista.lng)) {
@@ -663,27 +676,15 @@ let unsubSync = () => {};
       if (typeof d.distanciaM === "number") definirTexto(["distanciaInfo","estimated-distance","distPrevista","distancia"], km(d.distanciaM));
       
       if (d.fase === "cancelada" || d.cancelamento) {
-        console.log("[SYNC] Cancelamento detectado:", JSON.stringify(d.cancelamento||{}, null, 2));
-        // NUNCA redirecionar se estamos aguardando pagamento/avaliação do cliente
-        if (S.fase === 'finalizada_pendente' || C?.status === 'finalizada_pendente') {
-          console.log('[SYNC] Ignorando cancelamento pois status/fase = finalizada_pendente');
-          atualizarVisibilidadeBotaoCancelar('finalizada_pendente');
-          // fica na tela
-          
+        const por = d.cancelamento?.canceladoPor || null;
+        if (por === "cliente") {
+          localStorage.removeItem("ultimaCorridaCliente");
+          window.location.href = "homeC.html";
+          return;
         } else {
-          const por = d.cancelamento?.canceladoPor || null;
-          const porUid = d.cancelamento?.canceladoPorUid || null;
-          console.log('[SYNC] Verificação de redirecionamento:', { por, porUid, uid: currentUser?.uid });
-          // Só redireciona se ESTE cliente foi quem cancelou
-          if (por === 'cliente' && porUid && currentUser?.uid && porUid === currentUser.uid) {
-            console.log('[SYNC] Redirecionando: cancelamento efetuado por este cliente.');
-            localStorage.removeItem('ultimaCorridaCliente');
-            window.location.href = 'homeC.html';
-            return;
-          } else {
-            console.log('[SYNC] Permanecendo na tela: cancelado por outro ou sistema/motorista.');
-            atualizarVisibilidadeBotaoCancelar('cancelada');
-          }
+          // Corrida foi cancelada por motorista/sistema: não redirecionar o cliente automaticamente
+          // Mantemos a tela para permitir avaliação/pagamento ou exibir estado final
+          atualizarVisibilidadeBotaoCancelar("cancelada");
         }
       }
       
@@ -734,7 +735,7 @@ let unsubSync = () => {};
     });
 
     const closeBtn = $("close-driver-modal"); 
-    if (closeBtn) closeBtn.onclick = ()=> modal.style.display="none";
+    if (closeBtn) { closeBtn.onclick = null; closeBtn.style.display = "none"; }
     
     const enviar = $("submit-driver-rating");
     const comentario = $("driver-rating-comment");
@@ -795,17 +796,7 @@ let unsubSync = () => {};
     modal.style.display = "flex";
   }
   
-  function ensureChegouButton(){
-    let b = $("btnChegou");
-    if (!b) {
-      b = document.createElement("button");
-      b.id="btnChegou"; 
-      b.textContent = "Motorista chegou";
-      b.className="track-btn destaque-chegada";
-      document.querySelector(".ride-status")?.appendChild(b);
-    }
-    b.onclick = abrirModalAvaliacao;
-  }
+  function ensureChegouButton(){ /* não exibir botão quando auto-abrindo modal */ }
 
   (function injetarCss(){
     if (document.getElementById("css-destaque-chegada")) return;

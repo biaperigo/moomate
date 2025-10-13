@@ -1,4 +1,4 @@
-(() => {
+﻿﻿﻿﻿(() => {
   const pick = (...ids) => ids.map((id) => document.getElementById(id)).find((el) => !!el) || null
 
 
@@ -27,8 +27,9 @@
 
   const $openModal = () => modal && (modal.style.display = "flex")
   const $closeModal = () => modal && (modal.style.display = "none")
-  ;[cancelarAvaliacaoBtn, fecharModalBtn].forEach((b) => b?.addEventListener("click", $closeModal))
+  ;[cancelarAvaliacaoBtn].forEach((b) => b?.addEventListener("click", $closeModal))
   if (cancelarAvaliacaoBtn) cancelarAvaliacaoBtn.style.display = "none"
+  if (fecharModalBtn) fecharModalBtn.style.display = "none"
 
 
   if (!window.firebase) {
@@ -438,18 +439,12 @@
       }
 
 
-      // Para a linha da rota, aceitamos qualquer coordenada numérica válida
-      // (sem a restrição regional de validarCoordenadas), pois a polilinha
-      // pode conter pontos fora do retângulo de SP dependendo do provedor.
-      const latlngs = route.geometry.coordinates
-        .map(([lng, lat]) => {
-          const la = parseFloat(lat), lo = parseFloat(lng)
-          if (Number.isFinite(la) && Number.isFinite(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180) {
-            return [la, lo]
-          }
-          return null
-        })
-        .filter(Boolean)
+      const latlngs = route.geometry.coordinates.map(([lng, lat]) => {
+        if (validarCoordenadas(lat, lng)) {
+          return [lat, lng]
+        }
+        return null
+      }).filter(coord => coord !== null)
       
       if (latlngs.length === 0) {
         console.error("Nenhuma coordenada válida na rota")
@@ -801,7 +796,7 @@
 
       console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
       
-      // 4. Atualizar status da corrida para pendente do cliente (não finalizar ainda)
+      // 4. Atualizar status da corrida
       if (corridaRef) {
         await corridaRef.set({
           avaliacao: {
@@ -809,11 +804,8 @@
             comentario: comentario,
             avaliadoEm: firebase.firestore.FieldValue.serverTimestamp()
           },
-          status: 'finalizada_pendente'
+          status: 'finalizada'
         }, { merge: true });
-        try {
-          await corridaRef.collection('sync').doc('estado').set({ fase: 'finalizada_pendente' }, { merge: true });
-        } catch(e) { console.warn('Falha ao atualizar fase do sync:', e); }
       }
       
       $closeModal()

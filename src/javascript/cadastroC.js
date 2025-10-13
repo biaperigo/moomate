@@ -23,8 +23,7 @@ $(document).ready(function () {
         }, { merge: true });
       })
       .then(() => {
-        alert("Login com Google realizado com sucesso!");
-        window.location.href = "homeC.html"; 
+                window.location.href = "homeC.html"; 
       })
       .catch((error) => {
         if (error.code === 'auth/account-exists-with-different-credential') {
@@ -40,7 +39,7 @@ $(document).ready(function () {
                   return userCredential.user.linkWithCredential(pendingCred);
                 })
                 .then(() => {
-                  alert("Conta Google vinculada com sucesso! Agora você pode entrar usando o Google.");
+                  
                   window.location.href = "login.html";
                 })
                 .catch((linkError) => {
@@ -55,7 +54,7 @@ $(document).ready(function () {
           }
         } else {
           console.error("Erro ao logar com Google:", error);
-          alert("Erro ao fazer login com Google: " + error.message);
+        
         }
       });
   });
@@ -114,7 +113,7 @@ $(document).ready(function () {
         tipoUsuario: "usuario"
       });
 
-      alert("Cadastro realizado com sucesso!");
+      
       window.location.href = "login.html";
 
     } catch (error) {

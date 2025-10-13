@@ -10,8 +10,6 @@
   <link rel="stylesheet" href="src/styles/agendamentoC.css"/>
 </head>
 <body>
-
-  <!-- Header -->
   <header class="top-bar">
     <div class="logo-area">
       <img src="src/images/favicon.png" alt="Logo Moomate" />
@@ -33,8 +31,6 @@
       </button>
     </div>
   </header>
-
-  <!-- Banner -->
   <section class="banner">
     <img src="src/images/banneragendamento.png" alt="Banner agendamento" />
     <div class="banner-text">
@@ -46,26 +42,19 @@
     <div class="tab active" id="tab-solicitar">Solicitar</div>
     <div class="tab" id="tab-agendados">Agendados</div> 
   </div>
-
-  <!-- Container Principal que envolve o conteúdo das abas -->
   <main id="main-content">
     
-    <!-- Seção da Aba "Solicitar" -->
     <section id="solicitar-content" class="form-section active">
       <div class="form-fields">
-        <!-- Data de Agendamento -->
         <div class="input-box">
           <label for="dataAgendamento"><i class="fa-solid fa-calendar-day"></i> Data de Agendamento</label>
           <input type="date" id="dataAgendamento" placeholder="Escolha a data" class="date-input" required>
         </div>
-
-        <!-- Hora de Agendamento -->
         <div class="input-box">
           <label for="horaAgendamento"><i class="fa-solid fa-clock"></i> Hora de Agendamento</label>
           <input type="time" id="horaAgendamento" required>
         </div>
 
-        <!-- Local de Retirada -->
         <div class="input-box">
           <label for="cep"><i class="fa-solid fa-map-pin"></i> CEP</label>
           <input type="text" id="cep" placeholder="Digite o CEP" maxlength="9" required>
@@ -76,31 +65,30 @@
           <input type="text" id="localRetirada" placeholder="Digite o endereço completo" required>
         </div>
 
-        <!-- Número e Complemento de Retirada -->
         <div class="input-group">
           <input type="text" id="numeroRetirada" placeholder="Número" required>
           <input type="text" id="complementoRetirada" placeholder="Complemento (opcional )">
         </div>
 
-        <!-- Local de Entrega -->
+        <div class="input-box">
+          <label for="cepEntrega"><i class="fa-solid fa-map-pin"></i> CEP (entrega)</label>
+          <input type="text" id="cepEntrega" placeholder="Digite o CEP" maxlength="9">
+        </div>
         <div class="input-box">
           <label for="localEntrega"><i class="fa-solid fa-location-dot"></i> Local de Entrega</label>
           <input type="text" id="localEntrega" placeholder="Digite o endereço completo" required>
         </div>
 
-        <!-- Número e Complemento de Entrega -->
         <div class="input-group">
           <input type="text" id="numeroEntrega" placeholder="Número" required>
           <input type="text" id="complementoEntrega" placeholder="Complemento (opcional)">
         </div>
 
-        <!-- Número de Volumes -->
         <div class="input-box">
           <label for="volumes"><i class="fa-solid fa-boxes-stacked"></i> Número de Volumes</label>
           <input type="number" id="volumes" class="volumes-input" placeholder="Quantos itens serão transportados?" min="1" required>
         </div>
 
-        <!-- Tipo de Veículo (Tamanho do Caminhão) -->
         <div class="input-box">
           <label><i class="fa-solid fa-truck"></i> Tipo de Veículo</label>
           <div class="vehicle-types">
@@ -122,21 +110,16 @@
 
       <section id="propostasSection" class="propostas-section" style="display: none;">
         <div id="propostasContainer">
-          <!-- Conteúdo preenchido pelo JS -->
+   
         </div>
       </section>
     </section>
-
-    <!-- Seção da Aba "Agendados" -->
     <section id="agendados-content" class="agendados-section" style="display: none;">
       <div id="agendadosContainer" class="cards-container">
-        <!-- Conteúdo preenchido pelo JS -->
       </div>
     </section>
-
   </main>
 
-  <!-- Footer -->
   <footer>
     <div id="footer_content">
       <div class="footer-left">
@@ -146,7 +129,7 @@
         <span class="social-text">Acompanhe-nos</span>
         <div class="social-icons">
           <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank"><i class="fa-brands fa-instagram"></i></a>
-          <a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a>
+          <a href="https://www.linkedin.com/company/moomateoficial"class="social-icon" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a>
         </div>
       </div>
     </div>
@@ -155,7 +138,6 @@
     </div>
   </footer>
 
-  <!-- Modal de Confirmação de Proposta Aceita (informativo) -->
   <div id="modalPropostaAceita" class="mm-modal" style="display:none;">
     <div class="mm-modal-backdrop"></div>
     <div class="mm-modal-dialog" role="dialog" aria-labelledby="modalPropostaAceitaTitulo" aria-modal="true">
@@ -169,7 +151,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-  <!-- Firebase SDKs -->
+
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>

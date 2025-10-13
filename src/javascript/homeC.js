@@ -36,6 +36,62 @@ async function getClienteNome(uid) {
   }
 }
 
+// === CEP da ENTREGA (destino) ===
+function checarCEPEntrega() {
+  const field = document.getElementById("cepEntrega");
+  let digits = (field?.value || "").replace(/\D/g, "");
+  // Aplica máscara 99999-999
+  if (field) field.value = formatarCEP(digits);
+  if (digits.length === 8) {
+    if (isCEPSaoPaulo(digits)) {
+      buscarEnderecoEntregaPorCEP(digits);
+    } else {
+      alert("Por favor, digite um CEP do estado de São Paulo.");
+      if (field) field.value = "";
+    }
+  }
+}
+
+async function buscarEnderecoEntregaPorCEP(cep) {
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const data = await res.json();
+    if (data.erro) return alert("CEP não encontrado!");
+
+    if (data.uf !== "SP") {
+      alert("Este CEP não pertence ao estado de São Paulo.");
+      const f = document.getElementById("cepEntrega");
+      if (f) f.value = "";
+      return;
+    }
+
+    const endereco = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
+    const entregaField = document.getElementById("localEntrega");
+    if (entregaField) entregaField.value = endereco;
+
+    const q = encodeURIComponent(`${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`);
+    const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
+    const nominatimData = await nominatimRes.json();
+    if (!nominatimData[0]) return;
+
+    const lat = parseFloat(nominatimData[0].lat);
+    const lon = parseFloat(nominatimData[0].lon);
+
+    if (!estaDentroDeSaoPaulo(lat, lon)) {
+      alert("Por favor, selecione um endereço dentro do estado de São Paulo.");
+      return;
+    }
+
+    destinoCoords = [lat, lon];
+    map.setView(destinoCoords, 15);
+    markerDestino.setLatLng(destinoCoords).setOpacity(1);
+    reverterGeocodificacao(lat, lon, "localEntrega", false);
+    atualizarRota();
+  } catch {
+    alert("Erro ao buscar o endereço pelo CEP da entrega.");
+  }
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
   authDomain: "moomate-39239.firebaseapp.com",
@@ -218,7 +274,13 @@ async function reverterGeocodificacao(lat, lon, campo, setCep) {
     document.getElementById(campo).value = enderecoMontado;
 
     if (setCep && a.postcode && isCEPSaoPaulo(a.postcode.replace(/\D/g, ""))) {
-      document.getElementById("cep").value = formatarCEP(a.postcode);
+      if (campo === "localRetirada") {
+        const f = document.getElementById("cep");
+        if (f) f.value = formatarCEP(a.postcode);
+      } else if (campo === "localEntrega") {
+        const f2 = document.getElementById("cepEntrega");
+        if (f2) f2.value = formatarCEP(a.postcode);
+      }
     }
   } catch (e) {
     console.error("Erro reverse geocode", e);
@@ -363,6 +425,12 @@ async function selecionarItemAutocomplete(campo, item) {
     destinoCoords = [lat, lon];
     markerDestino.setLatLng(destinoCoords).setOpacity(1);
     map.setView(destinoCoords, 15);
+    // Preenche CEP da entrega quando disponível
+    const cepEntregaEl = document.getElementById("cepEntrega");
+    const pc = item.address?.postcode?.replace(/\D/g, "") || "";
+    if (cepEntregaEl && pc && isCEPSaoPaulo(pc)) {
+      cepEntregaEl.value = formatarCEP(pc);
+    }
   }
 
   atualizarRota();
@@ -763,6 +831,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const cepField = document.getElementById("cep");
   const localRetiradaField = document.getElementById("localRetirada");
   const localEntregaField = document.getElementById("localEntrega");
+  const cepEntregaField = document.getElementById("cepEntrega");
   const verMotoristasBtn = document.getElementById("verMotoristas");
 
   if (cepField) cepField.addEventListener("input", checarCEP);
@@ -774,6 +843,7 @@ document.addEventListener("DOMContentLoaded", function () {
     localEntregaField.addEventListener("input", () => autocompleteEndereco("localEntrega"));
     localEntregaField.addEventListener("blur", () => validarEnderecoSPPorTexto("localEntrega"));
   }
+  if (cepEntregaField) cepEntregaField.addEventListener("input", checarCEPEntrega);
 
   document.querySelectorAll(".vehicle-option").forEach((option) => {
     option.addEventListener("click", () => {

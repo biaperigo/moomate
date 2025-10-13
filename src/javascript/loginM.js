@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const emailInput = document.querySelector('input[placeholder="Email"]');
   const senhaInput = document.querySelector('input[placeholder="Senha"]');
   const togglePass = document.querySelector(".toggle-password");
+  const forgotLink = document.querySelector(".forgot-password");
 
 
   // Olhinho da senha
@@ -27,6 +28,28 @@ document.addEventListener("DOMContentLoaded", () => {
       senhaInput.type = senhaInput.type === "password" ? "text" : "password";
       togglePass.classList.toggle("fa-eye");
       togglePass.classList.toggle("fa-eye-slash");
+    });
+  }
+  // Esqueci a senha
+  if (forgotLink) {
+    forgotLink.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const email = (emailInput?.value || "").trim();
+      if (!email) {
+        alert("Informe seu e-mail para redefinir a senha");
+        return;
+      }
+      try {
+        await auth.sendPasswordResetEmail(email);
+      } catch (err) {
+        console.error("Erro ao enviar e-mail de redefinição:", err);
+        if (err.code === "auth/invalid-email") {
+          alert("Informe um e-mail válido.");
+          return;
+        }
+        // Demais erros ficam silenciosos para não vazar informações
+      }
+      alert("Verifique seu e-mail para redefinir a senha");
     });
   }
   async function buscarMotorista(uid, email) {
