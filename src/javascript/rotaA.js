@@ -1,4 +1,4 @@
-﻿﻿﻿﻿(() => {
+﻿﻿﻿(() => {
   const pick = (...ids) => ids.map((id) => document.getElementById(id)).find((el) => !!el) || null
 
 

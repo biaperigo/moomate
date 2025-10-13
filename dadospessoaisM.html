@@ -174,15 +174,16 @@
           </div>
           <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
         </div>
-        <div class="profile-item editable-field" data-field="antecedentes">
-          <span>Antecedentes criminais</span>
-          <span class="display-value" id="antecedentes"></span>
-          <textarea class="edit-input"></textarea>
-          <div class="edit-actions">
-            <button class="save-btn"><i class="fa-solid fa-check"></i></button>
-            <button class="cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+        <div class="profile-item">
+          <span>Certidão de Nada Consta</span>
+          <div class="vehicle-image-container">
+            <img id="certidaoImg" src="src/images/certidao.png" alt="Certidão" />
+            <div class="edit-overlay">
+              <i class="fa-solid fa-camera"></i>
+              <input type="file" id="inputCertidaoNadaConsta" accept="image/*" />
+            </div>
           </div>
-          <button class="edit-btn"><i class="fa-solid fa-pencil edit-icon"></i></button>
+          <img id="previewCertidao" class="image-preview" style="display:none;" alt="Preview Certidão"/>
         </div>
 
         <h2 class="section-title"><i class="fa-solid fa-truck"></i> Informações do Veículo</h2>
