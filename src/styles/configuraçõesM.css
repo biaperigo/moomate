@@ -157,7 +157,6 @@ input:checked + .slider:before {
   transform: translateX(20px);
 }
 
-/* Modal de mudança de senha */
 .modal {
   display: none;
   position: fixed;
@@ -235,7 +234,6 @@ button[type="submit"]:hover {
       margin-bottom: 1rem;
     }
 
-    /* Deixa os inputs iguais aos cards */
 input[type="password"] {
   width: 100%;
   padding: 1rem;
@@ -249,11 +247,10 @@ input[type="password"] {
   outline: none;
 }
 
-/* Quando clicar no input */
+
 input[type="password"]:focus {
   box-shadow: 0 0 0 2px #ff6c0c;
 }
-
 
     .btn-sair {
       background-color: #ff6c0c;

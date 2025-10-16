@@ -625,7 +625,7 @@ footer {
   70%{ box-shadow:0 10px 24px rgba(255,108,12,.35), 0 0 0 16px rgba(255,108,12,0) }
   100%{ box-shadow:0 10px 24px rgba(255,108,12,.35), 0 0 0 8px rgba(255,108,12,.18) }
 }
-/* Modal bonito */
+
 .modal{position:fixed;inset:0;
     display:none;
     align-items:center;

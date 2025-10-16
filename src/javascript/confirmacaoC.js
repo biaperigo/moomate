@@ -1,4 +1,4 @@
-// Gera o QR Code com o valor fixo ou com base em uma variável
+
 function abrirModalPix() {
   const modal = document.getElementById("modalPix");
   modal.classList.remove("hidden");

@@ -10,7 +10,6 @@ const firebaseConfig = {
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
  
-// Inicializa SDK Mercado Pago no front com sua Public Key
 const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { locale: 'pt-BR' });
 
   const metodoSelect = document.getElementById('metodo');
@@ -33,9 +32,8 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
     const metodo = metodoSelect.value;
     const params = new URLSearchParams(location.search);
     const corridaId = params.get('corrida') || localStorage.getItem('ultimaCorridaCliente') || undefined;
-    
-    // Busca o valor do preço do Firebase
-    let valor = 10; // valor padrão
+
+    let valor = 10; 
     try {
       if (corridaId) {
         resultado.textContent = 'Buscando informações da corrida...';
@@ -50,16 +48,14 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
     } catch (err) {
       console.error('Erro ao buscar preço:', err);
     }
-    
-    // Monta itens da preferência
+
     const items = [{
       title: 'Corrida Moomate',
       quantity: 1,
       unit_price: Number(valor),
       currency_id: 'BRL',
     }];
-    
-    // Restrições por método selecionado
+
     let payment_methods = {};
     if (metodo === 'pix') {
       payment_methods = { excluded_payment_types: [{ id: 'credit_card' }, { id: 'debit_card' }] };
@@ -76,7 +72,7 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
 
     try {
       resultado.textContent = 'Criando preferência de pagamento...';
-      const baseApi = base; // servidor Express exposto no mesmo host
+      const baseApi = base; 
       const resp = await fetch(`${baseApi}/create-mercadopago-preference`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,7 +91,6 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
       if (!data || !data.init_point) {
         throw new Error('Resposta inválida da API');
       }
-      // Registro simples no Firestore (opcional)
       try {
         await db.collection('pagamentos').add({
           metodo,
@@ -106,11 +101,11 @@ const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { loc
           preferenceId: data.preference_id || null,
         });
       } catch {}
-      // Salva dados para crédito na carteira após retorno
+
       try {
         localStorage.setItem('lastPayment', JSON.stringify({ valor, corridaId }));
       } catch {}
-      // Redireciona para o checkout do Mercado Pago
+
       window.location.href = data.init_point;
     } catch (err) {
       console.error(err);

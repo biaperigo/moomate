@@ -1,9 +1,8 @@
-// Controle do menu
+
 const menuToggle = document.getElementById('menuToggle');
 const navMenu = document.getElementById('navMenu');
 menuToggle.addEventListener('click', () => navMenu.classList.toggle('show'));
 
-// Controle do modal de feedback
 document.getElementById('abrir-feedback').addEventListener('click', function() {
     document.getElementById('modal-feedback').classList.remove('hidden');
 });
@@ -12,7 +11,6 @@ document.getElementById('fechar-modal').addEventListener('click', function() {
     document.getElementById('modal-feedback').classList.add('hidden');
 });
 
-// Exibir/ocultar explicações dos tópicos
 document.getElementById('fazer-pedido').addEventListener('click', function() {
     const explanation = document.getElementById('explanation-fazer-pedido');
     explanation.style.display = explanation.style.display === 'none' ? 'block' : 'none';

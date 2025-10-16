@@ -250,7 +250,7 @@ body {
   border-bottom: 1px solid #ff6c0c;
   padding-bottom: 0.8rem;
   text-align: left;
-  cursor: pointer; /* 👈 deixa o mouse de dedinho */
+  cursor: pointer; 
 }
 
 

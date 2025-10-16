@@ -1,13 +1,10 @@
-// contabancariaM.js — salva/recupera dados bancários do motorista (com import do Mercado Pago)
 (function(){
-  // Menu
-  try{
+   try{
     document.getElementById('menuToggle')?.addEventListener('click', ()=>{
       document.getElementById('navMenu')?.classList.toggle('show');
     });
   }catch{}
 
-  // Firebase compat
   const firebaseConfig = {
     apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
     authDomain: "moomate-39239.firebaseapp.com",
@@ -37,8 +34,6 @@
     return null;
   }
 
-  // Obtém endpoint seguro do backend que integra com a API do Mercado Pago.
-  // Priorizamos window.MP_BANK_ENDPOINT; caso ausente, tentamos Firestore em 'config/mercadopago.bankEndpoint'.
   async function obterEndpointMP(){
     try { if (window.MP_BANK_ENDPOINT) return String(window.MP_BANK_ENDPOINT); } catch{}
     try {
@@ -49,9 +44,6 @@
     return null;
   }
 
-  // Chama o backend para buscar dados bancários da conta Mercado Pago vinculada ao motorista logado.
-  // O backend deve validar o ID Token e usar as credenciais secretas do MP. Resposta esperada:
-  // { banco: 'NUBANK', agencia: '0001', conta: '123456-7', cpf: '00000000000' }
   async function carregarDeMercadoPago(){
     const uid = getUid(); if (!uid) return false;
     const endpoint = await obterEndpointMP(); if (!endpoint) return false;
@@ -73,7 +65,6 @@
       if (vAgencia) agencia.value = vAgencia;
       if (vConta) conta.value = vConta;
       if (vCpf) cpf.value = vCpf;
-      // Persistir no Firestore para uso offline
       try{
         await db.collection('motoristas').doc(uid).set({
           dadosBancarios: {
@@ -93,7 +84,7 @@
   async function carregar(){
     const uid = getUid(); if (!uid) return;
     try{
-      // Tenta importar do Mercado Pago primeiro
+ 
       const ok = await carregarDeMercadoPago();
       if (!ok){
         const snap = await db.collection('motoristas').doc(uid).get();

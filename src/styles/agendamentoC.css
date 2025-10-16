@@ -24,7 +24,6 @@ body {
   top: 0;
   z-index: 100;
 }
-/* Modal centralizado (overlay) */
 .mm-modal { position: fixed; inset: 0; display: none; z-index: 9999; align-items: center; justify-content: center; }
 .mm-modal.show { display: flex !important; }
 .mm-modal .mm-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); }
@@ -35,19 +34,18 @@ body {
 .mm-modal .mm-modal-body { padding: 18px 20px; color: #333; font-size: .98rem; line-height: 1.4; }
 @keyframes mm-pop { to { transform: translateY(0) scale(1); } }
 
-/* Cards empilhados com espaçamento agradável */
+
 .cards-container > div { display: flex; flex-direction: column; gap: 18px; }
-/* Centraliza os cards nas páginas de cliente e motorista */
+
 .cards-container { max-width: 760px; margin: 0 auto; }
 #scheduled-list { max-width: 760px; margin: 0 auto; }
 
-/* Botão de cancelar com rótulo e cor de alerta */
+
 .btn-cancel { background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: #fff; border: none; border-radius: 20px; padding: 8px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 8px rgba(244,67,54,.35); cursor: pointer; }
 .btn-cancel i { font-size: .95rem; }
 .btn-cancel::after { content: 'Cancelar'; font-weight: 700; font-size: .9rem; }
-/* Remover botão iniciar, deixar só cancelar */
 .btn-start { display: none !important; }
-/* Evitar quaisquer setas nativas em botões */
+
 .btn-cancel, .btn-start { appearance: none; -webkit-appearance: none; background-image: none; }
 .btn-cancel:hover { filter: brightness(.95); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(244,67,54,.45); }
 
@@ -618,20 +616,14 @@ footer {
   font-weight:600; font-size:14px; color:#555;
   letter-spacing:0.5px; text-transform:uppercase;
 }
-
-/* Em seu arquivo agendamentoC.css ou similar */
-
 #propostasContainer {
-  /* REMOVA a linha "display: none;" daqui */
   margin-top: 20px;
   padding: 20px;
-  background: #f0f8ff; /* Você pode mudar isso se quiser */
+  background: #f0f8ff; 
   border-radius: 10px;
   border: 2px solid #ff6c0c;
 }
 
-
-/* Esconde completamente a seção quando não há itens dentro da lista de propostas */
 #propostasSection:not(:has(#lista-propostas > *:not(.header))) {
   display: none !important;
 }
@@ -904,7 +896,7 @@ footer {
 .modal-overlay {
   will-change: opacity;
   contain: layout style;
-}/* Custom Styles for Vehicle Type Selection */
+}
 .vehicle-types {
   display: flex;
   flex-direction: column;
@@ -936,7 +928,6 @@ footer {
   margin-bottom: 20px;
 }
 
-/* Styling for the form */
 .form-section {
   background-color: #ffffff;
   max-width: 1000px;
@@ -1144,7 +1135,7 @@ footer {
 }
 
 .card-info .status {
-  align-self: flex-start; /* alinha à esquerda */
+  align-self: flex-start;
 }
 
 .status {
@@ -1366,17 +1357,14 @@ footer {
     flex-direction: column;
     gap: 0.8rem;
   }
-}/* =============================================== */
-/* ESTILOS FINAIS E ESPECÍFICOS PARA O CARD DE PROPOSTA */
-/* =============================================== */
-
+}
 .card-proposta-motorista {
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
   border: 1px solid #e0e0e0;
   margin-bottom: 20px;
-  overflow: hidden; /* Garante que nada saia dos cantos arredondados */
+  overflow: hidden; 
 }
 
 .card-proposta-motorista-content {
@@ -1402,7 +1390,7 @@ footer {
   align-items: center;
   gap: 12px;
   min-width: 200px;
-  padding-left: 15px; /* Espaço para a barra laranja */
+  padding-left: 15px; 
 }
 
 .card-proposta-motorista-avatar {
@@ -1503,7 +1491,7 @@ footer {
 .card-proposta-motorista-valor .aceitar-btn:hover {
   background: #e65c2e;
 }
-/* Seção de propostas ocupa toda a área branca */
+
 .propostas-section {
   background-color: transparent;
   border: none;
@@ -1511,7 +1499,7 @@ footer {
   padding: 0;
   margin: 0;
   width: 100%;
-  min-height: 400px; /* Garante altura mínima */
+  min-height: 400px; 
 }
 
 #propostasContainer {
@@ -1531,7 +1519,6 @@ footer {
   border: none;
 }
 
-/* Estilo para a mensagem "Aguardando..." igual ao homeC */
 #propostasContainer p {
   text-align: center;
   color: #666;
@@ -1545,12 +1532,8 @@ footer {
   align-items: center;
   justify-content: center;
 }
-/* =============================================== */
-/* CORREÇÃO FINAL PARA EXIBIR A FOTO DO MOTORISTA  */
-/* =============================================== */
 
 .card-proposta-motorista-avatar img {
-  width: 100%;      /* Faz a imagem ocupar toda a largura do círculo */
-  height: 100%;     /* Faz a imagem ocupar toda a altura do círculo */
-  object-fit: cover; /* Garante que a imagem cubra o espaço sem distorcer */
+  width: 100%;     
+  object-fit: cover; 
 }

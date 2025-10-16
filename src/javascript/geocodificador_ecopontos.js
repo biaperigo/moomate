@@ -1,13 +1,9 @@
-/**
- * Sistema de Geocodificação Automática para Ecopontos
- * Garante que todos os ecopontos tenham coordenadas válidas para desenho de rotas
- */
 
 class GeocodificadorEcopontos {
   constructor() {
     this.cache = new Map();
     this.tentativasMaximas = 3;
-    this.delayEntreTentativas = 1000; // 1 segundo
+    this.delayEntreTentativas = 1000; 
   }
 
   /**
@@ -29,7 +25,6 @@ class GeocodificadorEcopontos {
       return false;
     }
     
-    // Verificação específica para região metropolitana de SP (bounds ampliados)
     if (latNum < -25.50 || latNum > -19.50 || lngNum < -53.50 || lngNum > -44.00) {
       return false;
     }
@@ -37,9 +32,6 @@ class GeocodificadorEcopontos {
     return true;
   }
 
-  /**
-   * Limpa e normaliza o endereço para melhor geocodificação
-   */
   normalizarEndereco(endereco) {
     if (!endereco || typeof endereco !== 'string') {
       return null;
@@ -47,10 +39,7 @@ class GeocodificadorEcopontos {
 
     let enderecoLimpo = endereco.trim();
 
-    // Remover prefixo "Ecoponto" se existir
     enderecoLimpo = enderecoLimpo.replace(/^Ecoponto\s+/i, '');
-
-    // Se contém " - ", pegar a parte do endereço
     if (enderecoLimpo.includes(' - ')) {
       const partes = enderecoLimpo.split(' - ');
       if (partes.length > 1) {
@@ -58,14 +47,12 @@ class GeocodificadorEcopontos {
       }
     }
 
-    // Remover informações desnecessárias
     enderecoLimpo = enderecoLimpo
       .replace(/(defronte|altura do|esquina com|baixo do|baixos do)/gi, '')
-      .replace(/nº\s*\d+/gi, '') // Remover números específicos que podem não existir
+      .replace(/nº\s*\d+/gi, '') 
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Garantir que termine com São Paulo
     if (!enderecoLimpo.toLowerCase().includes('são paulo')) {
       enderecoLimpo += ', São Paulo, SP';
     }
@@ -73,9 +60,6 @@ class GeocodificadorEcopontos {
     return enderecoLimpo;
   }
 
-  /**
-   * Geocodifica um endereço usando múltiplas estratégias
-   */
   async geocodificarEndereco(endereco, tentativa = 1) {
     const enderecoNormalizado = this.normalizarEndereco(endereco);
     
@@ -84,7 +68,6 @@ class GeocodificadorEcopontos {
       return null;
     }
 
-    // Verificar cache
     if (this.cache.has(enderecoNormalizado)) {
       return this.cache.get(enderecoNormalizado);
     }
@@ -114,7 +97,7 @@ class GeocodificadorEcopontos {
         const data = await response.json();
 
         if (data && data.length > 0) {
-          // Procurar o resultado mais relevante
+
           for (const result of data) {
             const lat = parseFloat(result.lat);
             const lng = parseFloat(result.lon);
@@ -128,8 +111,6 @@ class GeocodificadorEcopontos {
                 fonte: 'nominatim',
                 confianca: this.calcularConfianca(result, enderecoNormalizado)
               };
-
-              // Salvar no cache
               this.cache.set(enderecoNormalizado, coordenadas);
               
               console.log(`✅ Geocodificação bem-sucedida:`, coordenadas);
@@ -138,7 +119,6 @@ class GeocodificadorEcopontos {
           }
         }
 
-        // Delay entre tentativas para não sobrecarregar a API
         await this.delay(this.delayEntreTentativas);
 
       } catch (error) {
@@ -147,7 +127,6 @@ class GeocodificadorEcopontos {
       }
     }
 
-    // Se chegou aqui, tentar novamente se não excedeu o limite
     if (tentativa < this.tentativasMaximas) {
       console.log(`🔄 Tentando novamente (${tentativa + 1}/${this.tentativasMaximas}) para: ${endereco}`);
       await this.delay(this.delayEntreTentativas * tentativa);
@@ -158,21 +137,15 @@ class GeocodificadorEcopontos {
     return null;
   }
 
-  /**
-   * Calcula a confiança do resultado baseado na relevância
-   */
   calcularConfianca(result, enderecoOriginal) {
-    let confianca = 0.5; // Base
+    let confianca = 0.5; 
 
     const displayName = result.display_name.toLowerCase();
     const original = enderecoOriginal.toLowerCase();
 
-    // Verificar se contém elementos do endereço original
     if (displayName.includes('são paulo')) confianca += 0.2;
     if (result.class === 'amenity' || result.class === 'building') confianca += 0.1;
     if (result.type === 'recycling' || result.type === 'waste_disposal') confianca += 0.2;
-
-    // Verificar palavras-chave
     const palavrasChave = original.split(/\s+/).filter(p => p.length > 3);
     for (const palavra of palavrasChave) {
       if (displayName.includes(palavra)) {
@@ -182,17 +155,10 @@ class GeocodificadorEcopontos {
 
     return Math.min(confianca, 1.0);
   }
-
-  /**
-   * Delay helper
-   */
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  /**
-   * Geocodifica uma lista de ecopontos em lote
-   */
   async geocodificarLote(ecopontos, callback = null) {
     const resultados = [];
     const total = ecopontos.length;
@@ -205,7 +171,6 @@ class GeocodificadorEcopontos {
       try {
         let endereco;
         
-        // Determinar o endereço baseado no formato do ecoponto
         if (typeof ecoponto === 'string') {
           endereco = ecoponto;
         } else if (ecoponto.endereco) {
@@ -217,7 +182,6 @@ class GeocodificadorEcopontos {
           continue;
         }
 
-        // Se já tem coordenadas válidas, usar as existentes
         if (ecoponto.lat && ecoponto.lng && this.validarCoordenadas(ecoponto.lat, ecoponto.lng)) {
           resultados.push({
             ...ecoponto,
@@ -229,7 +193,6 @@ class GeocodificadorEcopontos {
           continue;
         }
 
-        // Geocodificar
         const coordenadas = await this.geocodificarEndereco(endereco);
         
         if (coordenadas) {
@@ -248,7 +211,7 @@ class GeocodificadorEcopontos {
           
           if (callback) callback(i + 1, total, ecoponto.nome || endereco, 'sucesso');
         } else {
-          // Manter o ecoponto mesmo sem coordenadas
+ 
           resultados.push({
             ...ecoponto,
             geocodificado: false,
@@ -259,7 +222,6 @@ class GeocodificadorEcopontos {
           if (callback) callback(i + 1, total, ecoponto.nome || endereco, 'erro');
         }
 
-        // Delay entre geocodificações para não sobrecarregar a API
         if (i < ecopontos.length - 1) {
           await this.delay(1500);
         }
@@ -293,9 +255,7 @@ class GeocodificadorEcopontos {
     };
   }
 
-  /**
-   * Busca o ecoponto mais próximo de uma coordenada
-   */
+
   encontrarEcopontoMaisProximo(lat, lng, ecopontos) {
     if (!this.validarCoordenadas(lat, lng) || !ecopontos || ecopontos.length === 0) {
       return null;
@@ -323,11 +283,9 @@ class GeocodificadorEcopontos {
     return ecopontoMaisProximo;
   }
 
-  /**
-   * Calcula a distância entre duas coordenadas (fórmula de Haversine)
-   */
+
   calcularDistancia(lat1, lng1, lat2, lng2) {
-    const R = 6371; // Raio da Terra em km
+    const R = 6371; 
     const dLat = this.toRad(lat2 - lat1);
     const dLng = this.toRad(lng2 - lng1);
     
@@ -339,15 +297,11 @@ class GeocodificadorEcopontos {
     return R * c;
   }
 
-  /**
-   * Converte graus para radianos
-   */
   toRad(degrees) {
     return degrees * (Math.PI / 180);
   }
 }
 
-// Exportar para uso global
 if (typeof window !== 'undefined') {
   window.GeocodificadorEcopontos = GeocodificadorEcopontos;
 }

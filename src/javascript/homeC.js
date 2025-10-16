@@ -361,11 +361,6 @@ async function autocompleteEndereco(campo) {
   }, 300);
 }
 
-// SUBSTITUA a função mostrarListaAutocomplete no seu homeC.js por esta:
-
-
-// SUBSTITUA a função mostrarListaAutocomplete no seu homeC.js por esta:
-
 function mostrarListaAutocomplete(campo, data) {
     let container = document.getElementById(`autocomplete-list-${campo}`);
     if (!container) {
@@ -377,14 +372,12 @@ function mostrarListaAutocomplete(campo, data) {
             parent.appendChild(container);
         }
     }
-    container.innerHTML = ""; // Limpa a lista anterior
+    container.innerHTML = ""; 
     if (!data.length) {
         container.style.display = "none";
         return;
     }
 
-    // **A CORREÇÃO ESTÁ AQUI**
-    // Criamos um 'div' para cada endereço, garantindo que sejam elementos de bloco.
     data.forEach((item) => {
         const div = document.createElement("div");
         div.textContent = item.display_name;
@@ -425,18 +418,16 @@ async function selecionarItemAutocomplete(campo, item) {
     destinoCoords = [lat, lon];
     markerDestino.setLatLng(destinoCoords).setOpacity(1);
     map.setView(destinoCoords, 15);
-    // Preenche CEP da entrega quando disponível
+
     const cepEntregaEl = document.getElementById("cepEntrega");
     const pc = item.address?.postcode?.replace(/\D/g, "") || "";
     if (cepEntregaEl && pc && isCEPSaoPaulo(pc)) {
       cepEntregaEl.value = formatarCEP(pc);
     }
   }
-
   atualizarRota();
 }
 
-// rota
 function atualizarRota() {
   if (routeLine) map.removeLayer(routeLine);
   if (origemCoords && destinoCoords) {
@@ -460,7 +451,6 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// proposta
 async function ouvirPropostas(entregaId) {
   if (!db || !entregaId) return;
 
@@ -481,7 +471,7 @@ async function ouvirPropostas(entregaId) {
         return;
       }
       const cacheMotoristas = {};
-      // Buscar dados do pedido para preencher De/Para/Tipo
+
       let pedido = {};
       try {
         const pedidoSnap = await db.collection('entregas').doc(entregaId).get();
@@ -490,9 +480,6 @@ async function ouvirPropostas(entregaId) {
             async function getMotorista(uid) {
     console.log("[MOTORISTA] Buscando dados do UID:", uid); 
     if (!uid) return { nome: "Motorista", foto: null, nota: 0 };
-
-    // NÃO usar cache para garantir dados em tempo real
-    // if (cacheMotoristas[uid]) return cacheMotoristas[uid];
 
     try {
         const snap = await db.collection("motoristas").doc(uid).get();
@@ -506,7 +493,6 @@ async function ouvirPropostas(entregaId) {
         const nome = data.dadosPessoais?.nome || data.nome || "Motorista";
         const foto = data.dadosPessoais?.fotoPerfilUrl || data.fotoPerfilUrl || null;
         
-        // PRIORIDADE: avaliacaoMedia > media > ratingSum/ratingCount > 0
         let nota = 0;
         if (typeof data.avaliacaoMedia === 'number') {
           nota = data.avaliacaoMedia;
@@ -519,7 +505,7 @@ async function ouvirPropostas(entregaId) {
         console.log(`[MOTORISTA] ✓ ${nome} - Nota: ${nota.toFixed(2)} (avaliacaoMedia: ${data.avaliacaoMedia}, media: ${data.media})`);
 
         const motoristaInfo = { nome, foto, nota: Number(nota) || 0 };
-        cacheMotoristas[uid] = motoristaInfo; // Atualiza cache
+        cacheMotoristas[uid] = motoristaInfo; 
         return motoristaInfo;
 
     } catch (error) {
@@ -531,11 +517,10 @@ async function ouvirPropostas(entregaId) {
       lista.innerHTML = "";
       for (const doc of snapshot.docs) {
         const p = doc.data();
-        // Descoberta robusta do UID do motorista (inclui mais campos comuns)
+
         let uidMotorista = p.motoristaUid || p.motoristaId || p.uidMotorista || p.uid || p.userId || p.authorId || doc.id || "";
         console.log("[proposta] UID do motorista (resolvido):", uidMotorista, "|| bruto:", { motoristaUid: p.motoristaUid, motoristaId: p.motoristaId, uidMotorista: p.uidMotorista, uid: p.uid, userId: p.userId, authorId: p.authorId });
 
-        // Buscar por cadastro; se não achar, usar o nome vindo da proposta como último recurso
         const info = uidMotorista ? await getMotorista(uidMotorista) : { nome: null, foto: null, nota: 0 };
         let nomeMotorista = info?.nome || p.nomeMotorista || p.motoristaNome || p.nome || "Motorista";
         const fotoMotorista = info?.foto || p.fotoMotorista || null;
@@ -580,8 +565,6 @@ async function ouvirPropostas(entregaId) {
     });
 }
 
-// ... restante do código ...
-
 function mostrarModalPropostas(entregaId, snapshot) {  }
 function fecharModalPropostas() {
   const modal = document.getElementById("propostasModal");
@@ -594,7 +577,6 @@ function fecharModalPropostas() {
   }
 }
 
-//aceitar proposta
 async function aceitarProposta(entregaId, propostaId, motoristaId) {
   if (!db) return alert("Erro: Firebase não inicializado.");
   try {
@@ -604,13 +586,11 @@ async function aceitarProposta(entregaId, propostaId, motoristaId) {
     if (!propostaDoc.exists) return alert("Proposta não encontrada.");
     const propostaData = propostaDoc.data();
 
-    // Se o motoristaId vier vazio do botão, tentar deduzir da proposta
     if (!motoristaId) {
       motoristaId = propostaData.motoristaUid || propostaData.motoristaId || propostaData.uidMotorista || propostaData.uid || propostaData.userId || propostaData.authorId || null;
       console.log("[aceitarProposta] motoristaId deduzido da proposta:", motoristaId);
     }
 
-    // Buscar dados confiáveis do motorista para salvar no banco
     let motoristaNome = "Motorista";
     try {
       const snapM = await db.collection("motoristas").doc(motoristaId).get();
@@ -631,7 +611,6 @@ async function aceitarProposta(entregaId, propostaId, motoristaId) {
       clienteConfirmou: true
     });
 
-    // Garantir que a corrida espelho receba os identificadores corretos
     try {
       await db.collection('corridas').doc(entregaId).set({
         motoristaId: motoristaId,
@@ -682,7 +661,7 @@ function mostrarAguardandoMotorista(entregaId, dados = {}) {
   if (dados?.valor != null) document.getElementById('aguardando-valor').textContent = `R$ ${Number(dados.valor||0).toFixed(2)}`;
 
   modal.style.display = 'flex';
-  // animação de entrada (segue o padrão dos outros modais)
+
   setTimeout(() => {
     modal.style.opacity = '1';
     const card = modal.querySelector('.modal-content');
@@ -723,8 +702,6 @@ async function verMotoristas() {
 
   const tipoVeiculo = document.getElementById("tipoVeiculo").value;
   if (!tipoVeiculo) return alert("Selecione um tipo de veículo.");
-
-  // Garantir cliente autenticado (aguarda auth caso ainda não tenha carregado)
   const user = await obterUsuarioAtualAsync();
   if (!user) {
     alert('Faça login para criar o pedido (ou aguarde alguns segundos e tente novamente).');
@@ -753,7 +730,6 @@ async function verMotoristas() {
     propostas: {}
   };
 
-  // Preencher clienteId e clienteNome corretos
   try {
     const uid = user.uid;
     dadosFormulario.clienteId = uid;
@@ -779,7 +755,7 @@ async function verMotoristas() {
   try {
     if (db) {
       const docRef = await db.collection("entregas").add(dadosFormulario);
-      // Ref refina os campos de cliente por segurança (evita qualquer tela antiga gravar errado)
+
       try {
         await db.collection('entregas').doc(docRef.id).update({
           clienteId: dadosFormulario.clienteId,
@@ -807,7 +783,6 @@ async function verMotoristas() {
   }
 }
 
-//tipo veiculo
 function selecionarTipo(tipo) {
   const opcoes = document.querySelectorAll(".vehicle-option");
   const atual = Array.from(opcoes).find((el) => el.dataset.type === tipo);
@@ -860,11 +835,10 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
-// Encontre esta função no seu código
+
 window.onload = function () {
   iniciarMapa();
 
-  // Adicione a chamada aqui
   injetarEstilosHomeC(); 
 
   if (typeof firebase !== "undefined") {
@@ -876,13 +850,8 @@ window.onload = function () {
   }
 };
 
-// COLE ESTE BLOCO NO FINAL DO SEU ARQUIVO homeC.js
-
-// SUBSTITUA a função injetarEstilosHomeC inteira pela versão abaixo:
-
 function injetarEstilosHomeC() {
     const styleId = 'homec-custom-styles';
-    // Remove o estilo antigo se ele existir, para garantir uma reinjeção limpa
     const oldStyle = document.getElementById(styleId);
     if (oldStyle) {
         oldStyle.remove();

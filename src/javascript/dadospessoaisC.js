@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 auth.onAuthStateChanged(async (user) => {
   if (user) {
-    // verifica se é usuário
+
     const userDoc = await db.collection("usuarios").doc(user.uid).get();
 
     if (userDoc.exists && userDoc.data().tipoUsuario === "usuario") {
@@ -34,21 +34,21 @@ auth.onAuthStateChanged(async (user) => {
       carregarDadosUsuario(userData);
       habilitarTodosCamposParaEdicao(); 
     } else {
-      //  Se não for 
+  
       console.log("Usuário logado não é do tipo 'usuario' ou não foi encontrado na coleção 'usuarios'.");
       limparCampos();
       desabilitarEdicaoTodosCampos();
       mostrarFeedback("Acesso restrito. Esta página é apenas para usuários.", "error");
     }
   } else {
-    // Se ninguém estiver logado
+
     limparCampos();
     desabilitarEdicaoTodosCampos();
     mostrarFeedback("Você não está logado. Redirecionando...", "error");
     setTimeout(() => { window.location.href = "login.html"; }, 2000);
   }
 });
-// Limpar todos os campos de input
+
 function limparCampos() {
   const campos = ["nome", "email", "telefone", "cidade", "dataNascimento"];
   campos.forEach(campo => {
@@ -336,19 +336,6 @@ async function atualizarFoto() {
   }
 }
 
-// Função de logout depois
-function logout() {
-  auth
-    .signOut()
-    .then(() => {
-      window.location.href = "login.html";
-    })
-    .catch((error) => {
-      console.error("Erro ao fazer logout:", error);
-    });
-}
-
-//  CSS 
 function adicionarEstilos() {
   const style = document.createElement("style");
   style.textContent = `

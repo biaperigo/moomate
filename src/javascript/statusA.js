@@ -1,8 +1,8 @@
 let currentCorridaId = null;
 let unsubCorrida = () => {};
 let unsubSync = () => {};
-let corridaFinalizadaPeloMotorista = false; // Flag para controlar finalização
-let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
+let corridaFinalizadaPeloMotorista = false; 
+let __ratingOpenedOnceAg = false; 
 
 (() => {
   const { firebase, L } = window;
@@ -434,7 +434,6 @@ let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
       el(ids.indo_retirar)?.classList.add("completed");
       el(ids.a_caminho_destino)?.classList.add("completed");
       el(ids.finalizada_pendente)?.classList.add("active");
-      // Abrir modal automaticamente (sem botão) apenas uma vez
       if (!__ratingOpenedOnceAg) {
         __ratingOpenedOnceAg = true;
         corridaFinalizadaPeloMotorista = true;
@@ -607,7 +606,6 @@ let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
         S.fase = s.fase;
         console.log("[SYNC] Fase inicial:", S.fase);
         
-        // Verificar se já está finalizada ao carregar
         if (s.fase === "finalizada_pendente" && !corridaFinalizadaPeloMotorista) {
           console.log("🎯 Corrida já estava finalizada - Preparando modal");
           corridaFinalizadaPeloMotorista = true;
@@ -682,12 +680,9 @@ let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
           window.location.href = "homeC.html";
           return;
         } else {
-          // Corrida foi cancelada por motorista/sistema: não redirecionar o cliente automaticamente
-          // Mantemos a tela para permitir avaliação/pagamento ou exibir estado final
           atualizarVisibilidadeBotaoCancelar("cancelada");
         }
       }
-      
       updateTimeline(S.fase);
       
       if (needsRedraw) {
@@ -761,8 +756,7 @@ let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
             agendamentoId: corridaId,
             clienteUid: currentUser?.uid
           });
-          
-          // USAR A FUNÇÃO CORRETA que atualiza os agregados
+
           await salvarAvaliacaoMotorista(
             motoristaUid,
             nota,
@@ -774,7 +768,6 @@ let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
           console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
           modal.style.display="none";
           
-          // Processar pagamento
           setTimeout(async () => {
             try {
               const dadosPagamento = await buscarDadosPagamento(corridaId);
@@ -796,7 +789,7 @@ let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
     modal.style.display = "flex";
   }
   
-  function ensureChegouButton(){ /* não exibir botão quando auto-abrindo modal */ }
+  function ensureChegouButton(){ }
 
   (function injetarCss(){
     if (document.getElementById("css-destaque-chegada")) return;
@@ -992,11 +985,8 @@ let __ratingOpenedOnceAg = false; // evita abrir o modal múltiplas vezes
   });
 })()
 
-// Expor referência global ao Firestore para as funções de pagamento abaixo
-// (o `db` definido dentro do IIFE acima não está no escopo destas funções)
 const db = (window.firebase && window.firebase.firestore && window.firebase.firestore()) || null;
 
-// FUNÇÕES DO MERCADO PAGO - Adicionar antes da inicialização principal
 async function buscarDadosPagamento(corridaId) {
   try {
     let data = null;

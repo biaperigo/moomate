@@ -234,7 +234,7 @@ hr {
 .checkbox-container {
   display: flex;
   align-items: center;
-  gap: 8px;            /* ajuste conforme quiser */
+  gap: 8px;          
   font-size: 0.85rem;
   color: #555;
   margin-bottom: 1rem;
@@ -243,10 +243,10 @@ hr {
 }
 
 .checkbox-container input[type="checkbox"] {
-  width: auto !important;   /* remove o width:100% herdado */
+  width: auto !important;  
   height: auto;
   margin: 0;
-  flex: 0 0 auto;           /* garante que não cresça no flex */
+  flex: 0 0 auto;          
   appearance: auto;
   -webkit-appearance: checkbox;
   -moz-appearance: checkbox;

@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Classe para geocodificação com cache e rate limiting
     class GeocodificadorDescartes {
         constructor() {
             this.cache = new Map();
@@ -1439,9 +1438,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Erro ao enviar solicitação. ' + (error?.message || 'Tente novamente.'));
         }
     };
-
-    // APAGUE as funções ouvirPropostas e exibirProposta existentes e SUBSTITUA por este bloco:
-
 const ouvirPropostas = (descarteId) => {
     if (!db || !descarteId) return;
 
@@ -1473,7 +1469,6 @@ const ouvirPropostas = (descarteId) => {
                     const proposta = change.doc.data();
                     proposta.id = change.doc.id;
                     
-                    // Chama a nova função async para exibir o card
                     exibirProposta(proposta, descarteData); 
                 }
             });
@@ -1490,7 +1485,6 @@ const exibirProposta = async (proposta, descarteData) => {
     const origem = descarteData.localRetirada || 'N/A';
     const destino = descarteData.localEntrega || 'N/A';
 
-    // --- Lógica de busca de dados do motorista ---
     let motoristaNome = proposta.nomeMotorista || 'Motorista';
     let motoristaFotoUrl = null;
     let motoristaAvaliacao = 0.0;
@@ -1502,14 +1496,9 @@ const exibirProposta = async (proposta, descarteData) => {
                 const motoristaData = motoristaDoc.data();
                 
                 console.log('[PROPOSTA] Dados do motorista:', motoristaData);
-                
-                // Nome
                 motoristaNome = motoristaData.dadosPessoais?.nome || motoristaData.nome || motoristaNome;
-                
-                // Foto
                 motoristaFotoUrl = motoristaData.dadosPessoais?.fotoPerfilUrl || motoristaData.fotoPerfilUrl || null;
                 
-                // AVALIAÇÃO: Priorizar avaliacaoMedia > media > cálculo manual
                 if (typeof motoristaData.avaliacaoMedia === 'number') {
                     motoristaAvaliacao = motoristaData.avaliacaoMedia;
                 } else if (typeof motoristaData.media === 'number') {
@@ -1524,7 +1513,6 @@ const exibirProposta = async (proposta, descarteData) => {
             console.error("[PROPOSTA] Erro ao buscar motorista:", error);
         }
     }
-    // --- Fim da lógica de busca ---
 
     const getIniciais = (nome) => {
         if (!nome) return '?';
@@ -1538,8 +1526,6 @@ const exibirProposta = async (proposta, descarteData) => {
     const propostaDiv = document.createElement('div');
     propostaDiv.classList.add('proposta-card');
     propostaDiv.dataset.propostaId = proposta.id;
-
-    // **CORREÇÃO 3: HTML do card ajustado para corresponder ao estilo desejado**
     propostaDiv.innerHTML = `
         <div class="proposta-header">
             <div class="motorista-info">
@@ -1719,7 +1705,7 @@ const exibirProposta = async (proposta, descarteData) => {
                 console.log('[Submit] Geocodificando origem...');
                 let coordsOrigem = null;
                 let origemEnderecoUsado = enderecoCompleto;
-                // Se o usuário escolheu no autocomplete, use diretamente (mais rápido)
+        
                 try {
                     const oriLat = parseFloat(localRetiradaInput?.dataset?.lat || '');
                     const oriLng = parseFloat(localRetiradaInput?.dataset?.lng || '');
@@ -1729,7 +1715,6 @@ const exibirProposta = async (proposta, descarteData) => {
                         console.log('[Submit] Origem do autocomplete dataset:', coordsOrigem);
                     }
                 } catch {}
-                // Prioriza endereço canônico (ViaCEP + número) para reduzir tentativas/lentidão
                 try {
                     const cepNumPre = (cep || '').replace(/\D/g, '');
                     if (cepNumPre.length === 8 && numero) {
@@ -1771,7 +1756,7 @@ const exibirProposta = async (proposta, descarteData) => {
                             const res = await fetch(`https://viacep.com.br/ws/${cepNum}/json/`);
                             const data = await res.json();
                             if (!data.erro && data.uf === 'SP' && data.logradouro && data.localidade) {
-                                // Normaliza prefixos e testa múltiplos formatos de endereço
+                            
                                 let log = String(data.logradouro || '').trim();
                                 log = log.replace(/^ruc\b/i, 'Rua');
                                 log = log.replace(/^r\.?\s+/i, 'Rua ');
@@ -1867,7 +1852,6 @@ const exibirProposta = async (proposta, descarteData) => {
                     destino: destinoObj,
                     tipoVeiculo: tipoCaminhao,
                     tipo: 'descarte',
-                    // Flag para indicar que precisa geocodificar
                     precisaGeocodificar: (!origemObj.lat || !destinoObj.lat)
                 };
 
@@ -1879,15 +1863,12 @@ const exibirProposta = async (proposta, descarteData) => {
                     btnSubmit.textContent = 'Solicitação Enviada!';
                     btnSubmit.classList.add('enviado');
                 }
-
-                // Atualização em background (SEMPRE tenta, mesmo que já tenha coordenadas)
                 if (currentDescarteId) {
                     setTimeout(async () => {
                         console.log('[Background] Iniciando geocodificação em background...');
                         const atualizacoes = {};
                         let precisaAtualizar = false;
 
-                        // Tentar origem novamente se não tem coordenadas
                         if (!dadosDescarte.origem.lat || !dadosDescarte.origem.lng) {
                             console.log('[Background] Tentando geocodificar origem (tentativa 2)...');
                             const coords = await geocodificador.geocodificar(dadosDescarte.origem.endereco);
@@ -1902,7 +1883,7 @@ const exibirProposta = async (proposta, descarteData) => {
                             }
                         }
 
-                        // Tentar destino novamente se não tem coordenadas
+             
                         if (!dadosDescarte.destino.lat || !dadosDescarte.destino.lng) {
                             console.log('[Background] Tentando geocodificar destino (tentativa 2)...');
                             const coords = await geocodificador.geocodificar(dadosDescarte.destino.endereco);
@@ -1923,7 +1904,7 @@ const exibirProposta = async (proposta, descarteData) => {
                         } else {
                             console.log('[Background] Nenhuma atualização necessária ou possível');
                         }
-                    }, 3000); // Esperar 3 segundos antes de tentar novamente
+                    }, 3000); 
                 }
                 
                 setTimeout(() => {

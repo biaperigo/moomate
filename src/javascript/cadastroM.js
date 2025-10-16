@@ -147,7 +147,6 @@ function validarCRLV(crlv) {
   return crlv.length === 11;
 }
 
-// certidão (arquivo) será validada pela presença do arquivo no input
 
 // api cep
 async function buscarCEP(cep) {

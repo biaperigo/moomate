@@ -2,7 +2,6 @@ const menuToggle = document.getElementById('menuToggle');
 const navMenu = document.getElementById('navMenu');
 menuToggle.addEventListener('click', () => navMenu.classList.toggle('show'));
 
-// Firebase init (compat)
 const firebaseConfig = {
   apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
   authDomain: "moomate-39239.firebaseapp.com",
@@ -33,7 +32,6 @@ async function carregarSaldo(uid){
   }
 }
 
-// Se o app não usa login aqui, tente recuperar UID do motorista salvo
 function getUidFallback(){
   return localStorage.getItem('motoristaUid') || localStorage.getItem('uid') || null;
 }

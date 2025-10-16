@@ -1,13 +1,10 @@
-// Lista dinâmica de recebimentos e saques do motorista
 (function(){
-  // Menu
   try {
     document.getElementById('menuToggle')?.addEventListener('click', ()=>{
       document.getElementById('navMenu')?.classList.toggle('show');
     });
   } catch{}
 
-  // Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
     authDomain: "moomate-39239.firebaseapp.com",
@@ -74,7 +71,7 @@
   async function load(){
     let uid = getUid();
     if (!uid){
-      // Fallback por e-mail do usuário autenticado ou salvo localmente
+
       try {
         const u = firebase.auth?.().currentUser;
         let email = u?.email;
@@ -88,7 +85,7 @@
       } catch {}
     }
     if (!uid){
-      // Fallback por corrida ativa (localStorage/URL)
+
       try {
         const qs = new URLSearchParams(location.search);
         const corridaId = qs.get('corrida') || localStorage.getItem('ultimaCorridaMotorista') || localStorage.getItem('corridaSelecionada');
@@ -109,7 +106,6 @@
       return;
     }
 
-    // Recebimentos
     const recqs = await db.collection('historicotransacoesM')
       .where('motoristaId','==',uid)
       .where('tipo','==','recebimento')
@@ -120,7 +116,6 @@
     recqs.forEach(d=> recebimentos.push({ id:d.id, ...d.data(), tipo:'recebimento' }));
     console.log('[Historico] Recebimentos:', recebimentos.length);
 
-    // Saques (podem estar em qualquer status; exibimos todos, mais recentes primeiro)
     const sq = await db.collection('saques')
       .where('motoristaId','==',uid)
       .orderBy('criadoEm','desc')
@@ -130,7 +125,6 @@
     sq.forEach(d=> saques.push({ id:d.id, ...d.data(), tipo:'saque' }));
     console.log('[Historico] Saques:', saques.length);
 
-    // Mescla e ordena por data
     const all = recebimentos.concat(saques).sort((a,b)=>{
       const ta = (a.criadoEm?.toMillis?.()||0); const tb = (b.criadoEm?.toMillis?.()||0);
       return tb - ta;

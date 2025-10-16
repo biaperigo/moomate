@@ -57,10 +57,8 @@
     </main>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-    <!-- Script que credita o saldo -->
     <script src="src/javascript/pagamentoSucesso.js"></script>
     <script>
-      // Gatilho manual para creditar quando estiver testando
       document.getElementById('btnVoltarInicio')?.addEventListener('click', async ()=>{
         try {
           if (window.PagamentoSucesso && typeof window.PagamentoSucesso.creditarAgora === 'function') {

@@ -7,7 +7,6 @@ let unsubSync = () => {};
   if (!firebase || !firebase.apps.length) return;
   const db = firebase.firestore();
 
-  // Limites SP 
   const SP_BOUNDS = L.latLngBounds([[-25.5, -53.5], [-19.5, -44.0]]);
   const inSP = (p) => p && p.lat >= -25.5 && p.lat <= -19.5 && p.lng >= -53.5 && p.lng <= -44.0;
   const ATIVAS = new Set(["aceito","aceita","pendente","em_andamento","indo_retirar","a_caminho_destino","finalizada_pendente"]);
@@ -32,14 +31,12 @@ let unsubSync = () => {};
 
   let docRefGlobal = null;
   let motoristaUidAtual = null;
-  // Evita abrir o modal de avaliação múltiplas vezes por snapshots
+
   let __ratingOpenedOnce = false;
 
-  // Helper para obter a referência do documento do motorista
-  // Usado por salvarAvaliacao() para atualizar agregados (ratingCount, ratingSum, media)
   function getMotoristaRef(uid) {
     if (!uid || typeof uid !== 'string') throw new Error('motoristaId inválido');
-    // Centralizamos aqui caso no futuro mude a coleção/base
+  
     return db.collection('motoristas').doc(uid);
   }
   async function salvarAvaliacaoMotorista(motoristaUid, nota, comentario = "", corridaIdOverride = null, clienteUidOverride = null){
@@ -52,12 +49,10 @@ let unsubSync = () => {};
     const corridaId = corridaIdOverride || currentCorridaId || null;
     const avId = `${corridaId||'sem'}_${clienteUid||'anon'}`;
 
-    // 1) Subcoleção do motorista
     await db.collection('motoristas').doc(uidMot)
       .collection('avaliacoes').doc(avId)
       .set({ nota: n, estrelas: n, comentario: comentario||"", corridaId, clienteUid, criadoEm: when }, { merge: true });
 
-    // 2) Coleção global
     await db.collection('avaliacoes').doc(avId)
       .set({ nota: n, estrelas: n, comentario: comentario||"", corridaId, clienteUid, motoristaUid: uidMot, criadoEm: when }, { merge: true });
 
@@ -78,7 +73,6 @@ let unsubSync = () => {};
   const nomeMotoristaEl = getEl("nomeMotorista","motorista-nome","motoristaInfo","driver-name","driverName");
   const carroEl         = getEl("veiculoInfo","motorista-carro","carroInfo","vehicle-info","vehicleInfo");
 
-  // Elementos do cancelamento
   const cancelBtn = $("cancel-ride-btn");
   const cancelModal = $("cancel-modal");
   const confirmCancelBtn = $("confirm-cancel");
@@ -114,7 +108,6 @@ let unsubSync = () => {};
   const setupCancelHandlers = configurarHandlersCancelamento;
   configurarHandlersCancelamento();
 
-  // Mapa 
   const map = L.map("map", { maxBounds: SP_BOUNDS, maxBoundsViscosity: 1.0 });
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{ attribution:" OpenStreetMap" }).addTo(map);
   map.fitBounds(SP_BOUNDS);
@@ -130,7 +123,6 @@ let unsubSync = () => {};
   let lastRouteDrawTs = 0;
   let lastRouteKey = null; 
 
-  // Função p validar coordenadas 
   function validarCoordenadas(lat, lng) {
     if (lat === null || lng === null || lat === undefined || lng === undefined) {
       return false;
@@ -169,11 +161,9 @@ let unsubSync = () => {};
   }
   
   const geocodeEndereco = geocodificarEndereco;
-
-  // Resolve e posiciona pinos quando faltarem coordenadas usando endereço do doc ou do sync
   async function resolveAndSetPinos(docData, syncData, isDescarteDoc) {
     try {
-      // ORIGEM
+
       if (!S.origem) {
         const endO = docData?.origem?.endereco || docData?.localRetirada || syncData?.origem?.endereco || null;
         if (endO) {
@@ -181,7 +171,6 @@ let unsubSync = () => {};
           if (p) { setPinoOrigem(p, !!isDescarteDoc); }
         }
       }
-      // DESTINO
       if (!S.destino) {
         const endD = docData?.destino?.endereco || docData?.localEntrega || syncData?.destino?.endereco || null;
         if (endD) {
@@ -201,7 +190,6 @@ let unsubSync = () => {};
     try {
       console.log(`Cancelando ${tipoAtual === 'descarte' ? 'descarte' : 'corrida'}: ${corridaId}`);
       
-      // USAR A COLEÇÃO CORRETA
       const colecao = tipoAtual === 'descarte' ? 'descartes' : 'corridas';
       
       await db.collection(colecao).doc(corridaId).update({
@@ -231,7 +219,6 @@ let unsubSync = () => {};
     }
   }
 
-  // Função para detectar se é descarte
   function isDescarte(docData) {
     return docData.tipo === 'descarte' || 
            docData.localRetirada || 
@@ -358,8 +345,7 @@ let unsubSync = () => {};
     const coords = {lat: parseFloat(p.lat), lng: parseFloat(p.lng)};
     S.destino = coords;
     console.log("✅ Destino definido:", coords);
-    
-    // p descartes, usar marcador redondo laranja com símbolo de reciclagem
+
     const iconHtml = isDescarteDoc ?
       `<div style="width:24px;height:24px;background:#FF6C0C;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;">
         <i class="fa-solid fa-recycle" style="font-size:13px;color:#fff;"></i>
@@ -477,7 +463,7 @@ let unsubSync = () => {};
       el(ids.indo_retirar)?.classList.add("completed");
       el(ids.a_caminho_destino)?.classList.add("completed");
       el(ids.finalizada_pendente)?.classList.add("active");
-      // Abre automaticamente o modal de avaliação para o cliente
+
       if (!__ratingOpenedOnce) {
         __ratingOpenedOnce = true;
         try { abrirModalAvaliacao(); } catch(e) { console.warn('Falha ao abrir modal auto:', e?.message||e); }
@@ -634,12 +620,9 @@ let unsubSync = () => {};
       console.warn('Falha ao buscar doc espelho para coordenadas:', e?.message || e);
     }
   }
-
-  // Redesenhar dps d processar todos os dados
   redraw();
 }
 
-  // Buscar corrida ativa
 async function pickCorridaId(uid){
   console.log(" Buscando corrida ativa para UID:", uid);
   
@@ -650,8 +633,7 @@ async function pickCorridaId(uid){
   const candIds=[];
   if(fromQS) candIds.push({id: fromQS, fonte: 'url'});
   if(fromLS) candIds.push({id: fromLS, fonte: 'localStorage'});
-  
-  // BUSCAR NA COLEÇÃO CORRIDAS
+
   try{ 
     const q1=await db.collection("corridas")
       .where("clienteId","==",uid)
@@ -662,8 +644,7 @@ async function pickCorridaId(uid){
   }catch(error){
     console.warn(' Erro ao buscar corridas do cliente:', error);
   }
-  
-  // BUSCAR NA COLEÇÃO DESCARTES 
+
   try{ 
     const q2=await db.collection("descartes")
       .where("clienteId","==",uid)
@@ -674,8 +655,7 @@ async function pickCorridaId(uid){
   }catch(error){
     console.warn(' Erro ao buscar descartes do cliente:', error);
   }
-  
-  // BUSCAR CORRIDAS GERAIS
+
   try{ 
     const q3=await db.collection("corridas")
       .orderBy("criadoEm","desc")
@@ -701,8 +681,7 @@ async function pickCorridaId(uid){
       console.log(` Verificando candidato: ${candidate.id}`);
       
       let docSnap, syncSnap;
-      
-      // VERIFICAR NA COLEÇÃO CORRETA
+
       if (candidate.fonte === 'descartes') {
         docSnap = await db.collection("descartes").doc(candidate.id).get();
         syncSnap = await db.collection("descartes").doc(candidate.id).collection("sync").doc("estado").get();
@@ -814,8 +793,7 @@ async function pickCorridaId(uid){
     await processarDadosDocumento({ ...docData, clienteId: docData.clienteId || currentUser?.uid });
     await hidratarMotorista(C?.motoristaId || C?.propostaAceita?.motoristaUid, C);
   }
-  
-  // PROCESSAR SYNC INICIAL
+
   if(sSnap.exists){
     const s=sSnap.data()||{};
     console.log(" Dados iniciais do sync:", s);
@@ -839,8 +817,6 @@ async function pickCorridaId(uid){
   console.log(" Estado final inicial:", {fase: S.fase, motorista: S.motorista, origem: S.origem, destino: S.destino});
   redraw();
   ensureInitialRoute();
-
-  // LISTENER DO DOCUMENTO
   console.log(" Configurando listener do documento...");
   unsubCorrida = docRef.onSnapshot(async doc=>{
     if(!doc.exists) {
@@ -850,7 +826,7 @@ async function pickCorridaId(uid){
     
     const docData = doc.data()||{};
     console.log(" Update do documento:", docData);
-    // Garantir clienteId durante updates também
+
     try {
       if ((!docData.clienteId || typeof docData.clienteId !== 'string' || !docData.clienteId.trim()) && currentUser?.uid) {
         await docRef.set({ clienteId: currentUser.uid }, { merge: true });
@@ -867,22 +843,19 @@ async function pickCorridaId(uid){
     redraw();
   });
 
-  // LISTENER DO SYNC TEMPO REAL
   console.log(" Configurando listener do sync (tempo real)...");
   unsubSync = syncRef.onSnapshot(s=>{
     const d=s.data()||{};
     console.log(" Update do sync:", d);
     
     let needsRedraw = false;
-    
-    // Atualizar fase
+
     if(d.fase && d.fase !== S.fase) {
       console.log(` Mudança de fase: ${S.fase} → ${d.fase}`);
       S.fase = d.fase;
       needsRedraw = true;
     }
     
-      // aceitar origem/destino vindos do sync no descarte
     if (tipoAtual === 'descarte') {
       if (d.origem && validarCoordenadas(d.origem.lat, d.origem.lng)) {
         setPinoOrigem(d.origem, true);
@@ -892,13 +865,12 @@ async function pickCorridaId(uid){
         setPinoDestino(d.destino, true);
         needsRedraw = true;
       }
-      // Se ainda faltar algum pino, tentar geocodificar pelo endereço do doc ou do sync
+
       if (!S.origem || !S.destino) {
         resolveAndSetPinos(C || {}, d || {}, true).then(()=>{ redraw(); ensureInitialRoute(); });
       }
     }
 
-    // Atualizar posição do motorista 
     if(d.motorista && validarCoordenadas(d.motorista.lat, d.motorista.lng)) {
       const newLat = parseFloat(d.motorista.lat);
       const newLng = parseFloat(d.motorista.lng);
@@ -930,7 +902,6 @@ async function pickCorridaId(uid){
 
   console.log(" Listeners configurados com sucesso!");
 
-  // Listener extra no sync de DESCARTE
   try {
     if (tipoAtual === 'descarte') {
       const outraColecao = colecao === 'descartes' ? 'corridas' : 'descartes';
@@ -1037,8 +1008,7 @@ async function pickCorridaId(uid){
             corridaId,
             clienteUid: currentUser?.uid
           });
-          
-          // USAR A FUNÇÃO CORRETA que atualiza os agregados
+     
           await salvarAvaliacaoMotorista(
             motoristaUid,
             nota,
@@ -1049,8 +1019,7 @@ async function pickCorridaId(uid){
           
           console.log("✅ Avaliação salva com sucesso!");
           modal.style.display="none";
-          
-          // Processar pagamento
+      
           setTimeout(async () => {
             try {
               const dadosPagamento = await buscarDadosPagamento(corridaId);
@@ -1140,9 +1109,8 @@ async function pickCorridaId(uid){
       console.error("Erro ao salvar avaliação:", error);
     }
   }
-  const USE_CHECKOUT_PRO = true; // true = Mercado Pago, false = checkout transparente
+  const USE_CHECKOUT_PRO = true; 
 
-// FUNÇÕES DO MERCADO PAGO - Adicionar antes da inicialização principal
 async function buscarDadosPagamento(corridaId) {
   try {
     let data = null;
@@ -1158,7 +1126,6 @@ async function buscarDadosPagamento(corridaId) {
     }
     if (!data) throw new Error('Corrida não encontrada');
 
-    // Tentar obter proposta aceita a partir da subcoleção 'propostas' se necessário
     let proposta = data?.propostaAceita || null;
     try {
       if (!proposta) {
@@ -1182,14 +1149,12 @@ async function buscarDadosPagamento(corridaId) {
       }
     } catch (e) { console.warn('[MP] Falha ao ler subcoleção propostas', e); }
     
-    // Preço base: o que o motorista colocou na proposta
     const precoBase = (typeof proposta?.preco === 'number')
       ? Number(proposta.preco)
       : (typeof data?.propostaAceita?.preco === 'number')
         ? Number(data.propostaAceita.preco)
         : Number(data?.precoFinal || data?.valor || data?.preco || data?.total || 50);
 
-    // Quantidade de ajudantes: usar APENAS a proposta aceita (evita contagens erradas)
     let extras = 0;
     try {
       const p = proposta || data?.propostaAceita || {};
@@ -1199,7 +1164,6 @@ async function buscarDadosPagamento(corridaId) {
       extras = 50 * Math.max(0, count);
     } catch {}
 
-    // Conversor robusto para números que podem vir como string "816,97" ou "816.97"
     const toNumber = (v) => {
       if (typeof v === 'number') return v;
       if (typeof v === 'string') {
@@ -1210,7 +1174,6 @@ async function buscarDadosPagamento(corridaId) {
       return NaN;
     };
 
-    // total da proposta, se existir, tem prioridade
     const totalPropRaw = (proposta && (proposta.total ?? proposta.precoTotal ?? proposta.valorTotal));
     const totalProposta = toNumber(totalPropRaw);
     const valorBaseTotal = Number.isFinite(totalProposta) && totalProposta > 0
@@ -1247,11 +1210,9 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
   let { corridaId, valor, clienteId, descricao } = dadosPagamento;
 
   try {
-    // Base da API: em produção (Vercel) usa mesmo origin (/api), local usa http://localhost:3000
     const isVercel = /vercel\.app$/i.test(window.location.hostname);
     const apiBase = isVercel ? `${window.location.origin}/api` : 'http://localhost:3000';
 
-    // Garantir valor válido
     if (!Number.isFinite(Number(valor)) || Number(valor) <= 0) {
       console.warn('[MP] Valor inválido detectado, tentando fallback da URL... valor=', valor);
       const qsv = Number(new URLSearchParams(location.search).get('valor'));
@@ -1274,13 +1235,11 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
     };
 
     console.log('[MP] Criando preferência', { apiBase, corridaId, valor: Number(valor) });
-    // Monta payer com e-mail do usuário quando disponível (melhora aprovação no checkout)
     const payer = {
       email: (firebase.auth?.currentUser?.email) || `${(clienteId||'cliente')}@moomate.app`,
       name: 'Cliente Moomate'
     };
 
-    // Quando apiBase termina com /api (Vercel), rota é /api/create_preference. Quando localhost, é direto /create-mercadopago-preference
     const createUrl = isVercel ? `${apiBase}/create_preference` : `${apiBase}/create-mercadopago-preference`;
     let resp = await fetch(createUrl, {
       method: 'POST',
@@ -1297,7 +1256,6 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
     if (!resp.ok) {
       const txt = await resp.text();
       console.warn('[MP] Backend local falhou, tentando fallback Vercel...', resp.status, txt);
-      // Fallback Vercel
       resp = await fetch('https://moomate-omrw.vercel.app/api/create_preference', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1322,8 +1280,6 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
     const init_point = data?.init_point;
     const preference_id = data?.preference_id;
     if (!init_point) throw new Error('init_point não retornado');
-
-    // Salvar registro no Firestore
     try {
       await db.collection(colecaoAtual).doc(corridaId).update({
         pagamento: {
@@ -1335,11 +1291,7 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
         status: 'pagamento_pendente'
       });
     } catch {}
-
-    // Salvar lastPayment para creditar carteira após retorno
     try { localStorage.setItem('lastPayment', JSON.stringify({ valor: Number(valor), corridaId })); } catch {}
-
-    // Redirecionar para Mercado Pago
     console.log('Redirecionando para pagamento:', init_point);
     window.location.href = init_point;
 
@@ -1350,7 +1302,6 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
   }
 }
 
-  //CSS
   (function injetarCss(){
     if (document.getElementById("css-destaque-chegada")) return;
     const st=document.createElement("style"); 
@@ -1518,7 +1469,6 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
   });
 })();
 
-  // INICIALIZAÇÃO PRINCIPAL
   firebase.auth().onAuthStateChanged(async (user)=>{
     if(!user){ 
       console.log("❌ Usuário não logado");

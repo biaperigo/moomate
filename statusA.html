@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
     
     <style>
-        /* Estilos para o botão de cancelar */
+
         .cancel-ride-btn {
             background: #dc3545;
             color: white;
@@ -36,7 +36,6 @@
             transform: translateY(0);
         }
         
-        /* Modal de confirmação de cancelamento */
         .cancel-modal {
             position: fixed;
             inset: 0;
@@ -116,8 +115,6 @@
                 <p><strong>Destino:</strong> <span id="destino-address">Carregando...</span></p>
                 <p><strong>Tempo estimado:</strong> <span id="estimated-time">Calculando...</span></p>
             </div>
-
-            <!-- Botão de cancelar corrida -->
             <button id="cancel-ride-btn" class="cancel-ride-btn">
                 <i class="fas fa-times"></i> Cancelar Corrida
             </button>
@@ -155,7 +152,6 @@
         </div>
     </div>
 
-    <!-- Modal de confirmação de cancelamento -->
     <div id="cancel-modal" class="cancel-modal">
         <div class="cancel-modal-content">
             <h3><i class="fas fa-exclamation-triangle"></i> Cancelar Corrida?</h3>
@@ -171,7 +167,6 @@
         </div>
     </div>
   
-    <!-- Modal de avaliação do motorista -->
     <div id="driver-rating-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <h3>⭐ Avalie o motorista</h3>
@@ -198,8 +193,6 @@
     </div>
 
     <button id="openChat" class="track-btn">Chat</button>
-
-    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 

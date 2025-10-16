@@ -161,7 +161,6 @@ function preencherCampos(dados) {
     document.getElementById('rg').textContent = dados.dadosPessoais.rg || '';
     document.getElementById('cnh').textContent = dados.dadosPessoais.cnh || '';
 
-    // Exibir Certidão de Nada Consta como imagem no quadrado
     const certUrl = dados.dadosPessoais.certidaoNadaConstaUrl || '';
     const certImg = document.getElementById('certidaoImg');
     if (certImg && certUrl) {
@@ -445,14 +444,13 @@ document.addEventListener("DOMContentLoaded", function () {
       handleImageUpload(this, fotoVeiculo, false);
     });
   }
-  // Certidão de Nada Consta: upload imediato como no foto do veículo
   const inputCertidao = document.getElementById('inputCertidaoNadaConsta');
   if (inputCertidao) {
     inputCertidao.addEventListener('change', async function() {
       const file = this.files && this.files[0];
       if (!file) return;
       try {
-        // Preview temporário
+
         try {
           const reader = new FileReader();
           reader.onload = function(e){

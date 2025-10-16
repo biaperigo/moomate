@@ -738,8 +738,6 @@
         motoristaUid: firebase.auth()?.currentUser?.uid
       });
 
-
-      // 1. Salvar na subcoleção de avaliações do cliente
       const motoristaUid = firebase.auth()?.currentUser?.uid || null;
       const avId = `${corridaId||'sem'}_${motoristaUid||'anon'}`;
       
@@ -757,7 +755,6 @@
         }, { merge: true });
 
 
-      // 2. Salvar na coleção global de avaliações
       await db.collection('avaliacoes').doc(avId)
         .set({ 
           nota: rating, 
@@ -771,8 +768,6 @@
           criadoEm: firebase.firestore.FieldValue.serverTimestamp() 
         }, { merge: true });
 
-
-      // 3. Atualizar campos agregados usando transação
       const userRef = db.collection('usuarios').doc(clienteUid);
       await db.runTransaction(async (tx) => {
         const userSnap = await tx.get(userRef);
@@ -786,7 +781,6 @@
           avaliacaoSoma: soma, 
           avaliacaoCount: count, 
           avaliacaoMedia: media,
-          // Manter compatibilidade com campos antigos
           ratingSum: soma,
           ratingCount: count,
           ratingMedia: media
@@ -796,7 +790,6 @@
 
       console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
       
-      // 4. Atualizar status da corrida
       if (corridaRef) {
         await corridaRef.set({
           avaliacao: {

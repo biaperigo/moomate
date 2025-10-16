@@ -1,17 +1,14 @@
-// Agendamentos do Motorista - mesma base do homeM.js, filtrando apenas agendados
 (function(){
   const { firebase } = window;
-  // Firebase é inicializado no HTML (agendamentoM.html). Se ainda não estiver pronto, aborta silenciosamente.
   if (!firebase || !firebase.apps || !firebase.apps.length) return;
   const db = firebase.firestore();
-  // Referência urbana para fallback (centro da cidade de São Paulo)
+
   const CENTRO_SP_REF = { lat: -23.55052, lng: -46.633308 };
 
-  // Geocodificação aprimorada com múltiplos provedores e fallbacks
   async function geocodificarEndereco(endereco){
     if (!endereco) return null;
     
-    // Cache para evitar requisições desnecessárias
+
     const cacheKey = `geocode_${endereco}`;
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
@@ -19,11 +16,9 @@
         return JSON.parse(cached);
       } catch {}
     }
-
-    // Normalizar endereço para melhor precisão
     const normalizeAddress = (addr) => {
       let normalized = addr.trim();
-      // Adicionar Brasil se não especificado, mas não forçar São Paulo para permitir geocodificação mais ampla
+
       if (!normalized.includes("Brasil")) {
         normalized += ", Brasil";
       }
@@ -32,9 +27,7 @@
 
     const searchQuery = normalizeAddress(endereco);
     
-    // Tentar múltiplos provedores de geocodificação
     const providers = [
-      // Nominatim OpenStreetMap (gratuito)
       async () => {
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=3&countrycodes=br&bounded=1&viewbox=-46.826,-23.356,-46.365,-23.796`;
         const res = await fetch(url, {
@@ -52,7 +45,6 @@
         return null;
       },
       
-      // Photon (alternativa ao Nominatim)
       async () => {
         const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=3&bbox=-46.826,-23.796,-46.365,-23.356`;
         const res = await fetch(url);
@@ -72,7 +64,6 @@
 
     ];
 
-    // Tentar cada provedor sequencialmente com retries
     const maxRetries = 2;
     for (let i = 0; i < providers.length; i++) {
       const provider = providers[i];
@@ -98,7 +89,6 @@
       }
     }
 
-    // Fallback para endereços conhecidos de São Paulo
     const fallbackLocations = {
       'centro': { lat: -23.55052, lng: -46.633308 },
       'vila madalena': { lat: -23.5505, lng: -46.6889 },
@@ -121,7 +111,6 @@
     return null;
   }
 
-  // Agenda lembrete para início no horário agendado (motorista)
   function scheduleStartReminderMotorista(v){
     try{
       if (!v?.id || !v?.data || !v?.hora) return;
@@ -163,7 +152,6 @@
     }catch{}
   }
   
-  // Modal informativo reutilizável
   function ensureInfoModal(){
     let modal = document.getElementById('mm-info-modal');
     if (modal) return modal;
@@ -202,7 +190,6 @@
     setTimeout(()=>{ modal.style.display='none'; }, 180);
   }
 
-  // Modal para iniciar corrida no horário agendado (lado do motorista)
   function ensureStartAgModalM(){
     let modal = document.getElementById('ag-start-modal-m');
     if (modal) return modal;
@@ -260,7 +247,6 @@
     return { base: Math.round(base*100)/100, min: Math.round(min*100)/100, max: Math.round(max*100)/100 };
   }
 
-  // Listener por documento para remover o card e avisar quando o cliente cancelar
   function attachCardStatusListenerM(agendamentoId, cardEl){
     try{
       const ref = db.collection('agendamentos').doc(String(agendamentoId));
@@ -307,7 +293,6 @@
     }catch{ return 1; }
   }
 
-  // Cache simples para nomes/fotos
   const cachePerfil = new Map();
   async function preencherNomeEAvatar(card, uid){
     try{
@@ -339,7 +324,6 @@
     }catch{}
   }
 
-  // ================= Agendados (lista do motorista) =================
   let unsubscribeAgendados = null;
   function ouvirAgendadosDoMotorista(){
     if (!motoristaUid) return;
@@ -392,23 +376,20 @@
       });
   }
 
-  // Função para atualizar distância assincronamente
-  async function atualizarDistanciaAssincrona(solicitacao, cardElement) {
+   async function atualizarDistanciaAssincrona(solicitacao, cardElement) {
     try {
       const origem = solicitacao.origem?.endereco || solicitacao.localRetirada;
       const destino = solicitacao.destino?.endereco || solicitacao.localEntrega;
       
       if (!origem || !destino) return;
 
-      // Geocodificar origem e destino
       const [coordOrigem, coordDestino] = await Promise.all([
         geocodificarEndereco(origem),
         geocodificarEndereco(destino)
       ]);
 
       if (coordOrigem && coordDestino) {
-        // Calcular distância real
-        const R = 6371; // Raio da Terra em km
+        const R = 6371; 
         const toRad = (deg) => deg * Math.PI / 180;
         const dLat = toRad(coordDestino.lat - coordOrigem.lat);
         const dLng = toRad(coordDestino.lng - coordOrigem.lng);
@@ -417,14 +398,13 @@
                  Math.sin(dLng/2) * Math.sin(dLng/2);
         const distanciaReal = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-        // Atualizar o card com a distância real
+        
         const distanciaEl = cardElement.querySelector('[data-distancia]');
         if (distanciaEl) {
           distanciaEl.textContent = `${distanciaReal.toFixed(2)} km`;
-          distanciaEl.style.color = '#28a745'; // Verde para indicar que foi atualizada
+          distanciaEl.style.color = '#28a745'; 
         }
 
-        // Atualizar no Firestore para cache futuro
         try {
           await db.collection('agendamentos').doc(solicitacao.id).update({
             'origem.lat': coordOrigem.lat,
@@ -443,7 +423,7 @@
     }
   }
 
-  // ====== Card igual ao cliente ======
+
   function createViagemCard(viagem) {
     const card = document.createElement('div');
     card.className = 'viagem-card';
@@ -511,7 +491,6 @@
     return card;
   }
 
-  // Busca nome e email do cliente e atualiza o card
   async function preencherContatoCliente(cardEl, clienteUid){
     try{
       const { firebase } = window; if (!firebase?.apps?.length) return;
@@ -737,13 +716,11 @@
     const s = todasSolicitacoes.get(entregaSelecionadaId) || {};
     const collectionName = 'agendamentos';
 
-    // cálculo: custo motoristas + 10% taxa
     const custoAjud = ajud*50;
     const precoTotalMotorista = precoBase + custoAjud;
     const taxaPlataforma = 0.10;
     const precoCliente = Number((precoTotalMotorista * (1+taxaPlataforma)).toFixed(2));
 
-    // buscar perfil do motorista
     let nomeMotorista = 'Motorista';
     let fotoMotoristaUrl = '';
     let telefoneMotorista = '';
@@ -789,7 +766,6 @@
     }
   }
 
-  // Solicitações: apenas status aguardando_propostas_agendamento
   function carregarAgendados(){
     db.collection('agendamentos')
       .where('status', '==', 'aguardando_propostas_agendamento')
@@ -809,7 +785,6 @@
       });
   }
 
-  // Escuta propostas ACEITAS para este motorista
   function ouvirAgendamentosAceitos(){
     if (!motoristaUid) return;
     db.collection('agendamentos')
@@ -845,8 +820,7 @@
   botaoEnviar.addEventListener('click', abrirModal);
   botaoFecharModal.addEventListener('click', fecharModal);
   botaoConfirmarProposta.addEventListener('click', enviarProposta);
-  
-  // Autenticação e listeners
+
   firebase.auth().onAuthStateChanged(u=>{
     motoristaUid = u?.uid || null;
     carregarAgendados();
@@ -857,13 +831,13 @@
   });
 })();
 
-// Menu Toggle
+
 document.getElementById('menuToggle').addEventListener('click', function() {
   const navMenu = document.getElementById('navMenu');
   navMenu.classList.toggle('show');
 });
 
-// Tab Functionality
+
 document.addEventListener('DOMContentLoaded', function() {
   const tabLinks = document.querySelectorAll('.tab-link');
   const tabContents = document.querySelectorAll('.tab-content');
@@ -891,7 +865,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// Delivery card selection
+
 document.addEventListener('click', function(e) {
   if (e.target.closest('.delivery-card')) {
     document.querySelectorAll('.delivery-card').forEach(card => {
@@ -904,7 +878,7 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Modal functionality
+
 document.getElementById('submitBtn').addEventListener('click', function() {
   const selectedCard = document.querySelector('.delivery-card.selected');
   if (selectedCard) {
@@ -933,7 +907,6 @@ function closeModal() {
   }, 300);
 }
 
-// Simulate real-time updates
 setInterval(function() {
   const loadingMessage = document.getElementById('loading-message');
   if (loadingMessage) {

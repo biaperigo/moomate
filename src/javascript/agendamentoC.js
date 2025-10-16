@@ -1,18 +1,16 @@
-// Sistema de Tabs para Agendamento Moomate
+
 document.addEventListener('DOMContentLoaded', function() {
   
-  // Elementos das tabs
+
   const tabSolicitar = document.getElementById('tab-solicitar');
   const tabAgendados = document.getElementById('tab-agendados');
   const formSection = document.querySelector('.form-section');
   
-  // Controle de estado atual
+
   let currentTab = 'solicitar';
-  
-  // Lista em memória (preenchida via Firestore)
   let viagensAgendadas = [];
 
-  // Utilitário simples de modal informativo
+
   function ensureInfoModal(){
     let modal = document.getElementById('mm-info-modal');
     if (modal) return modal;
@@ -51,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(()=>{ modal.style.display='none'; }, 180);
   }
 
-  // Modal para iniciar corrida no horário agendado (lado do cliente)
+  
   function ensureStartAgModalC(){
     let modal = document.getElementById('ag-start-modal-c');
     if (modal) return modal;
@@ -88,19 +86,19 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(()=>{ modal.style.display='none'; }, 180);
   }
 
-  // Agenda lembrete para início no horário agendado (cliente)
+  
   function scheduleStartReminderCliente(v){
     try{
       if (!v?.id || !v?.data || !v?.hora) return;
       if (!window.__agStartTimersC) window.__agStartTimersC = {};
-      if (window.__agStartTimersC[v.id]) return; // já agendado
+      if (window.__agStartTimersC[v.id]) return; 
       const ts = new Date(`${v.data}T${v.hora}:00`);
       if (!(ts instanceof Date) || isNaN(ts.getTime())) return;
       const now = new Date();
       const ms = ts.getTime() - now.getTime();
       const fire = async ()=>{
         try{
-          // Criar/atualizar corridaagendamento e espelhar em corridas para reaproveitar o fluxo existente
+          
           const { firebase } = window; if (!firebase?.apps?.length) throw new Error('Firebase não inicializado');
           const db = firebase.firestore();
           const agRef = db.collection('agendamentos').doc(String(v.id));
@@ -121,57 +119,45 @@ document.addEventListener('DOMContentLoaded', function() {
           const corridaAgRef = db.collection('corridaagendamento').doc(String(v.id));
           await corridaAgRef.set(base, { merge: true });
           await corridaAgRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
-          // Espelho em corridas para compatibilidade do statusA.js
+          
           const corridaRef = db.collection('corridas').doc(String(v.id));
           await corridaRef.set(base, { merge: true });
           await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
           try{ localStorage.setItem('ultimaCorridaCliente', String(v.id)); }catch{}
         }catch(e){ console.warn('[agendamentoC] Falha ao preparar corrida agendada:', e?.message||e); }
         showStartAgModalC('Seu agendamento começou. Acompanhe o status agora.', ()=>{
-          // Usa ?corrida= para aproveitar fluxo existente em statusA.js
+          
           window.location.href = `statusA.html?corrida=${encodeURIComponent(v.id)}`;
         });
         delete window.__agStartTimersC[v.id];
       };
       if (ms <= 0){ fire(); return; }
-      if (ms > 24*60*60*1000) return; // não agenda além de 24h
+      if (ms > 24*60*60*1000) return; 
       window.__agStartTimersC[v.id] = setTimeout(fire, ms);
     }catch{}
   }
 
-  // Função para alternar entre as tabs
+
   function switchTab(activeTab, tabName) {
-    // Remove a classe 'active' de todas as abas
-    tabSolicitar.classList.remove('active');
+     tabSolicitar.classList.remove('active');
     tabAgendados.classList.remove('active');
     
-    // Adiciona a classe 'active' na aba clicada
-    activeTab.classList.add('active');
-    
-    // Atualiza o estado atual
-    currentTab = tabName;
 
-    // Pega a referência da seção de propostas
+    activeTab.classList.add('active');
+    currentTab = tabName;
     const propostasSection = document.getElementById('propostasSection');
     
-    // Mostra/esconde conteúdo baseado na aba ativa
     if (tabName === 'solicitar') {
-      // Mostra o formulário e esconde a lista de agendados
+     
       showSolicitarContent(); 
 
-      // Verifica se a seção de propostas já foi ativada anteriormente.
-      // Se sim, ela deve continuar visível na aba "Solicitar".
       if (propostasSection && propostasSection.dataset.active === 'true') {
         propostasSection.style.display = 'block';
-        // Mantém o formulário visível (não esconder .form-section)
       }
 
     } else if (tabName === 'agendados') {
-      // Mostra a lista de agendados
       showAgendadosContent(); 
       
-      // Esconde a seção de propostas e o formulário principal.
-      // Isso garante que as propostas NUNCA apareçam na aba "Agendados".
       if (propostasSection) {
         propostasSection.style.display = 'none';
       }
@@ -179,18 +165,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Função para mostrar o conteúdo da aba "Solicitar"
+
   function showSolicitarContent() {
     formSection.style.display = 'block';
     hideAgendadosContent();
-    // Se existir um agendamento em aberto (não aceito), manter a seção de propostas visível
+
     try {
       const abertoId = localStorage.getItem('agendamentoEmAberto');
       if (abertoId) {
         const propostasSection = document.getElementById('propostasSection');
         if (propostasSection) propostasSection.style.display = 'block';
-        // Mantém o formulário visível: não esconder '.form-fields'
-        // Reassina listener se necessário
+      
         if (window.ouvirPropostasAgendamento && typeof window.ouvirPropostasAgendamento === 'function') {
           if (!window.__agendamentoListenId || window.__agendamentoListenId !== abertoId) {
             try { if (window.__propostasUnsub) { window.__propostasUnsub(); } } catch {}
@@ -202,40 +187,36 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch {}
   }
 
-  // Função para mostrar o conteúdo da aba "Agendados"
+
   function showAgendadosContent() {
     formSection.style.display = 'none';
     renderAgendados();
-    // Inicia listener em tempo real para remover imediatamente itens cancelados
+
     startAgendadosRealtime();
   }
-  
-  // Função para voltar para a aba anterior
+
   function goBackToSolicitar() {
     switchTab(tabSolicitar, 'solicitar');
   }
 
-  // Remove apenas o container da UI, sem mexer no listener
   function removeAgendadosContainer(){
     const agendadosContainer = document.getElementById('agendados-container');
     if (agendadosContainer) agendadosContainer.remove();
   }
 
-  // Função para esconder o conteúdo da aba "Agendados" (saindo da aba)
   function hideAgendadosContent() {
     removeAgendadosContainer();
-    // Para evitar vazamento de listeners ao sair da aba
+    
     stopAgendadosRealtime();
   }
 
-  // Listener em tempo real para os agendamentos do cliente
   function startAgendadosRealtime(){
     try{
       const { firebase } = window;
       if (!firebase || !firebase.apps?.length) return;
       const db = firebase.firestore();
       const auth = firebase.auth();
-      // Se já existir, não reanexa
+ 
       if (window.__agendadosUnsub) return;
       const attach = (uid)=>{
         if (!uid) return;
@@ -243,16 +224,15 @@ document.addEventListener('DOMContentLoaded', function() {
         window.__agendadosUnsub = db.collection('agendamentos')
           .where('clienteId','==', uid)
           .onSnapshot(()=>{
-            // Re-render sempre que houver mudança
+           
             renderAgendados();
           });
-        // Render inicial assim que conectar
+       
         renderAgendados();
       };
       const user = auth.currentUser || null;
       if (user && user.uid) attach(user.uid);
       else {
-        // Aguarda autenticação e então anexa
         const off = auth.onAuthStateChanged(u=>{ if(u?.uid){ attach(u.uid); off(); } });
       }
     }catch{}
@@ -262,9 +242,8 @@ document.addEventListener('DOMContentLoaded', function() {
     try{ if (window.__agendadosUnsub){ window.__agendadosUnsub(); window.__agendadosUnsub = null; } }catch{}
   }
 
-  // Função para renderizar as viagens agendadas
   async function renderAgendados() {
-    // Remove container existente se houver
+
     removeAgendadosContainer();
 
     const agendadosContainer = document.createElement('section');
@@ -276,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loading.textContent = 'Carregando agendamentos...';
     agendadosContainer.appendChild(loading);
 
-    // Inserção robusta no DOM
+
     const tabsElement = document.querySelector('.tabs');
     const mainEl = document.getElementById('main-content');
     const agendadosEl = document.getElementById('agendados') || document.querySelector('#agendados-content');
@@ -299,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
         agendadosContainer.innerHTML = `<div class="empty-message"><i class="fa-solid fa-calendar-xmark"></i><h3>Nenhuma viagem agendada</h3><p>Entre para ver seus agendamentos.</p></div>`;
         return;
       }
-      // Consulta simples por clienteId para evitar índice composto obrigatório
+
       const qSnap = await db.collection('agendamentos')
         .where('clienteId', '==', user.uid)
         .limit(25)
@@ -325,13 +304,13 @@ document.addEventListener('DOMContentLoaded', function() {
         viagensAgendadas.push({ id: doc.id, data, hora, origem, destino, veiculo, volumes, status: 'Confirmado', motorista, telefone, preco, motoristaUid, __confMs: confDt ? confDt.getTime() : 0 });
       });
 
-      // Render
+  
       agendadosContainer.innerHTML = '';
       if (!viagensAgendadas.length){
         agendadosContainer.innerHTML = `<div class=\"empty-message\"><h3>Sem agendamentos no momento</h3></div>`;
         return;
       }
-      // Ordena por confirmação mais recente primeiro
+
       viagensAgendadas.sort((a,b)=> (b.__confMs||0) - (a.__confMs||0));
       const cardsContainer = document.createElement('div');
       cardsContainer.className = 'cards-container';
@@ -339,19 +318,19 @@ document.addEventListener('DOMContentLoaded', function() {
       list.style.display = 'flex';
       list.style.flexDirection = 'column';
       list.style.gap = '16px';
-      // Limpa listeners antigos de cards
+
       try{ if(!window.__agCardUnsubs) window.__agCardUnsubs = {}; Object.values(window.__agCardUnsubs).forEach(fn=>{ try{fn();}catch{} }); window.__agCardUnsubs = {}; }catch{}
 
       viagensAgendadas.forEach(v=>{ 
         const card = createViagemCard(v); 
         list.appendChild(card);
-        // Fallback: buscar nome/telefone do motorista se vierem vazios
+
         if ((v.motorista==='—' || v.telefone==='—') && v.motoristaUid){
           try{ preencherContatoMotorista(card, v.motoristaUid); }catch{}
         }
-        // Listener por documento: remove o card se deixar de ser confirmado
+
         try{ attachCardStatusListener(v.id, card); }catch{}
-        // Agenda alerta de início no horário marcado
+
         try{ scheduleStartReminderCliente(v); }catch{}
       });
       cardsContainer.appendChild(list);
@@ -362,12 +341,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Função para criar card de viagem
   function createViagemCard(viagem) {
     const card = document.createElement('div');
     card.className = 'viagem-card';
     
-    // Determina a classe do status
     const statusClass = getStatusClass(viagem.status);
     
     card.innerHTML = `
@@ -442,7 +419,6 @@ document.addEventListener('DOMContentLoaded', function() {
     return card;
   }
 
-  // Iniciar imediatamente o agendamento: prepara estrutura e redireciona
   window.iniciarAgendamentoAgora = async function(agendamentoId){
     try{
       const { firebase } = window; if (!firebase?.apps?.length) return alert('Serviço indisponível.');
@@ -466,11 +442,10 @@ document.addEventListener('DOMContentLoaded', function() {
         criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
       };
 
-      // Atualiza o próprio agendamento para o fluxo ativo
+ 
       await agRef.set({ status: 'indo_retirar', confirmadoEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
       await agRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
 
-      // Espelha para compatibilidade (corridaagendamento e corridas)
       const corridaAgRef = db.collection('corridaagendamento').doc(String(agendamentoId));
       await corridaAgRef.set(base, { merge: true });
       await corridaAgRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
@@ -481,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       try{ localStorage.setItem('ultimaCorridaCliente', String(agendamentoId)); }catch{}
 
-      // Navega para a tela de status com a corrida indicada
+
       window.location.href = `statusA.html?corrida=${encodeURIComponent(agendamentoId)}`;
     }catch(e){
       console.error('[agendamentoC] Falha ao iniciar agora:', e);
@@ -489,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
 
-  // Busca nome e telefone do motorista no Firestore e atualiza o card
+
   async function preencherContatoMotorista(cardEl, motoristaUid){
     try{
       const { firebase } = window; if (!firebase?.apps?.length) return;
@@ -504,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }catch{}
   }
 
-  // Listener por documento para remover o card se o status deixar de ser confirmado
+ 
   function attachCardStatusListener(agendamentoId, cardEl){
     try{
       const { firebase } = window; if (!firebase?.apps?.length) return;
@@ -516,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const status = String(d.status||'').toLowerCase();
         const confirmados = ['agendamento_confirmado','corrida_agendamento_confirmado'];
         if (!confirmados.includes(status)){
-          // Mostrar motivo específico quando foi o motorista que cancelou
+
           if (status === 'corrida_agendamento_cancelado' && !cardEl.dataset.modalShown){
             try{ showInfoModal('Agendamento cancelado', 'O motorista cancelou seu agendamento.'); cardEl.dataset.modalShown = '1'; }catch{}
           }
@@ -528,7 +503,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }catch{}
   }
 
-  // Função para determinar a classe CSS do status
   function getStatusClass(status) {
     switch (status.toLowerCase()) {
       case 'confirmado':
@@ -546,10 +520,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Função para formatar data
+
   function formatDate(dateString) {
     try{
-      // Se vier como 'YYYY-MM-DD', converte por string para evitar fuso UTC
+
       if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateString||''))){
         const [y,m,d] = String(dateString).split('-');
         return `${d}/${m}/${y}`;
@@ -559,24 +533,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }catch{ return String(dateString||''); }
   }
 
-  // Cancelamento de agendamento (Firestore)
   window.cancelViagem = async function(agendamentoId) {
     try{
       if (!window.firebase || !firebase.apps.length) return alert('Serviço indisponível.');
       const db = firebase.firestore();
       if (!confirm('Deseja realmente cancelar este agendamento?')) return;
-      // Cliente cancelando: usar um status distinto para diferenciar do cancelamento do motorista
+
       await db.collection('agendamentos').doc(String(agendamentoId)).set({ status: 'cancelado_agendamento', canceladoEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-      // Atualiza a lista após cancelar (sem modal para o próprio cliente)
+
       await renderAgendados();
     }catch(e){ console.error('Falha ao cancelar', e); alert('Erro ao cancelar agendamento.'); }
   };
 
-  // Event listeners para as tabs
   tabSolicitar.addEventListener('click', () => switchTab(tabSolicitar, 'solicitar'));
   tabAgendados.addEventListener('click', () => switchTab(tabAgendados, 'agendados'));
 
-  // Funcionalidade do menu mobile
   const menuToggle = document.getElementById('menuToggle');
   const navMenu = document.getElementById('navMenu');
 
@@ -586,7 +557,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Máscara para CEP
   const cepInput = document.getElementById('cep');
   if (cepInput) {
     cepInput.addEventListener('input', function(e) {
@@ -596,7 +566,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Consulta CEP via ViaCEP
   if (cepInput) {
     cepInput.addEventListener('blur', function() {
       const cep = this.value.replace(/\D/g, '');
@@ -622,25 +591,23 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
-  // Inicialização: mostra a aba "Solicitar" por padrão
   showSolicitarContent();
 
   console.log('Sistema de tabs inicializado com sucesso!');
-  
-  // Função global para testar
+
   window.testarPropostas = function() {
     document.getElementById('propostasSection').style.display = 'block';
     console.log('Seção de propostas mostrada!');
   };
 });
 
-// Enhancements for AgendamentoC: SP-only validation, CEP/address sync, autocomplete, date/time limits, Firestore submit and proposals
+
 (function(){
   document.addEventListener('DOMContentLoaded', function(){
     const { firebase } = window;
     const db = (firebase && firebase.apps && firebase.apps.length) ? firebase.firestore() : null;
 
-    // Elements
+    
     const cepInput = document.getElementById('cep');
     const localRetirada = document.getElementById('localRetirada');
     const localEntrega = document.getElementById('localEntrega');
@@ -649,38 +616,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const horaAgendamento = document.getElementById('horaAgendamento');
     const btnConfirmar = document.getElementById('confirmarAgendamento');
 
-    // SP bounds util
+
     const SP_BOUNDS = { north: -19.80, south: -25.30, east: -44.20, west: -53.10 };
     function estaDentroDeSaoPaulo(lat, lng){
       return lat <= SP_BOUNDS.north && lat >= SP_BOUNDS.south && lng <= SP_BOUNDS.east && lng >= SP_BOUNDS.west;
     }
     function isCEPSaoPaulo(cep){
       const n = parseInt(String(cep||'').replace(/\D/g,''),10);
-      return Number.isFinite(n) && n >= 1000000 && n <= 19999999; // 01000-000 a 19999-999
+      return Number.isFinite(n) && n >= 1000000 && n <= 19999999; 
     }
     function formatarCEP(cep){
       cep = String(cep||'').replace(/\D/g,'');
       return cep.length===8 ? `${cep.substring(0,5)}-${cep.substring(5)}` : cep;
     }
-    // Helper robusto: aceita endereço em qualquer cidade do estado de SP
+    
     function isEnderecoSP(addressObj, lat, lon){
       try{
-        // 1) Dentro do bounding box do estado
+        
         if (Number.isFinite(lat) && Number.isFinite(lon) && estaDentroDeSaoPaulo(lat, lon)) return true;
         const addr = addressObj || {};
         const state = (addr.state||'').toLowerCase();
         const stateCode = (addr.state_code||'').toLowerCase();
-        // 2) State textual
+        
         if (state.includes('são paulo') || state === 'sp') return true;
         if (stateCode === 'sp') return true;
-        // 3) ISO codes (Nominatim costuma trazer ISO3166-2 em diferentes níveis)
+
         for (const k of Object.keys(addr)){
           if (k.toLowerCase().startsWith('iso3166-2') && String(addr[k]).toUpperCase() === 'BR-SP') return true;
         }
       }catch{}
       return false;
     }
-    // Fallback textual quando geocodificação falhar/oscilar
+
     function textoIndicaSP(texto, cepPossivel){
       try{
         const t = String(texto||'').toLowerCase();
@@ -692,7 +659,6 @@ document.addEventListener('DOMContentLoaded', function() {
       return false;
     }
 
-    // CEP mask já existente; validar SP e sincronizar retirada
     if (cepInput){
       cepInput.addEventListener('blur', async function(){
         const cep = this.value.replace(/\D/g,'');
@@ -710,9 +676,9 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 
-    // CEP (entrega): máscara, validação SP e sincronização para endereço de entrega
+
     if (cepEntregaInput){
-      // máscara 99999-999
+
       cepEntregaInput.addEventListener('input', function(e){
         let v = String(e.target.value||'').replace(/\D/g,'');
         if (v.length > 8) v = v.slice(0,8);
@@ -734,9 +700,9 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 
-    // Autocomplete SP usando Nominatim
+
     let autocompleteTimers = {};
-    // Inject styles to match descarte dropdown look
+
     (function injectAutocompleteStyles(){
       const styleId = 'autocomplete-style-agendamento';
       if (document.getElementById(styleId)) return;
@@ -778,7 +744,7 @@ document.addEventListener('DOMContentLoaded', function() {
       document.head.appendChild(style);
     })();
 
-    // Quando usuário preencher endereço de entrega, tentar descobrir CEP de SP e preencher #cepEntrega
+    
     if (localEntrega){
       localEntrega.addEventListener('blur', async function(){
         try{
@@ -817,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       container.style.display='block';
     }
-    // UI helper: mostra/oculta um hint de validação SP abaixo do campo
+
     function setSpHint(fieldId, ok){
       const input = document.getElementById(fieldId);
       if (!input) return;
@@ -842,7 +808,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const pc = (item.address?.postcode||'').replace(/\D/g,'');
         cepInput.value = isCEPSaoPaulo(pc) ? formatarCEP(pc) : '';
       }
-      // marca visualmente como válido em SP
+
       setSpHint(campo, true);
     }
     async function autocompleteEndereco(campo){
@@ -877,7 +843,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (!data[0]) { setSpHint('localRetirada', false); return; }
           const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
           if (!isEnderecoSP(data[0].address, lat, lon)) {
-            // fallback textual: não bloquear o usuário
+    
             const cepVal = (document.getElementById('cep')?.value||'').replace(/\D/g,'');
             if (!textoIndicaSP(val, cepVal)) {
               alert('Este endereço não aparenta ser do estado de São Paulo.');
@@ -909,8 +875,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }catch(e){ console.warn('Falha ao validar endereço de entrega', e); }
       });
     }
-
-    // Agrupa Data e Hora na mesma linha (sem alterar HTML), apenas layout
     try{
       const dataBox = document.getElementById('dataAgendamento')?.closest('.input-box');
       const horaBox = document.getElementById('horaAgendamento')?.closest('.input-box');
@@ -920,14 +884,12 @@ document.addEventListener('DOMContentLoaded', function() {
         row.style.display = 'grid';
         row.style.gridTemplateColumns = '1fr 1fr';
         row.style.gap = '12px';
-        // insere acima do primeiro e move os dois
         dataBox.parentElement.insertBefore(row, dataBox);
         row.appendChild(dataBox);
         row.appendChild(horaBox);
       }
     }catch{}
 
-    // Date/time constraints
     if (dataAgendamento){
       const now = new Date();
       const yyyy = now.getFullYear();
@@ -951,7 +913,6 @@ document.addEventListener('DOMContentLoaded', function() {
       atualizarMinHora();
     }
 
-    // Firestore submit and proposals listener
     async function obterUsuarioAtualAsync(timeoutMs = 4000){
       try{
         const auth = firebase?.auth();
@@ -972,20 +933,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return d?.dadosPessoais?.nome || d?.nome || 'Cliente';
       }catch{ return 'Cliente'; }
     }
-
-      // No seu arquivo agendamentoC.js
-
-/// ==================================================================
-// CÓDIGO FINAL PARA agendamentoC.js (usando a lógica de homeC.js)
-// ==================================================================
-
 async function ouvirPropostasAgendamento(id) {
     if (!db || !id) return;
 
     const agRef = db.collection('agendamentos').doc(id);
     let origemTxt = '—', destinoTxt = '—';
 
-    // Pega os detalhes do agendamento (De/Para) uma vez
     try {
         const agSnap = await agRef.get();
         const ag = agSnap.exists ? (agSnap.data() || {}) : {};
@@ -995,10 +948,8 @@ async function ouvirPropostasAgendamento(id) {
         console.warn("Falha ao buscar detalhes do agendamento:", e);
     }
 
-    // Cache para não buscar o mesmo motorista várias vezes
     const cacheMotoristas = {};
 
-    // Função para buscar dados do motorista (copiada e adaptada de homeC.js)
      async function getMotorista(uid) {
         console.log("[AGENDAMENTO] Buscando motorista:", uid);
         if (!uid) return { nome: "Motorista", foto: null, nota: 0 };
@@ -1015,8 +966,7 @@ async function ouvirPropostasAgendamento(id) {
             
             const nome = data?.dadosPessoais?.nome || data?.nome || "Motorista";
             const foto = data?.dadosPessoais?.fotoPerfilUrl || data?.fotoPerfilUrl || null;
-            
-            // PRIORIDADE: avaliacaoMedia > media > cálculo manual
+
             let nota = 0;
             if (typeof data.avaliacaoMedia === 'number') {
                 nota = data.avaliacaoMedia;
@@ -1056,7 +1006,6 @@ async function ouvirPropostasAgendamento(id) {
                 const p = d.data() || {};
                 const uidM = p.motoristaUid || d.id;
                 
-                // Usa a nova função robusta para obter os dados
                 const motorista = await getMotorista(uidM);
 
                 const nome = motorista.nome;
@@ -1109,8 +1058,6 @@ async function ouvirPropostasAgendamento(id) {
 }
 
 
-
-// expõe o listener globalmente para reanexar ao voltar de abas
 window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
 
     async function aceitarPropostaAgendamento(agendamentoId, propostaId, motoristaUid){
@@ -1119,7 +1066,6 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
         const snap = await db.collection('agendamentos').doc(agendamentoId).collection('propostas').doc(propostaId).get();
         if (!snap.exists) return alert('Proposta não encontrada.');
         const propostaData = snap.data();
-        // Atualiza o agendamento como confirmado
         const user = firebase?.auth()?.currentUser || null;
         const clienteUid = user?.uid || propostaData?.clienteUid || null;
         await db.collection('agendamentos').doc(agendamentoId).set({ 
@@ -1130,9 +1076,7 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
           confirmadoEm: firebase.firestore.FieldValue.serverTimestamp() 
         }, { merge:true });
 
-        // Notificações simples (cliente e motorista)
         try{
-          // já pegamos clienteUid acima
           const notifRef = db.collection('notificacoes');
           const payload = {
             tipo: 'agendamento_confirmado',
@@ -1146,14 +1090,10 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
           if (motoristaUid) await notifRef.add({ ...payload, destinatario: motoristaUid });
         }catch(err){ console.warn('Falha ao registrar notificações', err); }
 
-        // limpar estado de "em aberto"
         try { localStorage.removeItem('agendamentoEmAberto'); } catch {}
 
-        // Esconder propostas
         const propSec = document.getElementById('propostasSection');
         if (propSec) propSec.style.display = 'none';
-
-        // Exibir modal de confirmação (centralizado) e redirecionar automaticamente
         try{
           const modal = document.getElementById('modalPropostaAceita');
           if (modal){
@@ -1162,18 +1102,15 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
               modal.classList.remove('show');
               const t = document.getElementById('tab-agendados');
               if (t) t.click();
-              // força um refresh da lista pouco depois do redirecionamento
               setTimeout(()=>{ try{ renderAgendados(); }catch{} }, 400);
             }, 1200);
           } else {
-            // Fallback
+    
             const t = document.getElementById('tab-agendados'); if (t) t.click();
           }
         }catch{}
       }catch(e){ console.error(e); alert('Falha ao aceitar proposta.'); }
     }
-
-    // Helpers para novos status exclusivos de agendamento (sem integrar telas agora)
     async function finalizarAgendamento(agendamentoId){
       if (!db) return;
       try{
@@ -1186,7 +1123,6 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
         await db.collection('agendamentos').doc(agendamentoId).set({ status:'cancelado_agendamento', canceladoEm: firebase.firestore.FieldValue.serverTimestamp(), motivoCancelamento: motivo||null }, { merge:true });
       }catch(e){ console.warn('Falha ao cancelar agendamento:', e); }
     }
-    // expõe para futuras chamadas externas
     window.finalizarAgendamentoCliente = finalizarAgendamento;
     window.cancelarAgendamentoCliente = cancelarAgendamento;
 
@@ -1196,7 +1132,6 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
       db.collection('agendamentos').where('clienteId','==', uid)
         .onSnapshot(snap=>{
           if (!snap || snap.empty) return;
-          // pegar o mais recente com status aguardando_propostas_agendamento
           let maisRecente = null; let tsRef = 0;
           snap.forEach(doc=>{
             const d = doc.data()||{};
@@ -1250,7 +1185,6 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
               if (isEnderecoSP(d[0].address, lat, lon)) return { lat, lon, address: d[0].address, display_name: d[0].display_name };
             }
           }catch(e){ console.warn('Geo falhou, usando fallback SP', e); }
-          // Fallback: aceitar se texto/CEP indicarem SP
           if (textoIndicaSP(texto, cepVal)) return { lat:null, lon:null, address:null, display_name:String(texto) };
           return null;
         }
@@ -1292,26 +1226,20 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
           const docRef = await db.collection('agendamentos').add(dados);
           alert('Solicitação criada com sucesso! Aguardando propostas...');
           
-          // Persistir o agendamento em aberto para manter a visualização ao trocar de abas
           try { localStorage.setItem('agendamentoEmAberto', docRef.id); } catch {}
           
-          // Mostrar a seção de propostas e ocultar os campos do formulário
           const propSec = document.getElementById('propostasSection');
           if (propSec) { propSec.style.display = 'block'; propSec.dataset.active = 'true'; }
-          // Mantém o formulário visível: não esconder '.form-fields'
+
           
           if (propostasUnsub) { try{ propostasUnsub(); }catch{} propostasUnsub=null; }
           propostasUnsub = ouvirPropostasAgendamento(docRef.id);
         } catch (e) { console.error('Falha ao salvar agendamento:', e); alert('Erro ao criar agendamento.'); }
       });
     }
-
-    // Quando o usuário recarrega a página, ligar automaticamente no último agendamento aberto
     firebase.auth().onAuthStateChanged(u=>{
       const uid = u?.uid || null;
       if (uid) autoOuvirUltimoAgendamentoDoCliente(uid);
-      // Removido: popup em tempo real por notificações
-      // O modal de confirmação aparece APENAS quando o usuário clica em "Aceitar Proposta".
     });
   });
 })();

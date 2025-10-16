@@ -1,7 +1,3 @@
-
-// Credita saldo do motorista após pagamento aprovado
-// Requer Firebase compat (app, auth, firestore) carregado na página
-
 (function(){
   const firebaseConfig = {
     apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
@@ -48,7 +44,6 @@
         return;
       }
 
-      // Buscar corrida em 'corridas' e, se não houver, em 'descartes'
       let corridaDoc = await db.collection('corridas').doc(corridaId).get();
       let origemColecao = 'corridas';
       if (!corridaDoc.exists) {
@@ -61,7 +56,6 @@
       }
       const corrida = corridaDoc.data()||{};
       
-      // Inferir tipo do serviço
       const tipoInferido = (()=>{
         const t = (corrida?.tipo||'').toString().toLowerCase();
         if (t) return t;
@@ -75,12 +69,9 @@
         ui.append('Motorista da corrida não definido.');
         return;
       }
-
-      // Calcular valores: motorista recebe 90%, plataforma fica com 10%
       const valorMotorista = Math.round(valorTotal * 0.90 * 100) / 100;
       const taxaPlataforma = Math.round(valorTotal * 0.10 * 100) / 100;
 
-      // Transação idempotente: só credita se a corrida ainda não estiver marcada como creditada
       const motRef = db.collection('motoristas').doc(motoristaId);
       const corridaRef = db.collection(origemColecao).doc(corridaId);
       
@@ -113,7 +104,7 @@
       });
       
       if (!txResult?.already) {
-        // Registrar no histórico do motorista
+
         try {
           await db.collection('motoristas').doc(motoristaId)
             .collection('historico').add({
@@ -130,7 +121,6 @@
             });
         } catch (e) { console.warn('Falha ao registrar histórico:', e); }
 
-        // Registrar na coleção global
         try {
           await db.collection('historicotransacoesM').add({
             motoristaId,
@@ -157,12 +147,10 @@
     }
   }
 
-  // expõe função global para ser chamada pelo botão "Voltar ao início"
   window.PagamentoSucesso = {
     creditarAgora: () => executarCredito({ forcar:true })
   };
 
-  // dispara no load apenas se aprovado e não for aba de teste
   document.addEventListener('DOMContentLoaded', ()=>{
     if (!isTest) executarCredito({ forcar:false });
   });

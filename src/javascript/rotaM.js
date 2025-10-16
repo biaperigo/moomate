@@ -3,7 +3,7 @@
 
   const origemInfoEl = pick("origemInfo")
   const destinoInfoEl = pick("destinoInfo")
-  // Separar elementos: um na página e outro no modal de avaliação
+
   const nomeClienteMainEl = pick("clienteInfo")
   const nomeClienteModalEl = pick("modal-client-name")
   const nomeMotoristaEl = pick("motoristaInfo")
@@ -28,7 +28,6 @@
   if (cancelarAvaliacaoBtn) cancelarAvaliacaoBtn.style.display = "none"
   if (fecharModalBtn) fecharModalBtn.style.display = "none"
 
-  // Verificar se Firebase está disponível
   if (!window.firebase) {
     console.error("Firebase não está carregado!")
     return
@@ -40,16 +39,13 @@
   let dadosCorrida = null
   let corridaRef = null
   let syncRef = null
-  let tipoAtual = null // 'mudanca', 'descarte'
-  let colecaoAtual = null // 'corridas' ou 'descartes'
-
+  let tipoAtual = null 
+  let colecaoAtual = null 
   async function resolverNomeCliente({ docData, corridaId }) {
     try {
-      // 1) Priorizar campos do próprio documento
       let nome = docData?.clienteNome || dadosCorrida?.clienteNome || null;
       if (nome && typeof nome === 'string' && nome.trim() && nome.toLowerCase() !== 'cliente') return nome;
 
-      // 2) Tentar na coleção entregas (espelho) pelo mesmo ID
       try {
         const eSnap = await db.collection('entregas').doc(corridaId).get();
         if (eSnap.exists) {
@@ -62,7 +58,6 @@
         }
       } catch {}
 
-      // 3) Fallback: obterNome pelo clienteId do doc atual
       if (docData?.clienteId) {
         const uNome = await obterNome(docData.clienteId);
         if (uNome && uNome !== '—') return uNome;
@@ -71,7 +66,6 @@
     return null;
   }
 
-  // Função para criar e mostrar modal de cancelamento
   function criarModalCancelamento() {
     console.log("🚨 CRIANDO MODAL DE CANCELAMENTO");
     
@@ -207,7 +201,6 @@
     }, 10000);
   }
 
-  // Função para validar coordenadas
   function validarCoordenadas(lat, lng) {
     if (lat === null || lng === null || lat === undefined || lng === undefined) {
       return false
@@ -223,8 +216,6 @@
     if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
       return false
     }
-    
-    // Verificação específica para SP (bounds mais amplos para segurança)
     if (latNum < -25.50 || latNum > -19.50 || lngNum < -53.50 || lngNum > -44.00) {
       return false
     }
@@ -232,7 +223,6 @@
     return true
   }
 
- // No rotaM.js, você pode ajustar a função geocodificarEndereco:
 async function geocodificarEndereco(endereco) {
   if (!endereco || typeof endereco !== 'string') {
     return null;
@@ -240,24 +230,20 @@ async function geocodificarEndereco(endereco) {
 
   let searchQuery = endereco;
 
-  // Melhor tratamento para ecopontos
   if (searchQuery.toLowerCase().includes('ecoponto')) {
-    // Extrair partes principais do endereço
     const partes = searchQuery.split('–');
     if (partes.length > 1) {
-      // Pegar a parte do endereço após o "–"
       searchQuery = partes[1].trim();
     }
-    // Remover informações desnecessárias
+
     searchQuery = searchQuery.replace(/(defronte|bairro:|nº)/gi, '');
     searchQuery = searchQuery.replace(/\s+/g, ' ').trim();
   }
 
-  // Tentar múltiplas variações
   const queries = [
     searchQuery + ', São Paulo, SP, Brasil',
     searchQuery + ', São Paulo, Brasil',
-    searchQuery.split(',')[0] + ', São Paulo, Brasil' // Só a rua principal
+    searchQuery.split(',')[0] + ', São Paulo, Brasil' 
   ];
 
   for (const query of queries) {
@@ -303,12 +289,12 @@ async function geocodificarEndereco(endereco) {
     return "—"
   }
 
-  // Função atualizada para buscar corrida/descarte ativo
+
   async function obterCorridaAtiva(uid) {
     try {
       const ultima = localStorage.getItem("ultimaCorridaMotorista")
       if (ultima) {
-        // Tentar primeiro na coleção corridas
+    
         try {
           let d = await db.collection("corridas").doc(ultima).get()
           if (d.exists) {
@@ -321,7 +307,6 @@ async function geocodificarEndereco(endereco) {
           console.warn("Erro ao buscar corrida específica:", error)
         }
         
-        // Se não encontrar, tentar na coleção descartes
         try {
           let d = await db.collection("descartes").doc(ultima).get()
           if (d.exists) {
@@ -335,7 +320,6 @@ async function geocodificarEndereco(endereco) {
         }
       }
       
-      // Buscar corrida ativa mais recente
       try {
         let q = await db.collection("corridas")
           .where("motoristaId", "==", uid)
@@ -351,8 +335,7 @@ async function geocodificarEndereco(endereco) {
       } catch (error) {
         console.warn("Erro ao buscar corridas ativas:", error)
       }
-      
-      // Buscar em descartes aceitos
+
       try {
         let q = await db.collection("descartes")
           .where("propostaAceita.motoristaUid", "==", uid)
@@ -374,7 +357,6 @@ async function geocodificarEndereco(endereco) {
     return null
   }
 
-  // Verificar se Leaflet está disponível
   if (!window.L) {
     console.error("Leaflet não está carregado!")
     return
@@ -499,7 +481,6 @@ async function geocodificarEndereco(endereco) {
   function desenharMarcadores() {
   const isDescarte = tipoAtual === 'descarte'
   
-  // Motorista – verde com pulse (igual para todos)
   if (posMotorista && validarCoordenadas(posMotorista.lat, posMotorista.lng)) {
     if (!motoristaMarker) {
       motoristaMarker = L.marker([posMotorista.lat, posMotorista.lng], {
@@ -514,7 +495,6 @@ async function geocodificarEndereco(endereco) {
     }
   }
 
-  // Origem – azul padrão (igual para todos)
   if (dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
     const origemIcon = `<div style="width:22px;height:22px;background:#1E3A8A;border:3px solid #fff;border-radius:50%;"></div>`
     
@@ -530,7 +510,6 @@ async function geocodificarEndereco(endereco) {
     }
   }
 
-  // Destino – laranja padrão; para descartes usar símbolo de reciclagem com fundo laranja
   if (fase === "a_caminho_destino" && dadosCorrida?.destino && validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
     const destinoIcon = isDescarte ?
       `<div style="width:22px;height:22px;background:#FF6C0C;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;">
@@ -553,7 +532,6 @@ async function geocodificarEndereco(endereco) {
 
   const getTexto = (el) => (el && el.textContent && el.textContent.trim()) || ""
 
-  // Função para mapear dados de descarte para formato de corrida
   function mapearDadosDescarte(docData) {
     console.log("Mapeando dados de descarte:", docData);
     
@@ -563,7 +541,6 @@ async function geocodificarEndereco(endereco) {
       clienteId: docData.clienteId || 'cliente_descarte',
       motoristaId: docData.propostaAceita?.motoristaUid,
       
-      // Mapear endereços
       origem: docData.origem || {
         endereco: docData.localRetirada || '',
         lat: null,
@@ -574,8 +551,7 @@ async function geocodificarEndereco(endereco) {
         lat: null,
         lng: null
       },
-      
-      // Manter campos originais do descarte
+
       localRetirada: docData.localRetirada,
       localEntrega: docData.localEntrega,
       tipoCaminhao: docData.tipoCaminhao || docData.tipoVeiculo,
@@ -595,10 +571,8 @@ async function geocodificarEndereco(endereco) {
       if (dadosCorrida?.motoristaId) payload.motoristaId = dadosCorrida.motoristaId
 
       const isDescarte = tipoAtual === 'descarte'
-
-      // Processar origem (local de retirada)
+      
       if (dadosCorrida?.origem) {
-        // Se tem coordenadas válidas, usar direto
         if (validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
           payload.origem = {
             lat: parseFloat(dadosCorrida.origem.lat),
@@ -606,7 +580,7 @@ async function geocodificarEndereco(endereco) {
             endereco: dadosCorrida.origem.endereco || getTexto(origemInfoEl) || base?.origem?.endereco || "",
           }
         }
-        // Se não tem coordenadas mas tem endereço, tentar geocodificar
+
         else if (dadosCorrida.origem.endereco && typeof dadosCorrida.origem.endereco === 'string' && dadosCorrida.origem.endereco.trim()) {
           try {
             console.log("Geocodificando origem:", dadosCorrida.origem.endereco)
@@ -626,7 +600,6 @@ async function geocodificarEndereco(endereco) {
         }
       }
 
-      // Processar destino (local de entrega/ecoponto)
       if (dadosCorrida?.destino) {
         if (validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng)) {
           payload.destino = {
@@ -654,7 +627,6 @@ async function geocodificarEndereco(endereco) {
         }
       }
       
-      // Manter campos originais dos descartes
       if (isDescarte) {
         if (dadosCorrida.localRetirada) payload.localRetirada = dadosCorrida.localRetirada
         if (dadosCorrida.localEntrega) payload.localEntrega = dadosCorrida.localEntrega
@@ -733,18 +705,16 @@ async function geocodificarEndereco(endereco) {
         await desenharRota(dadosCorrida.origem, dadosCorrida.destino)
       }
       
-      // Antes de esconder, restaurar o texto padrão do botão (caso ele reapareça depois)
       btnTudoPronto.innerHTML = '<i class="fas fa-check"></i> Tudo pronto, seguir até o destino'
       btnTudoPronto.style.display = "none"
       if (btnFinalizar) btnFinalizar.style.display = "inline-block"
 
-      // Atualizar texto do botão baseado no tipo
       if (btnFinalizar && tipoAtual === 'descarte') {
         btnFinalizar.innerHTML = '<i class="fas fa-recycle"></i> Descarte concluído'
       }
 
       const updatePromises = []
-      // Atualizar sync com fase e, se disponíveis, origem/destino para que o cliente sincronize a mudança imediatamente
+
       if (syncRef) {
         const payload = { fase: "a_caminho_destino" }
         if (dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
@@ -769,7 +739,6 @@ async function geocodificarEndereco(endereco) {
         await Promise.all(updatePromises)
       }
 
-      // Esconder o botão de cancelar no cliente quando motorista vai para destino
       console.log("Motorista seguindo para destino - botão de cancelar será escondido no cliente");
       
     } catch (error) {
@@ -793,7 +762,6 @@ async function geocodificarEndereco(endereco) {
     }
   })
 
-  // Salvar avaliação
   salvarAvaliacaoBtn?.addEventListener("click", async () => {
     try {
       const comentario = comentarioEl ? comentarioEl.value || "" : ""
@@ -809,12 +777,12 @@ async function geocodificarEndereco(endereco) {
           },
           status: novoStatus
         }, { merge: true })
-        // Também gravar a avaliação no perfil do cliente (usuarios/{clienteId}/avaliacoes/{motoristaId})
+
         try {
           const clienteUid = dadosCorrida?.clienteId || null;
           if (clienteUid) {
             const userRef = db.collection('usuarios').doc(clienteUid);
-            // Capturar SEMPRE o motorista a partir do auth desta página
+
             const motId = firebase.auth()?.currentUser?.uid || null;
             let motNome = null;
             try {
@@ -824,10 +792,10 @@ async function geocodificarEndereco(endereco) {
                 motNome = m.nome || m.dadosPessoais?.nome || null;
               }
             } catch {}
-            // Estrutura: usuarios/{clienteId}/avaliacoes/{motoristaId}/avaliacoes/{autoId}
+
             if (motId) {
               const contRef = userRef.collection('avaliacoes').doc(motId);
-              // 1) Acrescenta avaliação como item da subcoleção (não sobrescreve nada existente)
+
               await contRef.collection('avaliacoes').add({
                 corridaId: corridaId,
                 motoristaId: motId,
@@ -837,7 +805,7 @@ async function geocodificarEndereco(endereco) {
                 avaliadoPor: 'motorista',
                 criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
               });
-              // 2) Atualiza um resumo leve no doc do motorista (merge)
+
               await contRef.set({
                 motoristaId: motId,
                 motoristaNome: motNome || null,
@@ -846,7 +814,7 @@ async function geocodificarEndereco(endereco) {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
               }, { merge: true });
             } else {
-              // fallback extremamente raro
+
               await userRef.collection('avaliacoes').add({
                 corridaId: corridaId,
                 motoristaId: motId,
@@ -857,12 +825,11 @@ async function geocodificarEndereco(endereco) {
                 criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
               });
             }
-            // Agregados no documento do usuário (atômicos)
             await userRef.set({
               ratingCount: firebase.firestore.FieldValue.increment(1),
               ratingSum: firebase.firestore.FieldValue.increment(Number(rating) || 0)
             }, { merge: true });
-            // Calcular média após incrementos (não atômico, mas seguro o suficiente para UI)
+
             try {
               const aggSnap = await userRef.get();
               const d = aggSnap.exists ? (aggSnap.data()||{}) : {};
@@ -879,7 +846,6 @@ async function geocodificarEndereco(endereco) {
       
       $closeModal()
       
-      // Redirecionar ou mostrar mensagem de sucesso
       setTimeout(() => {
         alert(`${tipoAtual === 'descarte' ? 'Descarte' : 'Corrida'} finalizada com sucesso!`)
         window.location.href = "carteiraM.html"
@@ -919,7 +885,6 @@ async function geocodificarEndereco(endereco) {
         window.CHAT.attach(corridaId);
       }
 
-      // Definir as referências baseado no tipo
       const isDescarte = tipoAtual === 'descarte'
       const colecao = isDescarte ? 'descartes' : 'corridas'
       
@@ -933,9 +898,6 @@ async function geocodificarEndereco(endereco) {
           console.error("Erro ao definir fase inicial:", error)
         )
       }
-
-      // **SISTEMA DE DETECÇÃO DE CANCELAMENTO ATUALIZADO**
-      // Listener principal para mudanças no documento
       const unsubscribeCorreda = db.collection(colecao)
         .doc(corridaId)
         .onSnapshot(async (doc) => {
@@ -954,23 +916,18 @@ async function geocodificarEndereco(endereco) {
               console.warn("Documento sem dados!")
               return
             }
-
-            // **VERIFICAÇÃO CRÍTICA DE CANCELAMENTO**
             if (docData.status === "cancelada" || docData.canceladoPor === "cliente") {
               console.log("🚨 CORRIDA/DESCARTE CANCELADO PELO CLIENTE DETECTADO!")
               console.log("Status:", docData.status)
               console.log("Cancelado por:", docData.canceladoPor)
-              
-              // Mostrar modal imediatamente
+
               criarModalCancelamento()
-              return // Parar processamento aqui
+              return 
             }
-            
-            // **PROCESSAMENTO ESPECÍFICO PARA DESCARTES**
+
             if (isDescarte) {
               console.log("Processando como descarte")
               
-              // Mapear dados do descarte para formato compatível
               dadosCorrida = {
                 ...docData,
                 tipo: 'descarte',
@@ -979,7 +936,6 @@ async function geocodificarEndereco(endereco) {
                 clienteNome: docData.clienteNome || dadosCorrida?.clienteNome || null,
                 motoristaNome: docData.motoristaNome || dadosCorrida?.motoristaNome || null,
                 
-                // **MAPEAMENTO DOS ENDEREÇOS**
                 origem: docData.origem || {
                   endereco: docData.localRetirada || '',
                   lat: null,
@@ -991,15 +947,12 @@ async function geocodificarEndereco(endereco) {
                   lng: null
                 },
                 
-                // Manter campos originais
                 localRetirada: docData.localRetirada,
                 localEntrega: docData.localEntrega,
                 tipoCaminhao: docData.tipoCaminhao || docData.tipoVeiculo,
                 descricao: docData.descricao
               }
 
-              // **GEOCODIFICAÇÃO AUTOMÁTICA PARA DESCARTES**
-              // Se origem não tem coordenadas mas tem endereço
               if (!validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng) && 
                   dadosCorrida.localRetirada) {
                 try {
@@ -1016,7 +969,6 @@ async function geocodificarEndereco(endereco) {
                 }
               }
 
-              // Se destino não tem coordenadas mas tem endereço
               if (!validarCoordenadas(dadosCorrida.destino.lat, dadosCorrida.destino.lng) && 
                   dadosCorrida.localEntrega) {
                 try {
@@ -1045,8 +997,7 @@ async function geocodificarEndereco(endereco) {
             }
             
             tipoAtual = dadosCorrida.tipo || tipoAtual
-            
-            // Atualizar elementos da UI
+
             if (origemInfoEl) {
               const textoOrigem = isDescarte ? 
                 (dadosCorrida.localRetirada || dadosCorrida.origem?.endereco || "—") :
@@ -1073,7 +1024,7 @@ async function geocodificarEndereco(endereco) {
               if (nomeClienteMainEl && nomeCliente) nomeClienteMainEl.textContent = nomeCliente;
               if (nomeClienteModalEl && nomeCliente) nomeClienteModalEl.textContent = nomeCliente;
               console.log("Nome do cliente atualizado:", nomeCliente)
-              // Persistir no documento para evitar voltar "Cliente"
+
               try {
                 if (nomeCliente && corridaRef) {
                   await corridaRef.set({ clienteNome: nomeCliente }, { merge: true });
@@ -1087,7 +1038,6 @@ async function geocodificarEndereco(endereco) {
               console.log("Nome do motorista atualizado:", nomeMotorista)
             }
 
-            // Atualizar botões com texto apropriado
             if (btnTudoPronto && isDescarte) {
               btnTudoPronto.innerHTML = '<i class="fas fa-recycle"></i> Material coletado'
             }
@@ -1098,7 +1048,6 @@ async function geocodificarEndereco(endereco) {
             console.log("Chamando desenharMarcadores...")
             desenharMarcadores()
 
-            // Desenhar rotas apenas se tiver posição do motorista
             if (posMotorista && validarCoordenadas(posMotorista.lat, posMotorista.lng)) {
               console.log("Motorista tem posição válida, verificando rotas...")
               if (fase === "indo_retirar" && dadosCorrida?.origem && validarCoordenadas(dadosCorrida.origem.lat, dadosCorrida.origem.lng)) {
@@ -1120,24 +1069,20 @@ async function geocodificarEndereco(endereco) {
           console.error("Erro no listener:", error)
         })
 
-      // **LISTENER ADICIONAL NO SYNC PARA CANCELAMENTOS RÁPIDOS**
       const unsubscribeSync = syncRef.onSnapshot((syncDoc) => {
         try {
           const syncData = syncDoc.data() || {}
           console.log("Dados do sync:", syncData)
 
-          // **VERIFICAÇÃO ADICIONAL DE CANCELAMENTO NO SYNC**
           if (syncData.fase === "cancelada" || syncData.cancelamento) {
             console.log("🚨 CANCELAMENTO DETECTADO NO SYNC!")
             console.log("Fase:", syncData.fase)
             console.log("Cancelamento:", syncData.cancelamento)
-            
-            // Mostrar modal imediatamente
+  
             criarModalCancelamento()
             return
           }
 
-          // Processamento normal do sync (posição, etc.)
           if (syncData.fase) fase = syncData.fase
           if (syncData.motorista) {
             posMotorista = {
@@ -1154,7 +1099,6 @@ async function geocodificarEndereco(endereco) {
         console.error("Erro no listener do sync:", error)
       })
 
-      // Salvar os listeners globalmente para limpeza posterior
       window.cancelamentoListeners = {
         unsubscribeCorreda,
         unsubscribeSync
@@ -1162,8 +1106,7 @@ async function geocodificarEndereco(endereco) {
 
       console.log("Iniciando geolocalização...")
       startGeolocation()
-      
-      // Definir centro inicial do mapa em São Paulo se não houver dados ainda
+
       if (!posMotorista) {
         map.setView([-23.5505, -46.6333], 12)
       }
@@ -1174,7 +1117,6 @@ async function geocodificarEndereco(endereco) {
     }
   })
 
-  // Adicionar estilos CSS
   const style = document.createElement("style")
   style.innerHTML = `
     @keyframes pulse { 
@@ -1209,7 +1151,6 @@ async function geocodificarEndereco(endereco) {
   document.head.appendChild(style)
 })()
 
-// Sistema de Avaliação
 let ratingAtual = 0
 window.ratingAtual = 0
 
@@ -1231,7 +1172,6 @@ window.ratingAtual = 0
   })
 })()
 
-// Sistema de Chat
 ;(() => {
   const { firebase } = window
   if (!firebase || !firebase.apps.length) return

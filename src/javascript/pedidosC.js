@@ -1,6 +1,4 @@
-// Pedidos do Cliente – Histórico (Completos, Cancelados e Agendados)
 ;(() => {
-  // Tabs (agora 3: Agendados, Completos e Cancelados)
   const tabs = document.querySelectorAll(".tab");
   const contents = document.querySelectorAll(".tab-content");
   const menuToggle = document.getElementById("menuToggle");
@@ -28,7 +26,6 @@
   const listaCancelados = document.getElementById("lista-cancelados");
   const vazioCancelados = document.getElementById("vazio-cancelados");
 
-  // Helpers
   const txt = (v) => {
     if (v === null || v === undefined) return "—";
     if (typeof v === "string" && !v.trim()) return "—";
@@ -54,7 +51,6 @@
   function cardPedido({ id, tipo, origem, destino, tituloIcone, tituloTxt, statusTxt, statusClasse, quandoTxt, colecao }) {
     const div = document.createElement("div");
     div.className = "delivery-card";
-    // Adiciona um link para a página de status se for um agendamento ativo
     if (colecao === "agendamentos" && statusClasse === "status-agendado") {
       div.onclick = () => { window.location.href = `statusA.html?corrida=${id}`; };
       div.style.cursor = "pointer";
@@ -154,7 +150,6 @@
     const vistosAg = new Set(), vistosC = new Set(), vistosX = new Set();
     const agendados = [], completos = [], cancelados = [];
 
-    // Processar Agendamentos Ativos
     agendamentosAtivosDocs.forEach(doc => {
       if (vistosAg.has(doc.id)) return; vistosAg.add(doc.id);
       const d = doc.data()||{};
@@ -173,7 +168,6 @@
       });
     });
 
-    // Processar Completos
     [...corridasCompletasDocs, ...descartesCompletosDocs, ...agendamentosCompletosDocs].forEach(doc => {
       if (vistosC.has(doc.id)) return; vistosC.add(doc.id);
       const d = doc.data()||{};
@@ -198,7 +192,6 @@
       });
     });
 
-    // Processar Cancelados
     [...corridasCanceladasDocs, ...descartesCanceladosDocs, ...agendamentosCanceladosDocs.filter(doc => filtroStatus.cancelados.includes(doc.data().status))].forEach(doc => {
       if (vistosX.has(doc.id)) return; vistosX.add(doc.id);
       const d = doc.data()||{};
@@ -223,7 +216,6 @@
       });
     });
 
-    // Ordenar por mais recente primeiro
     try {
       agendados.sort((a,b)=> (b?.sortKey||0) - (a?.sortKey||0));
       completos.sort((a,b)=> (b?.sortKey||0) - (a?.sortKey||0));
@@ -235,7 +227,6 @@
     renderLista(listaCancelados, vazioCancelados, cancelados, "cancelados");
   }
 
-  // Autenticação
   const { firebase } = window;
   if (!firebase || !firebase.apps.length) {
     console.warn("Firebase não detectado nesta página. As listas não serão carregadas.");
@@ -245,7 +236,7 @@
   firebase.auth().onAuthStateChanged((user) => {
     if (!user) {
       console.warn("Usuário não autenticado.");
-      // Mensagem amigável para todas as abas
+  
       const msgLogin = `
         <div class="delivery-card" style="opacity:.95">
           <div class="delivery-left">

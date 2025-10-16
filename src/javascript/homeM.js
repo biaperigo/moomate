@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let nomeMotoristaReal = "Motorista";
   const CENTRO_SP_REF = { lat: -22.1900, lng: -48.7900 };
   
-  // Cache para geocodificação
   const geocodingCache = new Map();
   let geocodingQueue = [];
   let isProcessingQueue = false;
@@ -90,17 +89,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })();
 
-  // Função de geocodificação com fila e delay
   async function geocodificarEndereco(endereco) {
     if (!endereco) return null;
     
-    // Verificar cache
     if (geocodingCache.has(endereco)) {
       return geocodingCache.get(endereco);
     }
     
     try {
-      // Aguardar 1 segundo entre requisições
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const searchQuery = endereco.includes('SP') || endereco.includes('São Paulo') ? 
@@ -369,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     modalProposta.style.display = 'none';
   }, 300);
-  // Mostra o botão fixo novamente
+  
   botaoEnviar.classList.remove('hidden-by-modal');
 }
 
@@ -551,7 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalExistente = document.getElementById('modalPropostaAceitaDescarte');
   if (modalExistente) modalExistente.remove();
 
-  // Esconde o botão fixo
   botaoEnviar.classList.add('hidden-by-modal');
 
   const modal = document.createElement('div');
@@ -738,8 +733,6 @@ function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
   document.getElementById('destino-info').textContent = destino;
   document.getElementById('valor-info').textContent = valor;
   document.getElementById('tempo-info').textContent = tempo;
-
-  // Esconde o botão fixo
   botaoEnviar.classList.add('hidden-by-modal');
 
   abrirModalPropostaAceita();
@@ -861,7 +854,6 @@ function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
     console.error('Erro ao recusar a corrida:', error);
   } finally {
     fecharModalPropostaAceita();
-    // Garante que o botão volte
     botaoEnviar.classList.remove('hidden-by-modal');
   }
 }

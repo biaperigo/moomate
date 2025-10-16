@@ -158,7 +158,7 @@ header.scrolled {
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  text-decoration: none; /* remove o sublinhado */
+  text-decoration: none;
   box-shadow: 0 0 10px 2px rgba(222, 81, 20, 0.5);
   transition: background-color 0.3s ease;
 }

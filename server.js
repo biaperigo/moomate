@@ -3,7 +3,6 @@ const cors = require('cors');
 const path = require('path');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
-// Configure with your Access Token (server-side secret)
 const client = new MercadoPagoConfig({
   accessToken: 'APP_USR-1427866074323098-091520-1b6505fd270447a2d31bfb4839dacaec-2695373344',
 });
@@ -13,11 +12,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve static files so back_urls work, e.g., pagamento-sucesso.html
 const staticDir = path.join(__dirname);
 app.use(express.static(staticDir));
 
-// Helper to build absolute base URL (works locally and on Vercel)
 function getBaseUrl(req){
   const host = req.headers['x-forwarded-host'] || req.headers.host;
   const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
@@ -32,7 +29,6 @@ async function createPreferenceHandler(req, res){
       return res.status(400).json({ success: false, message: 'Items inválidos' });
     }
 
-    // Infer corridaId e valor para popular back_urls de sucesso
     const corridaId = (external_reference || req.query.corrida || items?.[0]?.id || metadata?.corridaId || '').toString();
     const unitPrice = Number(items?.[0]?.unit_price || items?.[0]?.unitPrice || 0);
     const quantity = Number(items?.[0]?.quantity || 1);
@@ -80,7 +76,6 @@ async function createPreferenceHandler(req, res){
   }
 }
 
-// Rotas compatíveis com o frontend (local e Vercel)
 app.post('/create-mercadopago-preference', createPreferenceHandler);
 app.post('/api/create-mercadopago-preference', createPreferenceHandler);
 

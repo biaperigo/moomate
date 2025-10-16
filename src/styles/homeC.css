@@ -501,8 +501,6 @@ footer {
   transform: scale(0.9);
   transition: transform 0.3s ease;
 }
-
-/* ===== Modal Aguardando Motorista (igual ao descarte) ===== */
 .aguardando-card{ padding:0; border-radius:20px; overflow:hidden; max-width:640px; width:min(640px,92vw) }
 .aguardando-header{
   padding:16px 22px;
@@ -522,7 +520,7 @@ footer {
 .aguardando-spinner{
   margin-top:8px;
   width:18px; height:18px;
-  border:2px dotted #111; /* bolinhas pretas formando um círculo */
+  border:2px dotted #111; 
   border-radius:50%;
   animation: aguardando-rotate 1.1s linear infinite;
 }

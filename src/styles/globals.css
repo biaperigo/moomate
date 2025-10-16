@@ -1,4 +1,3 @@
-/* Estilos globais */
 :root {
   --primary-color: #0070f3;
   --secondary-color: #1a1a1a;
@@ -38,14 +37,12 @@ button {
   cursor: pointer;
 }
 
-/* Estilos para o container principal */
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 16px;
 }
 
-/* Estilos para formulários */
 input, textarea, select {
   width: 100%;
   padding: 8px 12px;
@@ -71,7 +68,6 @@ button:hover, .btn:hover {
   background-color: #005bb5;
 }
 
-/* Estilos para cards */
 .card {
   background: white;
   border-radius: 8px;
@@ -80,7 +76,6 @@ button:hover, .btn:hover {
   margin-bottom: 20px;
 }
 
-/* Utilitários */
 .text-center {
   text-align: center;
 }

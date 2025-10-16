@@ -1,4 +1,4 @@
-// Configuração do Firebase
+
 const firebaseConfig = {
   apiKey: "AIzaSyB9ZuAW1F9rBfOtg3hgGpA6H7JFUoiTlhE",
   authDomain: "moomate-39239.firebaseapp.com",
@@ -9,13 +9,12 @@ const firebaseConfig = {
   measurementId: "G-62J7Q8CKP4"
 };
 
-// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Menu toggle funcionality
+
   const menuToggle = document.getElementById('menuToggle');
   const navMenu = document.getElementById('navMenu');
   
@@ -25,10 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Verificar se o usuário está logado
   auth.onAuthStateChanged((user) => {
     if (!user) {
-      // Se não estiver logado, redirecionar para login
       window.location.href = 'loginM.html';
       return;
     }
@@ -37,16 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPasswordChange(user);
   });
 
-  // Configurar botão de sair
   const btnSair = document.querySelector('.btn-sair');
   if (btnSair) {
     btnSair.addEventListener('click', handleLogout);
   }
 
-  // Toggle de notificações
+
   const notificationsToggle = document.querySelector('.switch input[type="checkbox"]');
   if (notificationsToggle) {
-    // Carregar estado atual das notificações
     loadNotificationSettings();
     
     notificationsToggle.addEventListener('change', (e) => {
@@ -55,12 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Função para configurar mudança de senha
 function setupPasswordChange(user) {
   const senhaAtualInput = document.getElementById('senhaAtual');
   const novaSenhaInput = document.getElementById('novaSenha');
   
-  // Criar botão para salvar senha se não existir
   let btnSalvarSenha = document.querySelector('.btn-salvar-senha');
   if (!btnSalvarSenha) {
     btnSalvarSenha = document.createElement('button');
@@ -78,8 +71,7 @@ function setupPasswordChange(user) {
       display: block;
       margin: 2rem auto;
     `;
-    
-    // Adicionar após o campo de nova senha
+
     novaSenhaInput.parentNode.parentNode.appendChild(btnSalvarSenha);
   }
   
@@ -88,7 +80,6 @@ function setupPasswordChange(user) {
   });
 }
 
-// Função para alterar senha (apenas para usuários com email/senha)
 async function handlePasswordChange(user, currentPassword, newPassword) {
   if (!currentPassword || !newPassword) {
     showMessage('Por favor, preencha todos os campos de senha.', 'error');
@@ -101,7 +92,6 @@ async function handlePasswordChange(user, currentPassword, newPassword) {
   }
   
   try {
-    // Reautenticar com a senha atual antes de alterar
     const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
     
     await user.reauthenticateWithCredential(credential);
@@ -109,7 +99,6 @@ async function handlePasswordChange(user, currentPassword, newPassword) {
     
     showMessage('Senha alterada com sucesso!', 'success');
     
-    // Limpar campos apenas se a alteração foi bem-sucedida
     document.getElementById('senhaAtual').value = '';
     document.getElementById('novaSenha').value = '';
     
@@ -138,14 +127,12 @@ async function handlePasswordChange(user, currentPassword, newPassword) {
   }
 }
 
-// Função para fazer logout
 async function handleLogout() {
   if (confirm('Tem certeza que deseja sair?')) {
     try {
       await auth.signOut();
       showMessage('Logout realizado com sucesso!', 'success');
       
-      // Redirecionar após um breve delay
       setTimeout(() => {
         window.location.href = 'loginM.html';
       }, 1000);
@@ -157,17 +144,15 @@ async function handleLogout() {
   }
 }
 
-// Função para carregar configurações de notificação
 async function loadNotificationSettings() {
   try {
     const user = auth.currentUser;
     if (!user) return;
-    
-    // Buscar na coleção de motoristas
+
     const doc = await db.collection('motoristas').doc(user.uid).get();
     if (doc.exists) {
       const data = doc.data();
-      const notificationsEnabled = data.notificacoesHabilitadas !== false; // padrão é true
+      const notificationsEnabled = data.notificacoesHabilitadas !== false; 
       
       const checkbox = document.querySelector('.switch input[type="checkbox"]');
       if (checkbox) {
@@ -179,13 +164,10 @@ async function loadNotificationSettings() {
   }
 }
 
-// Função para salvar configurações de notificação
 async function saveNotificationSettings(enabled) {
   try {
     const user = auth.currentUser;
     if (!user) return;
-    
-    // Salvar na coleção de motoristas
     await db.collection('motoristas').doc(user.uid).update({
       notificacoesHabilitadas: enabled,
       configuracaoAtualizada: firebase.firestore.FieldValue.serverTimestamp()
@@ -199,9 +181,7 @@ async function saveNotificationSettings(enabled) {
   }
 }
 
-// Função para mostrar mensagens ao usuário
 function showMessage(message, type) {
-  // Remover mensagem anterior se existir
   const existingMessage = document.querySelector('.message');
   if (existingMessage) {
     existingMessage.remove();
@@ -226,7 +206,6 @@ function showMessage(message, type) {
   
   document.body.appendChild(messageDiv);
   
-  // Remover mensagem após 4 segundos
   setTimeout(() => {
     if (messageDiv.parentNode) {
       messageDiv.remove();

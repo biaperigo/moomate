@@ -273,7 +273,7 @@ body {
 #modalAguardandoMotorista {
   position: fixed;
   inset: 0;
-  display: none; /* mostre como flex quando abrir */
+  display: none; 
   align-items: center;
   justify-content: center;
   background: rgba(0,0,0,.45);
@@ -542,10 +542,7 @@ footer {
 }
 
 #propostaAceitaModal .proposta-aceita-info strong{ color:#ff6b35 }
-
 #propostaAceitaModal .modal-buttons{ justify-content:flex-end }
-
-/* Botões do modal estático de proposta aceita */
 #propostaAceitaModal .btn-iniciar{
   background: linear-gradient(180deg, #ff7a3f 0%, #ff6b35 100%) !important;
   color:#fff !important;
@@ -721,8 +718,6 @@ footer {
   .icon-area{ width:48px; height:48px }
   .icon-area i{ font-size:1.2rem }
 }
-
-/* Estilos do modal simples usado por JS (mm-*) */
 .mm-modal{ 
   position:fixed;
   inset:0;
@@ -746,16 +741,14 @@ footer {
 .mm-actions{ display:flex; gap:10px; justify-content:flex-end }
 .primario{ padding:10px 14px; background:#3DBE34; border:0; color:#fff; border-radius:8px; cursor:pointer }
 .secundario{ padding:10px 14px; background:#e7e7e7; border:0; color:#111; border-radius:8px; cursor:pointer }
-/* === BOTÃO FIXO DE MANDAR PROPOSTA === */
 
-/* === BOTÃO FIXO DE MANDAR PROPOSTA === */
 .btn-cta.full-width {
   position: fixed;
-  bottom: 20px;                 /* distância da parte inferior */
-  left: 50%;                    /* centraliza horizontalmente */
-  transform: translateX(-50%);  /* ajusta o centro */
-  width: 90%;                   /* ocupa quase toda a largura */
-  max-width: 600px;             /* limita o tamanho em telas grandes */
+  bottom: 20px;                 
+  left: 50%;                    
+  transform: translateX(-50%);  
+  width: 90%;                  
+  max-width: 600px;             
   background-color: #ff6c0c;
   color: white;
   padding: 0.9rem 1rem;
@@ -766,17 +759,16 @@ footer {
   cursor: pointer;
   transition: background-color 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
   box-shadow: 0 6px 18px rgba(255, 108, 12, 0.35);
-  z-index: 1500;                /* fica acima do conteúdo */
+  z-index: 1500;              
 }
 
-/* Esconde o botão quando o modal está aberto */
 .btn-cta.full-width.hidden-by-modal {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
 }
 
-/* Hover e estado desativado mantêm o padrão do seu tema */
+
 .btn-cta.full-width:hover {
   background-color: #d65300;
 }
@@ -789,12 +781,10 @@ footer {
   opacity: 0.7;
 }
 
-/* Espaço no final da página para o botão não cobrir conteúdo */
 body {
   padding-bottom: 120px;
 }
 
-/* Ajuste em telas menores: botão ligeiramente mais estreito */
 @media screen and (max-width: 500px) {
   .btn-cta.full-width {
     width: 94%;
