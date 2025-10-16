@@ -283,16 +283,11 @@ document.addEventListener('DOMContentLoaded', () => {
       distancia = `${distKm.toFixed(2)} km`;
     }
     
-    let volumes = '';
-    if (isDescarte) {
-      volumes = solicitacao.descricao ? 
-        (solicitacao.descricao.length > 30 ? solicitacao.descricao.substring(0, 30) + '...' : solicitacao.descricao)
-        : 'Não informado';
-    } else {
-      volumes = solicitacao.volumes ? `${solicitacao.volumes} itens` : '---';
-    }
-      
-    const tipoVeiculo = solicitacao.tipoVeiculo || solicitacao.tipoCaminhao || '---';    
+    const tipoVeiculo = solicitacao.tipoVeiculo || solicitacao.tipoCaminhao || '---';
+    const descricao = isDescarte && solicitacao.descricao ? 
+      (solicitacao.descricao.length > 30 ? solicitacao.descricao.substring(0, 30) + '...' : solicitacao.descricao)
+      : 'Não informado';
+    
     const tempoPostagem = obterTempoPostagem(solicitacao);
 
     card.innerHTML = `
@@ -306,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="info-meio">
           <p><strong>Distância:</strong> <span class="distancia-valor">${distancia}</span></p>
-          <p><strong>${isDescarte ? 'Descrição' : 'Volumes'}:</strong> ${volumes}</p>
+          ${isDescarte ? `<p><strong>Descrição:</strong> ${descricao}</p>` : ''}
           <p><strong>Tipo de veículo:</strong> ${tipoVeiculo}</p>
         </div>
         <div class="info-direita">
@@ -338,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function abrirModal() {
+   function abrirModal() {
     if (!entregaSelecionadaId) return alert("Selecione um pedido!");
     const solicitacao = todasSolicitacoes.get(entregaSelecionadaId);
     if (!solicitacao) return alert("Dados da entrega não encontrados.");
@@ -358,6 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const hint = garantirElementoDicaPreco();
     hint.textContent = `Faixa permitida: R$ ${limitesPrecoAtuais.min.toFixed(2)} a R$ ${limitesPrecoAtuais.max.toFixed(2)} (base: R$ ${limitesPrecoAtuais.base.toFixed(2)})`;
 
+    // Esconde o botão fixo
+    botaoEnviar.classList.add('hidden-by-modal');
+
     modalProposta.style.display = 'flex';
     setTimeout(() => {
       modalProposta.style.opacity = '1';
@@ -366,12 +364,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fecharModal() {
-    modalProposta.style.opacity = '0';
-    modalProposta.querySelector('.conteudo-modal, .modal-content').style.transform = 'scale(0.9)';
-    setTimeout(() => {
-      modalProposta.style.display = 'none';
-    }, 300);
-  }
+  modalProposta.style.opacity = '0';
+  modalProposta.querySelector('.conteudo-modal, .modal-content').style.transform = 'scale(0.9)';
+  setTimeout(() => {
+    modalProposta.style.display = 'none';
+  }, 300);
+  // Mostra o botão fixo novamente
+  botaoEnviar.classList.remove('hidden-by-modal');
+}
 
   async function enviarProposta() {
     const precoBase = parseFloat((inputPrecoProposta.value || "").replace(",", "."));
@@ -487,13 +487,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function abrirModalPropostaAceita(){
-    const modal = garantirModalPropostaAceita();
-    modal.style.display = 'flex';
-    requestAnimationFrame(()=>{
-      modal.style.opacity = '1';
-      modal.querySelector('.conteudo-modal, .modal-content').style.transform = 'scale(1)';
-    });
-  }
+  const modal = garantirModalPropostaAceita();
+  modal.style.display = 'flex';
+  requestAnimationFrame(()=>{
+    modal.style.opacity = '1';
+    modal.querySelector('.conteudo-modal, .modal-content').style.transform = 'scale(1)';
+  });
+}
   
   function fecharModalPropostaAceita(){
     const modal = document.getElementById('propostaAceitaModal');
@@ -542,60 +542,68 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function mostrarModalPropostaAceitaDescarte(descarteId, descarteData) {
-    const nomeCliente = descarteData.clienteNome || descarteData.clienteId || "Cliente";
-    const origem = descarteData.localRetirada || descarteData.origem?.endereco || 'Não informado';
-    const destino = descarteData.localEntrega || descarteData.destino?.endereco || 'Não informado';
-    const valor = Number(descarteData.propostaAceita?.preco || 0).toFixed(2);
-    const tempo = descarteData.propostaAceita?.tempoChegada || 0;
+  const nomeCliente = descarteData.clienteNome || descarteData.clienteId || "Cliente";
+  const origem = descarteData.localRetirada || descarteData.origem?.endereco || 'Não informado';
+  const destino = descarteData.localEntrega || descarteData.destino?.endereco || 'Não informado';
+  const valor = Number(descarteData.propostaAceita?.preco || 0).toFixed(2);
+  const tempo = descarteData.propostaAceita?.tempoChegada || 0;
 
-    const modalExistente = document.getElementById('modalPropostaAceitaDescarte');
-    if (modalExistente) modalExistente.remove();
+  const modalExistente = document.getElementById('modalPropostaAceitaDescarte');
+  if (modalExistente) modalExistente.remove();
 
-    const modal = document.createElement('div');
-    modal.id = 'modalPropostaAceitaDescarte';
-    modal.className = 'modal-overlay';
-    modal.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999;opacity:1;';
-    
-    modal.innerHTML = `
-        <div class="modal-content conteudo-modal proposta-aceita-style" style="width:min(520px,92vw);background:#eeeeee;border:3px solid #ff6b35;border-radius:16px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,.35);position:relative;">
-            <button aria-label="Fechar" style="position:absolute;top:12px;right:14px;background:transparent;border:0;font-size:20px;color:#888;cursor:pointer">&times;</button>
-            <div class="modal-header" style="text-align:center;margin-bottom:12px;">
-                <h3 style="color:#1e1e1e;margin:0;font-size:1.6rem;font-weight:700"><i class="fa-solid fa-check-circle" style="color:#3DBE34;margin-right:8px;"></i> Proposta Aceita</h3>
-            </div>
-            <div class="modal-body">
-                <p style="margin:8px 0;text-align:center;"><strong style="color:#ff6b35;">Cliente:</strong> <span style="color:#333;">${nomeCliente}</span></p>
-                <div class="proposta-info" style="margin-bottom:14px;font-size:.95rem;line-height:1.45;">
-                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Origem:</strong> <span style="color:#333;">${origem}</span></p>
-                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Destino:</strong> <span style="color:#333;">${destino}</span></p>
-                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Valor para o cliente:</strong> <span style="color:#111;font-weight:700;">R$ ${valor}</span></p>
-                    <p style="margin:8px 0;"><strong style="color:#ff6b35;">Tempo até a retirada:</strong> <span style="color:#111;">${tempo} min</span></p>
-                </div>
-                <div class="modal-actions" style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;">
-                    <button id="btnIniciarCorridaDescarte" style="padding:12px 18px;background:linear-gradient(180deg,#ff7a3f 0%,#ff6b35 100%);border:0;color:#fff;border-radius:10px;cursor:pointer;font-weight:700;box-shadow:0 6px 16px rgba(255,107,53,.45);">
-                        <i class="fa-solid fa-truck" style="margin-right:6px;"></i> Iniciar Corrida
-                    </button>
-                    <button id="btnRecusarCorridaDescarte" style="padding:12px 18px;background:#e7e7e7;border:0;color:#111;border-radius:10px;cursor:pointer;font-weight:700;">
-                        <i class="fa-solid fa-times" style="margin-right:6px;"></i> Recusar Corrida
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
+  // Esconde o botão fixo
+  botaoEnviar.classList.add('hidden-by-modal');
 
-    document.body.appendChild(modal);
+  const modal = document.createElement('div');
+  modal.id = 'modalPropostaAceitaDescarte';
+  modal.className = 'modal-overlay';
+  modal.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:9999;opacity:1;';
+  
+  modal.innerHTML = `
+      <div class="modal-content conteudo-modal proposta-aceita-style" style="width:min(520px,92vw);background:#eeeeee;border:3px solid #ff6b35;border-radius:16px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,.35);position:relative;">
+          <button aria-label="Fechar" style="position:absolute;top:12px;right:14px;background:transparent;border:0;font-size:20px;color:#888;cursor:pointer">&times;</button>
+          <div class="modal-header" style="text-align:center;margin-bottom:12px;">
+              <h3 style="color:#1e1e1e;margin:0;font-size:1.6rem;font-weight:700"><i class="fa-solid fa-check-circle" style="color:#3DBE34;margin-right:8px;"></i> Proposta Aceita</h3>
+          </div>
+          <div class="modal-body">
+              <p style="margin:8px 0;text-align:center;"><strong style="color:#ff6b35;">Cliente:</strong> <span style="color:#333;">${nomeCliente}</span></p>
+              <div class="proposta-info" style="margin-bottom:14px;font-size:.95rem;line-height:1.45;">
+                  <p style="margin:8px 0;"><strong style="color:#ff6b35;">Origem:</strong> <span style="color:#333;">${origem}</span></p>
+                  <p style="margin:8px 0;"><strong style="color:#ff6b35;">Destino:</strong> <span style="color:#333;">${destino}</span></p>
+                  <p style="margin:8px 0;"><strong style="color:#ff6b35;">Valor para o cliente:</strong> <span style="color:#111;font-weight:700;">R$ ${valor}</span></p>
+                  <p style="margin:8px 0;"><strong style="color:#ff6b35;">Tempo até a retirada:</strong> <span style="color:#111;">${tempo} min</span></p>
+              </div>
+              <div class="modal-actions" style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;">
+                  <button id="btnIniciarCorridaDescarte" style="padding:12px 18px;background:linear-gradient(180deg,#ff7a3f 0%,#ff6b35 100%);border:0;color:#fff;border-radius:10px;cursor:pointer;font-weight:700;box-shadow:0 6px 16px rgba(255,107,53,.45);">
+                      <i class="fa-solid fa-truck" style="margin-right:6px;"></i> Iniciar Corrida
+                  </button>
+                  <button id="btnRecusarCorridaDescarte" style="padding:12px 18px;background:#e7e7e7;border:0;color:#111;border-radius:10px;cursor:pointer;font-weight:700;">
+                      <i class="fa-solid fa-times" style="margin-right:6px;"></i> Recusar Corrida
+                  </button>
+              </div>
+          </div>
+      </div>
+  `;
 
-    document.getElementById('btnIniciarCorridaDescarte').onclick = () => iniciarCorridaDescarte(descarteId, descarteData, nomeCliente);
-    document.getElementById('btnRecusarCorridaDescarte').onclick = () => recusarCorridaDescarte(descarteId);
-    modal.querySelector('button[aria-label="Fechar"]').onclick = () => modal.remove();
-    
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            if (confirm('Deseja recusar esta corrida?')) {
-                recusarCorridaDescarte(descarteId);
-            }
-        }
-    });
-  }
+  document.body.appendChild(modal);
+
+  const fecharModalDescarte = () => {
+    modal.remove();
+    botaoEnviar.classList.remove('hidden-by-modal');
+  };
+
+  document.getElementById('btnIniciarCorridaDescarte').onclick = () => iniciarCorridaDescarte(descarteId, descarteData, nomeCliente);
+  document.getElementById('btnRecusarCorridaDescarte').onclick = () => recusarCorridaDescarte(descarteId);
+  modal.querySelector('button[aria-label="Fechar"]').onclick = fecharModalDescarte;
+  
+  modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+          if (confirm('Deseja recusar esta corrida?')) {
+              recusarCorridaDescarte(descarteId);
+          }
+      }
+  });
+}
 
   async function iniciarCorridaDescarte(descarteId, descarteData, nomeCliente) {
     try {
@@ -709,33 +717,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
-    const nomeCliente = entregaData.clienteNome || "Cliente";
-    
-    let origem, destino;
-    if (collectionName === 'descartes') {
-      origem = entregaData.localRetirada || entregaData.origem?.endereco || '';
-      destino = entregaData.localEntrega || entregaData.destino?.endereco || '';
-    } else {
-      origem = entregaData.origem?.endereco || entregaData.localRetirada || '';
-      destino = entregaData.destino?.endereco || entregaData.localEntrega || '';
-    }
-    
-    const valor = Number(entregaData.propostaAceita?.preco || 0).toFixed(2);
-    const tempo = entregaData.propostaAceita?.tempoChegada || 0;
-
-    garantirModalPropostaAceita();
-    document.getElementById('mm-nome-cliente').textContent = `Cliente: ${nomeCliente}`;
-    document.getElementById('origem-info').textContent = origem;
-    document.getElementById('destino-info').textContent = destino;
-    document.getElementById('valor-info').textContent = valor;
-    document.getElementById('tempo-info').textContent = tempo;
-
-    abrirModalPropostaAceita();
-
-    document.getElementById('btnIniciarCorrida').onclick = () => iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName);
-    document.getElementById('btnRecusarCorrida').onclick = () => recusarCorridaAposAceite(entregaId, collectionName);
+function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
+  const nomeCliente = entregaData.clienteNome || "Cliente";
+  
+  let origem, destino;
+  if (collectionName === 'descartes') {
+    origem = entregaData.localRetirada || entregaData.origem?.endereco || '';
+    destino = entregaData.localEntrega || entregaData.destino?.endereco || '';
+  } else {
+    origem = entregaData.origem?.endereco || entregaData.localRetirada || '';
+    destino = entregaData.destino?.endereco || entregaData.localEntrega || '';
   }
+  
+  const valor = Number(entregaData.propostaAceita?.preco || 0).toFixed(2);
+  const tempo = entregaData.propostaAceita?.tempoChegada || 0;
+
+  garantirModalPropostaAceita();
+  document.getElementById('mm-nome-cliente').textContent = `Cliente: ${nomeCliente}`;
+  document.getElementById('origem-info').textContent = origem;
+  document.getElementById('destino-info').textContent = destino;
+  document.getElementById('valor-info').textContent = valor;
+  document.getElementById('tempo-info').textContent = tempo;
+
+  // Esconde o botão fixo
+  botaoEnviar.classList.add('hidden-by-modal');
+
+  abrirModalPropostaAceita();
+
+  document.getElementById('btnIniciarCorrida').onclick = () => iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName);
+  document.getElementById('btnRecusarCorrida').onclick = () => recusarCorridaAposAceite(entregaId, collectionName);
+}
 
   async function iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName) {
     try {
@@ -836,22 +847,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function recusarCorridaAposAceite(entregaId, collectionName) {
-    try {
-      await db.collection(collectionName).doc(entregaId).update({
-        status: collectionName === 'descartes' ? 'pendente' : 'aguardando_propostas',
-        propostaAceita: null,
-        motoristaEscolhido: null,
-        recusadaEm: firebase.firestore.FieldValue.serverTimestamp(),
-        recusadaPor: motoristaUid || fallbackMotoristaId,
-        motoristaRecusou: true
-      });
-    } catch (error) {
-      console.error('Erro ao recusar a corrida:', error);
-    } finally {
-      fecharModalPropostaAceita();
-    }
+ async function recusarCorridaAposAceite(entregaId, collectionName) {
+  try {
+    await db.collection(collectionName).doc(entregaId).update({
+      status: collectionName === 'descartes' ? 'pendente' : 'aguardando_propostas',
+      propostaAceita: null,
+      motoristaEscolhido: null,
+      recusadaEm: firebase.firestore.FieldValue.serverTimestamp(),
+      recusadaPor: motoristaUid || fallbackMotoristaId,
+      motoristaRecusou: true
+    });
+  } catch (error) {
+    console.error('Erro ao recusar a corrida:', error);
+  } finally {
+    fecharModalPropostaAceita();
+    // Garante que o botão volte
+    botaoEnviar.classList.remove('hidden-by-modal');
   }
+}
 
   listaEntregas.addEventListener('click', e => {
     const card = e.target.closest('.delivery-card');

@@ -747,6 +747,8 @@ footer {
 .primario{ padding:10px 14px; background:#3DBE34; border:0; color:#fff; border-radius:8px; cursor:pointer }
 .secundario{ padding:10px 14px; background:#e7e7e7; border:0; color:#111; border-radius:8px; cursor:pointer }
 /* === BOTÃO FIXO DE MANDAR PROPOSTA === */
+
+/* === BOTÃO FIXO DE MANDAR PROPOSTA === */
 .btn-cta.full-width {
   position: fixed;
   bottom: 20px;                 /* distância da parte inferior */
@@ -762,9 +764,16 @@ footer {
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
   box-shadow: 0 6px 18px rgba(255, 108, 12, 0.35);
   z-index: 1500;                /* fica acima do conteúdo */
+}
+
+/* Esconde o botão quando o modal está aberto */
+.btn-cta.full-width.hidden-by-modal {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* Hover e estado desativado mantêm o padrão do seu tema */

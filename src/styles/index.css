@@ -156,3 +156,17 @@ section {
 a {
   text-decoration: none;
 }
+.team-member-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.team-member-link .team-member {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.team-member-link .team-member:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}

@@ -746,7 +746,6 @@ async function verMotoristas() {
       coordenadas: { lat: destinoCoords[0], lng: destinoCoords[1] }
     },
     tipoVeiculo,
-    volumes: parseInt(document.getElementById("volumes").value) || 0,
     distancia: 0,
     precoEstimado: 0,
     status: "aguardando_propostas",
@@ -797,7 +796,7 @@ async function verMotoristas() {
     } else {
       console.log("Dados que seriam salvos:", dadosFormulario);
       alert(
-        `Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nVOLUMES: ${dadosFormulario.volumes}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPREÇO: R$ ${dadosFormulario.precoEstimado.toFixed(
+        `Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPREÇO: R$ ${dadosFormulario.precoEstimado.toFixed(
           2
         )}\n\nServiço temporariamente indisponível. Tente novamente.`
       );
