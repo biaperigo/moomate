@@ -1033,15 +1033,10 @@ async function pickCorridaId(uid){
           console.log("✅ Avaliação salva com sucesso!");
           modal.style.display="none";
       
-          setTimeout(async () => {
-            try {
-              const dadosPagamento = await buscarDadosPagamento(corridaId);
-              await criarPagamentoMercadoPago(dadosPagamento);
-            } catch (error) {
-              console.error('Erro ao processar pagamento:', error);
-              alert('Erro ao processar pagamento. Redirecionando...');
-              window.location.href = `pagamentoC.html?corrida=${encodeURIComponent(corridaId)}`;
-            }
+          // MUDANÇA AQUI: Redireciona para homeC ao invés de pagamento
+          setTimeout(() => {
+            alert("Avaliação enviada com sucesso! Obrigado por usar o Moomate.");
+            window.location.href = "homeC.html";
           }, 500);
           
         } catch (error) {
@@ -1052,8 +1047,7 @@ async function pickCorridaId(uid){
     }
     
     modal.style.display = "flex";
-  }
-  
+}
   function ensureChegouButton(){
     let b = $("btnChegou");
     if (!b) {
