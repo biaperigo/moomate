@@ -201,6 +201,160 @@
     }, 10000);
   }
 
+  function criarModalAguardandoPagamento() {
+    console.log("💰 CRIANDO MODAL DE AGUARDANDO PAGAMENTO");
+    
+    let modal = document.getElementById('waiting-payment-modal');
+    if (modal) {
+      modal.remove();
+    }
+
+    modal = document.createElement('div');
+    modal.id = 'waiting-payment-modal';
+    modal.style.cssText = `
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background: rgba(0, 0, 0, 0.8) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 99999 !important;
+      animation: fadeIn 0.3s ease !important;
+    `;
+    
+    modal.innerHTML = `
+      <div style="
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        max-width: 450px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        animation: slideIn 0.3s ease;
+        position: relative;
+        z-index: 100000;
+      ">
+        <div style="
+          width: 80px;
+          height: 80px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+          animation: pulse 2s infinite;
+        ">
+          <i class="fas fa-credit-card" style="color: white; font-size: 36px;"></i>
+        </div>
+        
+        <h2 style="
+          color: #667eea;
+          margin-bottom: 15px;
+          font-size: 28px;
+          font-weight: 700;
+        ">💳 Aguardando Pagamento</h2>
+        
+        <p style="
+          color: #666;
+          margin-bottom: 20px;
+          font-size: 18px;
+          line-height: 1.5;
+        ">O cliente está efetuando o pagamento da corrida.</p>
+        
+        <div style="
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 8px;
+          margin: 20px 0;
+        ">
+          <div class="dot" style="
+            width: 12px;
+            height: 12px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+          "></div>
+          <div class="dot" style="
+            width: 12px;
+            height: 12px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+            animation-delay: -0.32s;
+          "></div>
+          <div class="dot" style="
+            width: 12px;
+            height: 12px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+            animation-delay: -0.16s;
+          "></div>
+        </div>
+        
+        <p style="
+          color: #999;
+          font-size: 14px;
+          margin-top: 20px;
+        ">A corrida iniciará automaticamente após a confirmação do pagamento.</p>
+      </div>
+      
+      <style>
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+          from { 
+            transform: translateY(-50px);
+            opacity: 0;
+          }
+          to { 
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+          }
+          50% {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+          }
+        }
+        
+        @keyframes bounce {
+          0%, 80%, 100% { 
+            transform: scale(0);
+          } 
+          40% { 
+            transform: scale(1);
+          }
+        }
+      </style>
+    `;
+
+    document.body.appendChild(modal);
+}
+
+function removerModalAguardandoPagamento() {
+    const modal = document.getElementById('waiting-payment-modal');
+    if (modal) {
+      modal.style.opacity = '0';
+      setTimeout(() => modal.remove(), 300);
+    }
+}
+
   function validarCoordenadas(lat, lng) {
     if (lat === null || lng === null || lat === undefined || lng === undefined) {
       return false
@@ -916,6 +1070,13 @@ async function geocodificarEndereco(endereco) {
               console.warn("Documento sem dados!")
               return
             }
+             if (docData.status === "aguardando_pagamento") {
+        console.log("💰 Status: Aguardando pagamento do cliente");
+        criarModalAguardandoPagamento();
+        return;
+      } else {
+        removerModalAguardandoPagamento();
+      }
             if (docData.status === "cancelada" || docData.canceladoPor === "cliente") {
               console.log("🚨 CORRIDA/DESCARTE CANCELADO PELO CLIENTE DETECTADO!")
               console.log("Status:", docData.status)

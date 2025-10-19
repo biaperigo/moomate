@@ -838,7 +838,7 @@ function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
   document.getElementById('btnRecusarCorrida').onclick = () => recusarCorridaAposAceite(entregaId, collectionName);
 }
 
-  async function iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName) {
+ async function iniciarCorrida(entregaId, entregaData, nomeCliente, collectionName) {
     try {
         if (collectionName === 'descartes') {
             return await iniciarCorridaDescarte(entregaId, entregaData, nomeCliente);
@@ -887,10 +887,11 @@ function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
             distancia = R * c;
         }
 
+        // MUDANÇA AQUI: status agora é 'aguardando_pagamento'
         const corridaData = {
             entregaId,
             tipo: 'mudanca',
-            status: 'em_andamento',
+            status: 'aguardando_pagamento', // ← MUDOU
             iniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
             clienteId: entregaData.clienteId || null,
             clienteNome: nomeCliente || entregaData.clienteNome || 'Cliente',
@@ -908,15 +909,18 @@ function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
 
         const corridaRef = db.collection('corridas').doc(entregaId);
         await corridaRef.set(corridaData, { merge: true });
+        
+        // MUDANÇA AQUI: fase agora é 'aguardando_pagamento'
         await corridaRef.collection('sync').doc('estado').set({ 
-            fase: 'indo_retirar',
+            fase: 'aguardando_pagamento', // ← MUDOU
             corridaId: entregaId,
             tipo: 'mudanca'
         }, { merge: true });
         
+        // MUDANÇA AQUI: status é 'aguardando_pagamento'
         await db.collection('entregas').doc(entregaId).update({
-            status: 'em_corrida',
-            corridaIniciada: true,
+            status: 'aguardando_pagamento', // ← MUDOU
+            corridaIniciada: false, // ← MUDOU (ainda não iniciou)
             corridaIniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
             motoristaConfirmou: true,
             distancia: distancia
@@ -929,13 +933,29 @@ function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
         localStorage.setItem('ultimaCorridaMotorista', entregaId);
 
         fecharModalPropostaAceita();
+        
+        // NOVO: Envia cliente para pagamento
+        await enviarClienteParaPagamento(entregaId, corridaData);
+        
         window.location.href = `rotaM.html?corrida=${encodeURIComponent(entregaId)}`;
         
     } catch (error) {
         console.error('Erro ao iniciar corrida:', error);
         alert('Erro ao iniciar corrida. Tente novamente.');
     }
-  }
+}
+
+// NOVA FUNÇÃO: Adicione após a função iniciarCorrida
+async function enviarClienteParaPagamento(corridaId, corridaData) {
+    try {
+      await db.collection('corridas').doc(corridaId).update({
+        clienteDevePagar: true,
+        pagamentoSolicitadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Erro ao solicitar pagamento:', error);
+    }
+}
 
  async function recusarCorridaAposAceite(entregaId, collectionName) {
   try {

@@ -530,14 +530,27 @@ let unsubSync = () => {};
   const ensureInitialRoute = garantirRotaInicial;
 
   async function processarDadosDocumento(docData) {
-  console.log(" Processando dados do documento:", docData);
+  console.log("📄 Processando dados do documento:", docData);
   
   tipoAtual = isDescarte(docData) ? 'descarte' : 'mudanca';
   C = docData;
   
-  console.log(` Tipo detectado: ${tipoAtual}`);
+  console.log(`📌 Tipo detectado: ${tipoAtual}`);
   
   const isDescarteDoc = tipoAtual === 'descarte';
+  
+  // ADICIONE ESTE BLOCO AQUI ↓↓↓
+  if (docData.clienteDevePagar && docData.status === 'aguardando_pagamento') {
+    console.log("💳 Cliente deve efetuar pagamento, redirecionando...");
+    try {
+      const dadosPagamento = await buscarDadosPagamento(corridaId);
+      await criarPagamentoMercadoPago(dadosPagamento);
+    } catch (error) {
+      console.error('Erro ao processar pagamento:', error);
+      alert('Erro ao processar pagamento.');
+    }
+    return;
+  }
   
   console.log(" DEBUG - Objeto origem completo:", docData.origem);
   if (docData.origem) {

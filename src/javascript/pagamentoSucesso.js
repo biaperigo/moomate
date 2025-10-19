@@ -99,7 +99,20 @@
             taxaPlataforma: taxaPlataforma
           } 
         }, { merge: true });
-        
+          // MUDANÇAS AQUI ↓↓↓
+  tx.set(corridaRef, { 
+    pagamento: { 
+      ...(corridaSnap.data()?.pagamento||{}), 
+      creditado: true, 
+      creditadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      valorTotal: valorTotal,
+      valorMotorista: valorMotorista,
+      taxaPlataforma: taxaPlataforma
+    },
+    status: 'em_andamento',        // ← NOVO: Inicia corrida
+    corridaIniciada: true,          // ← NOVO: Marca como iniciada
+    clienteDevePagar: false         // ← NOVO: Remove flag
+  }, { merge: true });
         return { already:false };
       });
       
