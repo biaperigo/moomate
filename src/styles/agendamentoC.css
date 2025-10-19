@@ -24,16 +24,78 @@ body {
   top: 0;
   z-index: 100;
 }
-.mm-modal { position: fixed; inset: 0; display: none; z-index: 9999; align-items: center; justify-content: center; }
-.mm-modal.show { display: flex !important; }
-.mm-modal .mm-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); }
-.mm-modal .mm-modal-dialog { position: relative; background: #fff; width: min(520px, 92%); border-radius: 16px; overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.28); border: 1px solid #ffe4cc; z-index: 1; transform: translateY(8px) scale(.98); animation: mm-pop 260ms ease-out forwards; }
-.mm-modal .mm-modal-header { padding: 16px 20px; border-bottom: 1px solid #ffe4cc; background: linear-gradient(180deg, #fff7f0 0%, #fff 100%); }
-.mm-modal .mm-modal-header h3 { margin: 0; color: #ff6c0c; font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 10px; }
-.mm-modal .mm-modal-header h3 i { color: #ff6c0c; font-size: 1.2rem; }
-.mm-modal .mm-modal-body { padding: 18px 20px; color: #333; font-size: .98rem; line-height: 1.4; }
-@keyframes mm-pop { to { transform: translateY(0) scale(1); } }
+.mm-modal { 
+  position: fixed; 
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: none; 
+  z-index: 9999; 
+  align-items: center; 
+  justify-content: center; 
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
 
+.mm-modal.show { 
+  display: flex !important; 
+}
+
+.mm-modal .mm-modal-dialog { 
+  position: relative; 
+  background: #fff; 
+  width: 90%;
+  max-width: 500px;
+  border-radius: 16px; 
+  overflow: hidden; 
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  animation: modalFadeIn 0.3s ease-out;
+  margin: 20px;
+}
+
+@keyframes modalFadeIn {
+  from { 
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mm-modal .mm-modal-header { 
+  padding: 20px; 
+  border-bottom: 1px solid #eee; 
+  background: #fff;
+  text-align: center;
+}
+
+.mm-modal .mm-modal-header h3 { 
+  margin: 0; 
+  color: #ff6c0c; 
+  font-weight: 700; 
+  font-size: 1.4rem; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  gap: 10px; 
+}
+
+.mm-modal .mm-modal-header h3 i { 
+  color: #4CAF50; 
+  font-size: 1.5rem;
+}
+
+.mm-modal .mm-modal-body { 
+  padding: 25px; 
+  color: #333; 
+  font-size: 1rem; 
+  line-height: 1.6;
+  text-align: center;
+  background: #f9f9f9;
+}
 
 .cards-container > div { display: flex; flex-direction: column; gap: 18px; }
 

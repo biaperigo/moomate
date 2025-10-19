@@ -8,7 +8,6 @@
   async function geocodificarEndereco(endereco){
     if (!endereco) return null;
     
-
     const cacheKey = `geocode_${endereco}`;
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
@@ -18,7 +17,6 @@
     }
     const normalizeAddress = (addr) => {
       let normalized = addr.trim();
-
       if (!normalized.includes("Brasil")) {
         normalized += ", Brasil";
       }
@@ -61,7 +59,6 @@
         }
         return null;
       },
-
     ];
 
     const maxRetries = 2;
@@ -235,9 +232,11 @@
   const inputPrecoProposta = document.getElementById('proposalPrice');
   const inputAjudantesProposta = document.getElementById('proposalHelpers');
   const inputVeiculoProposta = document.getElementById('proposalVehicle');
+  const containerAjudantes = document.getElementById('ajudantes-container-agenda');
 
   let entregaSelecionadaId = null;
   let motoristaUid = null;
+  let ajudantesCarregados = [];
   const todasSolicitacoes = new Map();
   let limitesPrecoAtuais = null;
 
@@ -424,7 +423,7 @@
   }
 
 
-  function createViagemCard(viagem) {
+    function createViagemCard(viagem) {
     const card = document.createElement('div');
     card.className = 'viagem-card';
     const statusClass = getStatusClass(viagem.status);
@@ -528,7 +527,6 @@
     }catch{ return String(dateString||''); }
   }
 
-  // Cancelamento para motorista
   window.cancelViagem = async function(agendamentoId) {
     try{
       if (!window.firebase || !firebase.apps.length) return alert('Serviço indisponível.');
@@ -548,6 +546,78 @@
     }
     return hint;
   }
+
+  // ========== FUNÇÕES DOS AJUDANTES ==========
+  async function carregarAjudantes() {
+    try {
+      const user = firebase.auth().currentUser;
+      if (!user) return [];
+      
+      const motoristaDoc = await db.collection('motoristas').doc(user.uid).get();
+      if (!motoristaDoc.exists) return [];
+      
+      const motoristaData = motoristaDoc.data();
+      return motoristaData.ajudantes || [];
+    } catch (error) {
+      console.error('Erro ao carregar ajudantes:', error);
+      return [];
+    }
+  }
+
+  function renderizarAjudantes(ajudantes) {
+    if (!ajudantes || ajudantes.length === 0) {
+      containerAjudantes.innerHTML = '<p class="no-helpers">Nenhum ajudante cadastrado. Você pode cadastrar ajudantes no seu perfil.</p>';
+      return;
+    }
+
+    containerAjudantes.innerHTML = '';
+    
+    ajudantes.forEach((ajudante, index) => {
+      const ajudanteId = `ajudante-agenda-${index}`;
+      const item = document.createElement('div');
+      item.className = 'ajudante-item';
+      item.innerHTML = `
+        <div class="ajudante-content">
+          <img src="${ajudante.fotoPerfilUrl || 'src/images/default-avatar.png'}" alt="Foto do ajudante" class="ajudante-foto">
+          <div class="ajudante-info">
+            <div class="ajudante-nome">${ajudante.nome || 'Ajudante sem nome'}</div>
+          </div>
+          <input type="checkbox" id="${ajudanteId}" value="${index}" class="ajudante-checkbox">
+        </div>
+      `;
+      
+      item.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') {
+          const checkbox = item.querySelector('input[type="checkbox"]');
+          checkbox.checked = !checkbox.checked;
+          atualizarContagemAjudantes();
+        }
+      });
+      
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      checkbox.addEventListener('change', atualizarContagemAjudantes);
+      
+      containerAjudantes.appendChild(item);
+    });
+    
+    atualizarContagemAjudantes();
+  }
+  
+  function atualizarContagemAjudantes() {
+    const checkboxes = containerAjudantes.querySelectorAll('input[type="checkbox"]:checked');
+    const numAjudantes = checkboxes.length;
+    inputAjudantesProposta.value = numAjudantes;
+    
+    containerAjudantes.querySelectorAll('.ajudante-item').forEach(item => {
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      if (checkbox.checked) {
+        item.classList.add('ajudante-selecionado');
+      } else {
+        item.classList.remove('ajudante-selecionado');
+      }
+    });
+  }
+  // ========== FIM FUNÇÕES DOS AJUDANTES ==========
 
   function atualizarInterface(){
     mensagemCarregando.style.display='none';
@@ -684,6 +754,14 @@
     inputPrecoProposta.min = limitesPrecoAtuais.min.toFixed(2);
     inputPrecoProposta.max = limitesPrecoAtuais.max.toFixed(2);
     garantirElementoDicaPreco().textContent = `Faixa permitida: R$ ${limitesPrecoAtuais.min.toFixed(2)} a R$ ${limitesPrecoAtuais.max.toFixed(2)} (base: R$ ${limitesPrecoAtuais.base.toFixed(2)})`;
+    
+    // CARREGA AJUDANTES AQUI
+    containerAjudantes.innerHTML = '<p class="no-helpers">Carregando ajudantes...</p>';
+    carregarAjudantes().then(ajudantes => {
+      ajudantesCarregados = ajudantes;
+      renderizarAjudantes(ajudantes);
+    });
+    
     modalProposta.style.display='flex'; 
     setTimeout(()=>{ 
       modalProposta.style.opacity='1'; 
@@ -702,12 +780,23 @@
     const ajud = parseInt(inputAjudantesProposta.value,10);
     const veic = inputVeiculoProposta.value;
     
+    // PEGA AJUDANTES SELECIONADOS
+    const checkboxes = containerAjudantes.querySelectorAll('input[type="checkbox"]:checked');
+    const ajudantesSelecionados = Array.from(checkboxes).map(cb => {
+      const index = parseInt(cb.value, 10);
+      return ajudantesCarregados[index] ? { 
+        id: index, 
+        nome: ajudantesCarregados[index].nome,
+        cpf: ajudantesCarregados[index].cpf
+      } : null;
+    }).filter(Boolean);
+    
     if(!entregaSelecionadaId) return alert('Selecione um agendamento.');
     if(!limitesPrecoAtuais) return alert('Faixa de preço indisponível.');
     if(!precoBase || precoBase<limitesPrecoAtuais.min || precoBase>limitesPrecoAtuais.max) {
       return alert(`Valor fora da faixa (R$ ${limitesPrecoAtuais.min.toFixed(2)} - ${limitesPrecoAtuais.max.toFixed(2)})`);
     }
-    if(ajud<0||ajud>5) return alert('Número de motoristas inválido (0 a 5).');
+    if(ajud<0||ajud>10) return alert('Número de ajudantes inválido (0 a 10).');
 
     const auth = firebase.auth();
     const idParaUsar = auth?.currentUser?.uid || null;
@@ -736,7 +825,11 @@
 
     const propostaData = {
       preco: precoCliente,
-      ajudantes: ajud,
+      ajudantes: {
+        quantidade: ajud,
+        selecionados: ajudantesSelecionados,
+        custo: custoAjud
+      },
       veiculo: veic,
       precoOriginal: { 
         base: Number(precoBase.toFixed(2)), 
@@ -758,11 +851,11 @@
         .collection('propostas').doc(idParaUsar).set(propostaData);
       await db.collection(collectionName).doc(entregaSelecionadaId)
         .set({ [`propostas.${idParaUsar}`]: propostaData, ultimaPropostaEm: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
-            fecharModal(); 
+      fecharModal(); 
       botaoEnviar.disabled=true;
     }catch(e){ 
       console.error(e); 
-
+      alert('Erro ao enviar proposta. Tente novamente.');
     }
   }
 
@@ -831,12 +924,11 @@
   });
 })();
 
-
+// EVENT LISTENERS ADICIONAIS
 document.getElementById('menuToggle').addEventListener('click', function() {
   const navMenu = document.getElementById('navMenu');
   navMenu.classList.toggle('show');
 });
-
 
 document.addEventListener('DOMContentLoaded', function() {
   const tabLinks = document.querySelectorAll('.tab-link');
@@ -864,48 +956,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
-
-
-document.addEventListener('click', function(e) {
-  if (e.target.closest('.delivery-card')) {
-    document.querySelectorAll('.delivery-card').forEach(card => {
-      card.classList.remove('selected');
-    });
-    
-    e.target.closest('.delivery-card').classList.add('selected');
-    
-    document.getElementById('submitBtn').disabled = false;
-  }
-});
-
-
-document.getElementById('submitBtn').addEventListener('click', function() {
-  const selectedCard = document.querySelector('.delivery-card.selected');
-  if (selectedCard) {
-    document.getElementById('proposalModal').style.display = 'flex';
-    document.getElementById('proposalModal').style.opacity = '1';
-    document.querySelector('.modal-content').style.transform = 'scale(1)';
-  }
-});
-
-document.getElementById('modalClose').addEventListener('click', function() {
-  closeModal();
-});
-
-document.getElementById('proposalModal').addEventListener('click', function(e) {
-  if (e.target === this) {
-    closeModal();
-  }
-});
-
-function closeModal() {
-  const modal = document.getElementById('proposalModal');
-  modal.style.opacity = '0';
-  document.querySelector('.modal-content').style.transform = 'scale(0.9)';
-  setTimeout(() => {
-    modal.style.display = 'none';
-  }, 300);
-}
 
 setInterval(function() {
   const loadingMessage = document.getElementById('loading-message');

@@ -67,14 +67,12 @@
     </div>
 
     <div class="modal-input-group">
-      <label for="proposalHelpers"><i class="fa-solid fa-users"></i> Número de Ajudantes (além de você)</label>
-      <select id="proposalHelpers">
-        <option value="0">0 Ajudantes</option>
-        <option value="1">1 Ajudante</option>
-        <option value="2">2 Ajudantes</option>
-        <option value="3">3 Ajudantes</option>
-      </select>
+      <label><i class="fa-solid fa-users"></i> Ajudantes (selecione os que irão trabalhar)</label>
+      <div id="ajudantes-container" class="ajudantes-container">
+        <p>Carregando ajudantes cadastrados...</p>
+      </div>
     </div>
+    <input type="hidden" id="proposalHelpers" value="0">
 
     <div class="modal-input-group">
       <label for="proposalVehicle"><i class="fa-solid fa-truck"></i> Tamanho do seu Veículo</label>
@@ -85,7 +83,10 @@
       </select>
     </div>
 
-    <small class="price-summary">O cliente verá um valor final com base nas suas escolhas + taxa da plataforma.</small>
+    <div class="price-summary">
+      <p>O cliente verá um valor final com base nas suas escolhas + taxa da plataforma.</p>
+      <p id="custo-ajudantes">Custo adicional por ajudante: R$ 50,00 cada</p>
+    </div>
     <button class="btn-cta" id="sendProposalBtn">Confirmar e Enviar Proposta</button>
   </div>
 </div>

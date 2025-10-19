@@ -550,7 +550,7 @@ async function ouvirPropostas(entregaId) {
                 <div><strong>Para:</strong> <span style="color:#555">${destinoTxt}</span></div>
                 <div style="margin-top:6px"><strong>Tipo de veículo:</strong> ${tipoVeiculo}</div>
                 <div><strong>Tempo de chegada:</strong> ${p.tempoChegada || 0} min</div>
-                <div><strong>Ajudantes:</strong> ${p.ajudantes || 0}</div>
+                <div><strong>Ajudantes:</strong> ${p.ajudantes?.quantidade || 0} ${p.ajudantes?.quantidade === 1 ? 'ajudante' : 'ajudantes'}</div>
               </div>
             </div>
             <div style="text-align:right; min-width:180px; padding-left:8px;">

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dados Pessoais - Motorista</title>
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="src/styles/dadospessoaisM.css" />
   <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
  </head>
@@ -47,6 +47,16 @@
           </div>
         </div>
         <img id="previewFotoPerfil" class="image-preview" style="display:none;" alt="Preview Foto Perfil"/>
+        
+        <div class="rating-display">
+          <div class="average-rating">
+            <div class="stars">
+              <i class="fas fa-star"></i>
+            </div>
+            <div class="rating-value">0.0</div>
+            <div class="rating-count">0 avaliações</div>
+          </div>
+        </div>
       </div>
 
       <div class="left-side">
@@ -242,6 +252,48 @@
             </div>
           </div>
           <img id="previewFotoVeiculo" class="image-preview" style="display:none;" alt="Preview Foto Veículo"/>
+        </div>
+
+        <!-- Seção de Ajudantes -->
+        <div class="helpers-section">
+          <h2 class="section-title"><i class="fa-solid fa-users"></i> Ajudantes</h2>
+          <div id="helpersList" class="helpers-list">
+            <!-- Ajudantes serão adicionados aqui dinamicamente -->
+          </div>
+          <button id="addHelperBtn" class="add-helper-btn">
+            <i class="fa-solid fa-plus"></i> Adicionar Ajudante
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Modal para adicionar/editar ajudante -->
+      <div id="helperModal" class="modal">
+        <div class="modal-content">
+          <span class="close-modal">&times;</span>
+          <h3 id="modalTitle">Adicionar Ajudante</h3>
+          <div class="form-group">
+            <label for="helperName">Nome do Ajudante</label>
+            <input type="text" id="helperName" class="form-control" placeholder="Digite o nome">
+          </div>
+          <div class="form-group">
+            <label for="helperCpf">CPF</label>
+            <input type="text" id="helperCpf" class="form-control" placeholder="000.000.000-00">
+          </div>
+          <div class="form-group">
+            <label>Foto do Ajudante</label>
+            <div class="helper-photo-upload">
+              <img id="helperPhotoPreview" src="src/images/default-avatar.png" alt="Foto do Ajudante" />
+              <input type="file" id="helperPhotoInput" accept="image/*" />
+              <label for="helperPhotoInput" class="upload-btn">
+                <i class="fa-solid fa-camera"></i> Escolher Foto
+              </label>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button id="cancelHelperBtn" class="btn btn-secondary">Cancelar</button>
+            <button id="saveHelperBtn" class="btn btn-primary">Salvar</button>
+          </div>
         </div>
       </div>
 

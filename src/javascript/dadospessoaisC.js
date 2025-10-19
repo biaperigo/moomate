@@ -90,10 +90,43 @@ function habilitarTodosCamposParaEdicao() {
     if (btnFoto) btnFoto.style.display = 'block';
 }
 
-function carregarDadosUsuario(userData) {
+async function updateRatingDisplay(averageRating, ratingCount) {
+  const starsContainer = document.querySelector('.stars');
+  const ratingValue = document.querySelector('.rating-value');
+  const ratingCountElement = document.querySelector('.rating-count');
+  
+  // Garante que temos números válidos
+  const rating = parseFloat(averageRating) || 0;
+  const count = parseInt(ratingCount) || 0;
+  
+  console.log('Exibindo avaliação:', { rating, count });
+  
+  // Atualiza o valor numérico
+  if (ratingValue) {
+    ratingValue.textContent = count > 0 ? rating.toFixed(1) : '0.0';
+  }
+  
+  // Atualiza a contagem de avaliações com plural correto
+  if (ratingCountElement) {
+    if (count === 0) {
+      ratingCountElement.textContent = '(sem avaliações)';
+    } else if (count === 1) {
+      ratingCountElement.textContent = '(1 avaliação)';
+    } else {
+      ratingCountElement.textContent = `(${count} avaliações)`;
+    }
+  }
+  
+  // Atualiza a estrela
+  if (starsContainer) {
+    starsContainer.innerHTML = '<i class="fas fa-star"></i>';
+  }
+}
+
+async function carregarDadosUsuario(userData) {
   document.getElementById("nome").value = userData.nome || "";
   document.getElementById("email").value = userData.email || "";
-  document.getElementById("telefone").value = formatarTelefone(userData.telefone || "");
+  document.getElementById("telefone").value = userData.telefone || "";
   document.getElementById("cidade").value = userData.cidade || "";
   document.getElementById("dataNascimento").value = userData.dataNascimento || "";
 
@@ -102,6 +135,18 @@ function carregarDadosUsuario(userData) {
   } else {
     document.getElementById("fotoPerfil").src = "default-avatar.png";
   }
+
+  // APENAS LÊ OS CAMPOS CORRETOS DO FIREBASE E EXIBE
+  // NÃO FAZ NENHUMA ATUALIZAÇÃO NO BANCO
+  const media = userData.ratingMedia || 0;
+  const totalAvaliacoes = userData.ratingCount || 0;
+  
+  console.log('📊 Dados de avaliação carregados do Firebase:');
+  console.log('   Média:', media);
+  console.log('   Total:', totalAvaliacoes);
+
+  // Apenas atualiza a interface visual - NÃO TOCA NO FIREBASE
+  updateRatingDisplay(media, totalAvaliacoes);
 }
 
 function habilitarEdicao(campo) {
@@ -147,13 +192,11 @@ async function salvarCampo(campo) {
     const dadosAtualizacao = {};
 
     if (campo === "telefone") {
-      
       valor = valor.replace(/\D/g, "");
     }
 
     dadosAtualizacao[campo] = valor;
 
-    
     await db.collection("usuarios").doc(usuarioAtual.id).update(dadosAtualizacao);
     usuarioAtual[campo] = valor;
     finalizarEdicao(campo);
@@ -175,6 +218,7 @@ function cancelarEdicao(campo) {
   }
   finalizarEdicao(campo);
 }
+
 function finalizarEdicao(campo) {
   const input = document.getElementById(campo);
   const wrapper = input.parentElement;
@@ -194,6 +238,7 @@ function finalizarEdicao(campo) {
     actionsDiv.remove();
   }
 }
+
 function validarCampo(campo, valor) {
   switch (campo) {
     case "nome":
@@ -289,7 +334,7 @@ function mostrarFeedback(mensagem, tipo) {
     setTimeout(() => feedback.remove(), 300);
   }, 3000);
 }
-//  foto de perfil
+
 async function atualizarFoto() {
   const input = document.getElementById("inputFoto");
   const file = input.files[0];

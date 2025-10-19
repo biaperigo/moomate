@@ -1014,7 +1014,10 @@ async function ouvirPropostasAgendamento(id) {
 
                 const preco = Number(p.preco || 0).toFixed(2).replace('.', ',');
                 const tempo = p.tempoChegada || 0;
-                const ajud = p.ajudantes || 0;
+                // Extrai a quantidade de ajudantes do objeto ajudantes, se existir
+                const qtdAjudantes = p.ajudantes && typeof p.ajudantes === 'object' 
+                    ? (p.ajudantes.quantidade || 0) 
+                    : (Number(p.ajudantes) || 0);
                 const veic = p.veiculo || '-';
 
                 const card = document.createElement('div');
@@ -1038,7 +1041,7 @@ async function ouvirPropostasAgendamento(id) {
                             <div class="rota"><strong>Para:</strong> ${destinoTxt}</div>
                             <div class="specs">
                                 <span><strong>Veículo:</strong> ${veic}</span>
-                                <span><strong>Ajudantes:</strong> ${ajud}</span>
+                                <span><strong>Ajudantes:</strong> ${qtdAjudantes}</span>
                             </div>
                         </div>
                         <div class="card-proposta-motorista-valor">

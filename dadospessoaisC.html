@@ -35,8 +35,21 @@
   </header>
 
   <div class="perfil-container">
-    <div class="foto-wrapper">
-      <img id="fotoPerfil" class="foto-perfil" src="default-avatar.png" alt="Foto do perfil" />
+    <div class="profile-top-section">
+      <div class="foto-wrapper">
+        <img id="fotoPerfil" class="foto-perfil" src="default-avatar.png" alt="Foto do perfil" />
+      </div>
+      <div class="rating-display">
+        <div class="average-rating">
+          <div class="stars">
+            <i class="fas fa-star"></i>
+          </div>
+          <div class="rating-details">
+            <div class="rating-value">0.0</div>
+            <div class="rating-count">(sem avaliações)</div>
+          </div>
+        </div>
+      </div>
     </div>
     <label for="inputFoto" class="btn-foto">Alterar Foto</label>
     <input type="file" id="inputFoto" class="input-foto" accept="image/*" style="display:none" onchange="atualizarFoto()" />

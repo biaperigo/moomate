@@ -28,7 +28,7 @@
         </div>
         <div class="senha-container">
           <input type="password" id="senha" placeholder="Senha (min 6 caracteres)" required>
-          <i class="fas fa-eye-slash toggle-password"></i>
+
         </div>
 
         <div class="dupla">
@@ -89,6 +89,17 @@
           <input type="text" id="numero-conta" placeholder="Nº da conta" required />
         </div>
         <input type="text" id="pix" placeholder="Chave PIX (opcional)" />
+
+        <hr />
+
+        <h3>Ajudantes</h3>
+        <label for="quantidade-ajudantes">Quantos ajudantes você disponibiliza?</label>
+        <input type="number" id="quantidade-ajudantes" min="0" max="5" value="0" />
+        <div id="ajudantes-container"></div>
+
+
+        <hr />
+
        <label class="checkbox-container">
             <input type="checkbox" required>
             <span>
@@ -110,6 +121,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
    <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
   <script src="src/javascript/cadastroM.js"></script>
 </body>
 </html>

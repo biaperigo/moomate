@@ -312,6 +312,30 @@ function validarFormulario() {
     numeroConta: document.getElementById("numero-conta").value
   };
 
+  const quantidadeAjudantes = parseInt(document.getElementById("quantidade-ajudantes").value || '0');
+  for (let i = 1; i <= quantidadeAjudantes; i++) {
+    const nomeAjudante = document.getElementById(`ajudante-${i}-nome`).value.trim();
+    const cpfAjudante = document.getElementById(`ajudante-${i}-cpf`).value;
+    const dataNascimentoAjudante = document.getElementById(`ajudante-${i}-data-nascimento`).value;
+    const telefoneAjudante = document.getElementById(`ajudante-${i}-telefone`).value;
+    const emailAjudante = document.getElementById(`ajudante-${i}-email`).value;
+    const fotoPerfilAjudante = document.getElementById(`ajudante-${i}-foto-perfil`);
+
+    if (!nomeAjudante || nomeAjudante.length < 3) { alert(`Nome do Ajudante ${i} deve ter pelo menos 3 caracteres`); return false; }
+    if (!validarCPF(cpfAjudante)) { alert(`CPF do Ajudante ${i} inválido`); return false; }
+    if (!dataNascimentoAjudante) { alert(`Data de nascimento do Ajudante ${i} é obrigatória`); return false; }
+    if (!validarTelefone(telefoneAjudante)) { alert(`Telefone do Ajudante ${i} inválido`); return false; }
+    if (!validarEmail(emailAjudante)) { alert(`Email do Ajudante ${i} inválido`); return false; }
+    if (!fotoPerfilAjudante || !fotoPerfilAjudante.files || fotoPerfilAjudante.files.length === 0) { alert(`Envie a foto de perfil do Ajudante ${i}`); return false; }
+
+    const hoje = new Date();
+    const nascimentoAjudante = new Date(dataNascimentoAjudante);
+    const idadeAjudante = hoje.getFullYear() - nascimentoAjudante.getFullYear();
+    if (idadeAjudante < 18) { alert(`Ajudante ${i} deve ser maior de idade`); return false; }
+  }
+
+
+
   if (!campos.nome || campos.nome.length < 3) { alert("Nome deve ter pelo menos 3 caracteres"); return false; }
   if (!validarCPF(campos.cpf)) { alert("CPF inválido"); return false; }
   if (!validarEmail(campos.email)) { alert("Email inválido"); return false; }
@@ -336,7 +360,61 @@ function validarFormulario() {
 }
 
 //Listeners 
-document.addEventListener("DOMContentLoaded", function () {
+  document.addEventListener("DOMContentLoaded", function () {
+
+    const quantidadeAjudantesInput = document.getElementById("quantidade-ajudantes");
+    const ajudantesContainer = document.getElementById("ajudantes-container");
+
+    function gerarCamposAjudantes() {
+      ajudantesContainer.innerHTML = "";
+      let quantidade = parseInt(quantidadeAjudantesInput.value);
+
+      if (quantidade > 5) {
+        quantidade = 5;
+        quantidadeAjudantesInput.value = 5;
+      }
+
+      for (let i = 1; i <= quantidade; i++) {
+        const ajudanteDiv = document.createElement("div");
+        ajudanteDiv.classList.add("ajudante-item");
+        ajudanteDiv.innerHTML = `
+          <h4>Ajudante ${i}</h4>
+          <div class="dupla">
+            <input type="text" id="ajudante-${i}-nome" placeholder="Nome Completo" required />
+            <input type="text" id="ajudante-${i}-cpf" placeholder="CPF" required />
+          </div>
+          <div class="dupla">
+            <input type="date" id="ajudante-${i}-data-nascimento" placeholder="Data de Nascimento" required />
+            <input type="tel" id="ajudante-${i}-telefone" placeholder="Telefone" required />
+          </div>
+          <input type="email" id="ajudante-${i}-email" placeholder="Email" required />
+          <label>Foto de perfil do Ajudante ${i}:</label>
+          <input type="file" id="ajudante-${i}-foto-perfil" accept="image/*" />
+          <hr />
+        `;
+        ajudantesContainer.appendChild(ajudanteDiv);
+
+        const novosInputs = ajudanteDiv.querySelectorAll("input[required], select[required]");
+        novosInputs.forEach(input => {
+            input.addEventListener("input", verificarCampos);
+            input.addEventListener("change", verificarCampos);
+        });
+
+        // Adicionar listeners de formatação para CPF e Telefone dos ajudantes
+        document.getElementById(`ajudante-${i}-cpf`).addEventListener("input", e => e.target.value = formatarCPF(e.target.value));
+        document.getElementById(`ajudante-${i}-telefone`).addEventListener("input", e => e.target.value = formatarTelefone(e.target.value));
+
+        // Adicionar preview de imagem para a foto de perfil do ajudante
+        criarElementoPreview(`ajudante-${i}-foto-perfil`, `preview-ajudante-${i}-foto-perfil`);
+        document.getElementById(`ajudante-${i}-foto-perfil`).addEventListener("change", function() {
+          mostrarPreviewImagem(this, `preview-ajudante-${i}-foto-perfil`);
+        });
+      }
+    }
+
+    quantidadeAjudantesInput.addEventListener("input", gerarCamposAjudantes);
+    gerarCamposAjudantes(); // Gerar campos iniciais ao carregar a página
+
   
   criarElementoPreview('foto-perfil', 'preview-foto-perfil');
   criarElementoPreview('foto-veiculo', 'preview-foto-veiculo');
@@ -393,21 +471,61 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  const inputs = document.querySelectorAll("input[required], select[required]");
   const botaoSalvar = document.getElementById("salvar-dados");
 
   function verificarCampos() {
     let todosPreenchidos = true;
-    inputs.forEach(input => {
-      if (!input.value.trim()) todosPreenchidos = false;
+    // Seleciona todos os inputs e selects com o atributo 'required' no formulário
+    const allRequiredElements = document.querySelectorAll("#cadastro-form input[required], #cadastro-form select[required]");
+
+    allRequiredElements.forEach(element => {
+      if (element.type === 'checkbox') {
+        if (!element.checked) {
+          todosPreenchidos = false;
+        }
+      } else if (element.type === 'file') {
+        // Para campos de arquivo, verifica se um arquivo foi selecionado
+        if (element.files.length === 0) {
+          todosPreenchidos = false;
+        }
+      } else if (!element.value.trim()) {
+        todosPreenchidos = false;
+      }
     });
     botaoSalvar.disabled = !todosPreenchidos;
   }
 
-  inputs.forEach(input => {
+  // Adicionar listener para o campo de quantidade de ajudantes para re-verificar campos
+  document.getElementById("quantidade-ajudantes").addEventListener("input", () => {
+    gerarCamposAjudantes(); // Regenerar campos e adicionar listeners para eles
+    verificarCampos(); // Chamar verificarCampos após a regeneração
+  });
+
+  // Observar mudanças no DOM para novos campos de ajudantes e adicionar listeners
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === 1) { // Verifica se é um elemento HTML
+            node.querySelectorAll('input[required], select[required]').forEach(input => {
+              input.addEventListener('input', verificarCampos);
+              input.addEventListener('change', verificarCampos);
+            });
+          }
+        });
+        verificarCampos(); // Chamar verificarCampos após a adição de novos elementos
+      }
+    });
+  });
+  observer.observe(document.getElementById("ajudantes-container"), { childList: true, subtree: true });
+
+  // Adicionar listeners para todos os campos obrigatórios estáticos e dinâmicos (inicialmente)
+  document.querySelectorAll("#cadastro-form input[required], #cadastro-form select[required]").forEach(input => {
     input.addEventListener("input", verificarCampos);
     input.addEventListener("change", verificarCampos);
   });
+
+  verificarCampos(); // Chamar uma vez ao carregar a página para definir o estado inicial do botão.
 
 
   const tipoSelect = document.getElementById("tipo-veiculo");
@@ -444,10 +562,14 @@ document.addEventListener("DOMContentLoaded", function () {
       const tipoConta = document.querySelector('input[name="tipo-conta"]:checked').value;
 
       const fotoPerfil = document.getElementById("foto-perfil").files[0];
-      const fotoVeiculo = document.getElementById("foto-veiculo").files[0];
-      const certidaoArquivo = document.getElementById("certidao-nada-consta").files[0];
+    const fotoVeiculo = document.getElementById("foto-veiculo").files[0];
+    const certidaoArquivo = document.getElementById("certidao-nada-consta").files[0];
 
-      const dados = {
+
+
+        const dados = {
+  ajudantes: [],
+
   dadosPessoais: {
     nome: document.getElementById("nome").value.trim(),
     dataNascimento: document.getElementById("data-nascimento").value,
@@ -482,6 +604,22 @@ document.addEventListener("DOMContentLoaded", function () {
     numeroConta: document.getElementById("numero-conta").value,
     pix: document.getElementById("pix").value || null
   },
+  ajudantes: await Promise.all(Array.from({length: parseInt(document.getElementById("quantidade-ajudantes").value || '0')}).map(async (_, i) => {
+    const index = i + 1;
+    const fotoPerfilAjudante = document.getElementById(`ajudante-${index}-foto-perfil`).files[0];
+    let fotoPerfilAjudanteUrl = null;
+    if (fotoPerfilAjudante) {
+      fotoPerfilAjudanteUrl = await uploadImagemCloudinary(fotoPerfilAjudante);
+    }
+    return {
+      nome: document.getElementById(`ajudante-${index}-nome`).value.trim(),
+      cpf: document.getElementById(`ajudante-${index}-cpf`).value,
+      dataNascimento: document.getElementById(`ajudante-${index}-data-nascimento`).value,
+      telefone: document.getElementById(`ajudante-${index}-telefone`).value,
+      email: document.getElementById(`ajudante-${index}-email`).value,
+      fotoPerfilUrl: fotoPerfilAjudanteUrl
+    };
+  })),
   dataRegistro: new Date().toISOString(),
   status: "pendente"
 };

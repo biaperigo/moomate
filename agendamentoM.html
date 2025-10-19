@@ -79,18 +79,13 @@
       <small id="priceRangeHint" style="display:block;margin-top:6px;color:#666"></small>
     </div>
 
-  
-
-      <div class="modal-input-group" style="margin:8px 0;display:flex;flex-direction:column;gap:6px;">
-      <label for="proposalHelpers" style="font-weight:700;color:#333"><i class="fa-solid fa-users"></i> Número de ajudantes (de 0 a 5)</label>
-      <select id="proposalHelpers" style="padding:12px;border:1px solid #ddd;border-radius:10px;outline:none;">
-        <option value="0">0 ajudantes</option>
-        <option value="1">1 ajudantes</option>
-        <option value="2">2 ajudantes</option>
-        <option value="3">3 ajudantes</option>
-        <option value="4">4 ajudantes</option>
-        <option value="5">5 ajudantes</option>
-      </select>
+    <div class="modal-input-group" style="margin:8px 0;display:flex;flex-direction:column;gap:6px;">
+      <label style="font-weight:700;color:#333"><i class="fa-solid fa-users"></i> Ajudantes (selecione os que irão trabalhar)</label>
+      <div id="ajudantes-container-agenda" class="ajudantes-container" style="margin:15px auto;max-height:300px;overflow-y:auto;border:1px solid #e0e0e0;border-radius:12px;padding:15px;background:#fff;width:100%;box-shadow:0 2px 8px rgba(0,0,0,.05);">
+        <p class="no-helpers" style="text-align:center;color:#666;padding:15px;font-size:.95rem">Carregando ajudantes...</p>
+      </div>
+      <input type="hidden" id="proposalHelpers" value="0">
+      <small style="display:block;margin-top:6px;color:#ff6b35;font-weight:600">Custo adicional por ajudante: R$ 50,00 cada</small>
     </div>
 
     <div class="modal-input-group" style="margin:8px 0;display:flex;flex-direction:column;gap:6px;">

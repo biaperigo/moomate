@@ -121,11 +121,37 @@ async function carregarDadosUsuario() {
     }
 
     currentUserId = user.uid;
-    const doc = await db.collection("motoristas").doc(currentUserId).get();
+    const [userDoc, ratingsSnapshot] = await Promise.all([
+      db.collection("motoristas").doc(currentUserId).get(),
+      db.collection("avaliacoes").where("idMotorista", "==", currentUserId).get()
+    ]);
     
-    if (doc.exists) {
-      currentUserData = doc.data();
+    if (userDoc.exists) {
+      currentUserData = userDoc.data();
       preencherCampos(currentUserData);
+      
+      // Calcular e exibir a média de avaliações
+      if (!ratingsSnapshot.empty) {
+        let totalRating = 0;
+        let validRatings = 0;
+        
+        ratingsSnapshot.forEach(doc => {
+          const rating = doc.data().nota;
+          if (typeof rating === 'number' && rating >= 1 && rating <= 5) {
+            totalRating += rating;
+            validRatings++;
+          }
+        });
+        
+        if (validRatings > 0) {
+          const averageRating = totalRating / validRatings;
+          updateRatingDisplay(averageRating, validRatings);
+        } else {
+          updateRatingDisplay(0, 0);
+        }
+      } else {
+        updateRatingDisplay(0, 0);
+      }
     } else {
       console.error("Documento do usuário não encontrado");
       alert("Dados do usuário não encontrados.");
@@ -135,6 +161,7 @@ async function carregarDadosUsuario() {
     alert("Erro ao carregar dados: " + error.message);
   }
 }
+
 function preencherCampos(dados) {
 
   if (dados.dadosPessoais) {
@@ -179,6 +206,7 @@ function preencherCampos(dados) {
     }
   }
 }
+
 function formatarData(dataString) {
   if (!dataString) return '';
   const data = new Date(dataString);
@@ -192,6 +220,30 @@ function formatarTipoVeiculo(tipo) {
     'grande': 'Caminhão truck (grande)'
   };
   return tipos[tipo] || tipo;
+}
+
+function updateRatingDisplay(averageRating, ratingCount) {
+  const starsContainer = document.querySelector('.stars');
+  const ratingValue = document.querySelector('.rating-value');
+  const ratingCountElement = document.querySelector('.rating-count');
+  
+  // Arredonda para 1 casa decimal
+  const roundedRating = Math.round(averageRating * 10) / 10;
+  
+  // Atualiza o valor numérico
+  if (ratingValue) {
+    ratingValue.textContent = ratingCount > 0 ? roundedRating.toFixed(1) : '0.0';
+  }
+  
+  // Atualiza a contagem de avaliações
+  if (ratingCountElement) {
+    ratingCountElement.textContent = ratingCount === 0 ? '(sem avaliações)' : `(${ratingCount} ${ratingCount === 1 ? 'avaliação' : 'avaliações'})`;
+  }
+  
+  // Mantém apenas uma estrela laranja como representação
+  if (starsContainer) {
+    starsContainer.innerHTML = '<i class="fas fa-star" style="color: #ff6c0c;"></i>';
+  }
 }
 
 function iniciarEdicao(fieldElement) {
@@ -392,10 +444,255 @@ async function handleImageUpload(inputElement, imageElement, isProfile = false) 
   }
 }
 
+// Global variables for helpers management
+let helpers = [];
+let currentHelperIndex = -1;
+let currentHelperPhotoFile = null;
+
+// DOM elements
+const helpersList = document.getElementById('helpersList');
+const addHelperBtn = document.getElementById('addHelperBtn');
+const helperModal = document.getElementById('helperModal');
+const closeModal = document.querySelector('.close-modal');
+const cancelHelperBtn = document.getElementById('cancelHelperBtn');
+const saveHelperBtn = document.getElementById('saveHelperBtn');
+const helperNameInput = document.getElementById('helperName');
+const helperCpfInput = document.getElementById('helperCpf');
+const helperPhotoInput = document.getElementById('helperPhotoInput');
+const helperPhotoPreview = document.getElementById('helperPhotoPreview');
+const modalTitle = document.getElementById('modalTitle');
+
+// Format CPF input
+helperCpfInput.addEventListener('input', function(e) {
+  let value = e.target.value.replace(/\D/g, '');
+  if (value.length > 11) value = value.substring(0, 11);
+  value = value.replace(/(\d{3})(\d)/, '$1.$2');
+  value = value.replace(/(\d{3})(\d)/, '$1.$2');
+  value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  e.target.value = value;
+});
+
+// Handle helper photo upload
+helperPhotoInput.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem não pode ter mais que 5MB');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      helperPhotoPreview.src = event.target.result;
+      currentHelperPhotoFile = file;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// Open modal to add new helper
+addHelperBtn.addEventListener('click', () => {
+  currentHelperIndex = -1;
+  modalTitle.textContent = 'Adicionar Ajudante';
+  helperNameInput.value = '';
+  helperCpfInput.value = '';
+  helperPhotoPreview.src = 'src/images/default-avatar.png';
+  currentHelperPhotoFile = null;
+  helperModal.style.display = 'flex';
+});
+
+// Close modal
+closeModal.addEventListener('click', () => {
+  helperModal.style.display = 'none';
+});
+
+cancelHelperBtn.addEventListener('click', () => {
+  helperModal.style.display = 'none';
+});
+
+// Save helper
+saveHelperBtn.addEventListener('click', async () => {
+  const name = helperNameInput.value.trim();
+  const cpf = helperCpfInput.value.trim();
+  
+  if (!name) {
+    alert('Por favor, informe o nome do ajudante');
+    return;
+  }
+  
+  if (!cpf || cpf.length < 14) {
+    alert('Por favor, informe um CPF válido');
+    return;
+  }
+  
+  let photoUrl = '';
+  
+  // Upload photo if a new one was selected
+  if (currentHelperPhotoFile) {
+    try {
+      photoUrl = await uploadImagemCloudinary(currentHelperPhotoFile);
+    } catch (error) {
+      console.error('Erro ao fazer upload da foto:', error);
+      alert('Erro ao fazer upload da foto. Tente novamente.');
+      return;
+    }
+  } else if (currentHelperIndex >= 0 && helpers[currentHelperIndex]) {
+    // Keep the existing photo if editing and no new photo was selected
+    photoUrl = helpers[currentHelperIndex].fotoPerfilUrl || '';
+  }
+  
+  const helperData = {
+    nome: name,
+    cpf: cpf,
+    fotoPerfilUrl: photoUrl,
+    dataAtualizacao: new Date().toISOString()
+  };
+  
+  if (currentHelperIndex >= 0) {
+    // Update existing helper
+    helpers[currentHelperIndex] = helperData;
+  } else {
+    // Add new helper
+    helpers.push(helperData);
+  }
+  
+  // Save to Firestore
+  await salvarAjudantes();
+  
+  // Update UI
+  renderHelpers();
+  helperModal.style.display = 'none';
+});
+
+// Render helpers list
+function renderHelpers() {
+  helpersList.innerHTML = '';
+  
+  if (helpers.length === 0) {
+    helpersList.innerHTML = '<p class="no-helpers">Nenhum ajudante cadastrado. Clique no botão abaixo para adicionar.</p>';
+    return;
+  }
+  
+  helpers.forEach((helper, index) => {
+    const helperElement = document.createElement('div');
+    helperElement.className = 'helper-card';
+    helperElement.innerHTML = `
+      <img src="${helper.fotoPerfilUrl || 'src/images/default-avatar.png'}" alt="${helper.nome}" class="helper-photo">
+      <div class="helper-info">
+        <div class="helper-name">${helper.nome}</div>
+        <div class="helper-cpf">${helper.cpf || 'CPF não informado'}</div>
+      </div>
+      <div class="helper-actions">
+        <button class="edit-helper" data-index="${index}" title="Editar">
+          <i class="fa-solid fa-pen"></i>
+        </button>
+        <button class="delete-helper" data-index="${index}" title="Excluir">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    `;
+    
+    helpersList.appendChild(helperElement);
+  });
+  
+  // Add event listeners for edit and delete buttons
+  document.querySelectorAll('.edit-helper').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const index = parseInt(btn.getAttribute('data-index'));
+      editarAjudante(index);
+    });
+  });
+  
+  document.querySelectorAll('.delete-helper').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const index = parseInt(btn.getAttribute('data-index'));
+      if (confirm('Tem certeza que deseja remover este ajudante?')) {
+        helpers.splice(index, 1);
+        await salvarAjudantes();
+        renderHelpers();
+      }
+    });
+  });
+}
+
+// Edit helper
+function editarAjudante(index) {
+  const helper = helpers[index];
+  if (!helper) return;
+  
+  currentHelperIndex = index;
+  modalTitle.textContent = 'Editar Ajudante';
+  helperNameInput.value = helper.nome || '';
+  helperCpfInput.value = helper.cpf || '';
+  helperPhotoPreview.src = helper.fotoPerfilUrl || 'src/images/default-avatar.png';
+  currentHelperPhotoFile = null;
+  helperModal.style.display = 'flex';
+}
+
+// Save helpers to Firestore
+async function salvarAjudantes() {
+  if (!currentUserId) return;
+  
+  try {
+    await db.collection('motoristas').doc(currentUserId).update({
+      'ajudantes': helpers
+    });
+  } catch (error) {
+    console.error('Erro ao salvar ajudantes:', error);
+    throw error;
+  }
+}
+
+// Load helpers from Firestore
+async function carregarAjudantes() {
+  if (!currentUserId) return;
+  
+  try {
+    const doc = await db.collection('motoristas').doc(currentUserId).get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.ajudantes && Array.isArray(data.ajudantes)) {
+        helpers = data.ajudantes;
+        renderHelpers();
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao carregar ajudantes:', error);
+  }
+}
+
+// Load user data from Firestore
+async function carregarDadosUsuario() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  currentUserId = user.uid;
+  const userRef = db.collection('motoristas').doc(currentUserId);
+
+  userRef.get().then((doc) => {
+    if (doc.exists) {
+      currentUserData = doc.data();
+      preencherCampos(currentUserData);
+      
+      // Atualiza a exibição da avaliação média
+      const ratingData = {
+        averageRating: currentUserData.avaliacaoMedia || 0,
+        ratingCount: currentUserData.avaliacaoCount || 0
+      };
+      updateRatingDisplay(ratingData.averageRating, ratingData.ratingCount);
+    }
+  }).catch((error) => {
+    console.error("Erro ao carregar dados do usuário:", error);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   auth.onAuthStateChanged(function(user) {
     if (user) {
       carregarDadosUsuario();
+      carregarAjudantes();
     } else {
       window.location.href = 'loginM.html';
     }

@@ -72,6 +72,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputTempoProposta = document.getElementById('proposalTime');
   const inputAjudantesProposta = document.getElementById('proposalHelpers');
   const inputVeiculoProposta = document.getElementById('proposalVehicle');
+  const containerAjudantes = document.getElementById('ajudantes-container');
+   
+  // Variável para armazenar os ajudantes carregados
+  let ajudantesCarregados = [];
 
   let entregaSelecionadaId = null;
   const fallbackMotoristaId = `motorista_${Math.random().toString(36).substr(2, 9)}`;
@@ -329,10 +333,88 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-   function abrirModal() {
+   async function carregarAjudantes() {
+    try {
+      const user = firebase.auth().currentUser;
+      if (!user) return [];
+      
+      const motoristaDoc = await db.collection('motoristas').doc(user.uid).get();
+      if (!motoristaDoc.exists) return [];
+      
+      const motoristaData = motoristaDoc.data();
+      return motoristaData.ajudantes || [];
+    } catch (error) {
+      console.error('Erro ao carregar ajudantes:', error);
+      return [];
+    }
+  }
+
+  function renderizarAjudantes(ajudantes) {
+    if (!ajudantes || ajudantes.length === 0) {
+      containerAjudantes.innerHTML = '<p class="no-helpers">Nenhum ajudante cadastrado. Você pode cadastrar ajudantes no seu perfil.</p>';
+      return;
+    }
+
+    containerAjudantes.innerHTML = '';
+    
+    ajudantes.forEach((ajudante, index) => {
+      const ajudanteId = `ajudante-${index}`;
+      const item = document.createElement('div');
+      item.className = 'ajudante-item';
+      item.innerHTML = `
+        <div class="ajudante-content">
+          <img src="${ajudante.fotoPerfilUrl || 'src/images/default-avatar.png'}" alt="Foto do ajudante" class="ajudante-foto">
+          <div class="ajudante-info">
+            <div class="ajudante-nome">${ajudante.nome || 'Ajudante sem nome'}</div>
+          </div>
+          <input type="checkbox" id="${ajudanteId}" value="${index}" class="ajudante-checkbox">
+        </div>
+      `;
+      
+      // Adiciona evento de clique para selecionar/desselecionar o ajudante
+      item.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') {
+          const checkbox = item.querySelector('input[type="checkbox"]');
+          checkbox.checked = !checkbox.checked;
+          atualizarContagemAjudantes();
+        }
+      });
+      
+      // Adiciona evento ao checkbox
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      checkbox.addEventListener('change', atualizarContagemAjudantes);
+      
+      containerAjudantes.appendChild(item);
+    });
+    
+    atualizarContagemAjudantes();
+  }
+  
+  function atualizarContagemAjudantes() {
+    const checkboxes = containerAjudantes.querySelectorAll('input[type="checkbox"]:checked');
+    const numAjudantes = checkboxes.length;
+    inputAjudantesProposta.value = numAjudantes;
+    
+    // Atualiza a classe dos itens selecionados
+    containerAjudantes.querySelectorAll('.ajudante-item').forEach(item => {
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      if (checkbox.checked) {
+        item.classList.add('ajudante-selecionado');
+      } else {
+        item.classList.remove('ajudante-selecionado');
+      }
+    });
+  }
+
+  async function abrirModal() {
     if (!entregaSelecionadaId) return alert("Selecione um pedido!");
     const solicitacao = todasSolicitacoes.get(entregaSelecionadaId);
     if (!solicitacao) return alert("Dados da entrega não encontrados.");
+
+    // Carrega os ajudantes do motorista
+    containerAjudantes.innerHTML = '<p>Carregando ajudantes...</p>';
+    ajudantesCarregados = await carregarAjudantes();
+    renderizarAjudantes(ajudantesCarregados);
 
     const isDescarte = solicitacao.tipo === 'descarte';
     const distKm = estimarDistanciaKm(solicitacao);
@@ -374,6 +456,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const tempoChegada = parseInt(inputTempoProposta.value, 10);
     const numAjudantes = parseInt(inputAjudantesProposta.value, 10);
     const tipoVeiculo = inputVeiculoProposta.value;
+    
+    // Obter os índices dos ajudantes selecionados
+    const checkboxes = containerAjudantes.querySelectorAll('input[type="checkbox"]:checked');
+    const ajudantesSelecionados = Array.from(checkboxes).map(cb => {
+      const index = parseInt(cb.value, 10);
+      return ajudantesCarregados[index] ? { 
+        id: index, 
+        nome: ajudantesCarregados[index].nome,
+        cpf: ajudantesCarregados[index].cpf
+      } : null;
+    }).filter(Boolean);
 
     if (!entregaSelecionadaId) return alert("Entrega não selecionada.");
     if (!limitesPrecoAtuais) return alert("Não foi possível calcular a faixa de preço desta entrega.");
@@ -411,7 +504,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const propostaData = {
       preco: precoFinalCliente,
       tempoChegada,
-      ajudantes: numAjudantes,
+      ajudantes: {
+        quantidade: numAjudantes,
+        selecionados: ajudantesSelecionados,
+        custo: custoAjudantes
+      },
       veiculo: tipoVeiculo,
       precoOriginal: {
         base: precoBase,

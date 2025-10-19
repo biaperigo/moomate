@@ -1553,6 +1553,7 @@ const exibirProposta = async (proposta, descarteData) => {
                 <p><strong>De:</strong> ${origem}</p>
                 <p><strong>Para:</strong> ${destino}</p>
                 <p><strong>Tipo de veículo:</strong> ${proposta.veiculo || 'N/A'}</p>
+                <p><strong>Ajudantes:</strong> ${proposta.ajudantes?.quantidade || 0} ${proposta.ajudantes?.quantidade === 1 ? 'ajudante' : 'ajudantes'}</p>
                 <p><strong>Tempo de chegada:</strong> ${proposta.tempoChegada || 0} min</p>
             </div>
             <div class="proposta-preco">
