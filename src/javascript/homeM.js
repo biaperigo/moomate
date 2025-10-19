@@ -261,7 +261,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const complemento = !isDescarte && solicitacao.origem?.complemento ? solicitacao.origem.complemento : '';
 
-    // Calcular distância local com Haversine
     let distancia = '---';
     const getNum = (v) => (v === undefined || v === null ? null : Number(v));
     const oLat = getNum(solicitacao.origem?.lat ?? solicitacao.origem?.coordenadas?.lat);
@@ -290,6 +289,19 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const tempoPostagem = obterTempoPostagem(solicitacao);
 
+    // NOVO: Mostrar informação de pedágio se existir
+    const pedagioInfo = solicitacao.pedagio;
+    let pedagioHTML = '';
+    
+    if (pedagioInfo && pedagioInfo.temPedagio && pedagioInfo.pedagios && pedagioInfo.pedagios.length > 0) {
+      const custoPedagio = pedagioInfo.valor || 0;
+      pedagioHTML = `
+        <div style="background: #fff8e1; border-left: 3px solid #f5a623; padding: 8px; margin: 8px 0; border-radius: 4px;">
+          <span style="font-size: 12px; color: #f5a623; font-weight: 600;">🛣️ ${pedagioInfo.pedagios.length} pedágio(s): R$ ${custoPedagio.toFixed(2)}</span>
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <strong>${isDescarte ? 'Descarte' : 'Entrega'} #${solicitacao.id.substring(0, 6)}</strong>
       <div class="tempo-postagem">${tempoPostagem}</div>
@@ -308,10 +320,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="icon-area ${classeDistintivo}"><i class="fa-solid ${classeIcone}"></i></span>
         </div>
       </div>
+      ${pedagioHTML}
     `;
     
     return card;
-  }
+}
 
   function obterTempoPostagem(solicitacao) {
     try {
@@ -457,6 +470,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const numAjudantes = parseInt(inputAjudantesProposta.value, 10);
     const tipoVeiculo = inputVeiculoProposta.value;
     
+    // NOVO: Obter valor do pedágio da solicitação
+    const solicitacao = todasSolicitacoes.get(entregaSelecionadaId);
+    const custoPedagio = solicitacao?.pedagio?.valor || 0;
+    const pedagios = solicitacao?.pedagio?.pedagios || [];
+
     // Obter os índices dos ajudantes selecionados
     const checkboxes = containerAjudantes.querySelectorAll('input[type="checkbox"]:checked');
     const ajudantesSelecionados = Array.from(checkboxes).map(cb => {
@@ -478,7 +496,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (numAjudantes < 0 || numAjudantes > 10) return alert("Número de ajudantes inválido.");
 
     const custoAjudantes = numAjudantes * 50;
-    const precoTotalMotorista = precoBase + custoAjudantes;
+    
+    // NOVO: Incluir pedágio no preço total do motorista
+    const precoTotalMotorista = precoBase + custoAjudantes + custoPedagio;
+    
+    // Preço final do cliente (10% de taxa + pedágio já incluído)
     const precoFinalCliente = precoTotalMotorista * 1.10;
 
     const auth = firebase.auth();
@@ -498,8 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
       nomeMotoristaReal = mData?.nome || mData?.dadosPessoais?.nome || nomeMotoristaReal || 'Motorista';
     } catch(e){ console.warn('[homeM] validação motorista falhou:', e?.message||e); }
     
-    const solicitacao = todasSolicitacoes.get(entregaSelecionadaId);
-    const collectionName = solicitacao.tipo === 'descarte' ? 'descartes' : 'entregas';
+    const colectionName = solicitacao.tipo === 'descarte' ? 'descartes' : 'entregas';
 
     const propostaData = {
       preco: precoFinalCliente,
@@ -513,7 +534,15 @@ document.addEventListener('DOMContentLoaded', () => {
       precoOriginal: {
         base: precoBase,
         ajudantes: custoAjudantes,
+        pedagio: custoPedagio,
         total: precoTotalMotorista
+      },
+      // NOVO: Informações de pedágio
+      pedagio: {
+        valor: custoPedagio,
+        pedagogios: pedagios,
+        temPedagio: custoPedagio > 0,
+        detalhes: pedagios.length > 0 ? `${pedagios.length} pedágio(s)` : "Sem pedágios"
       },
       dataEnvio: firebase.firestore.FieldValue.serverTimestamp(),
       motoristaUid: idParaUsar,
@@ -527,13 +556,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (solicitacao?.clienteNome) propostaData.clienteNome = solicitacao.clienteNome;
     } catch {}
 
-    db.collection(collectionName)
+    db.collection(colectionName)
       .doc(entregaSelecionadaId)
       .collection('propostas')
       .doc(idParaUsar)
       .set(propostaData)
       .then(() => {
-        return db.collection(collectionName)
+        return db.collection(colectionName)
           .doc(entregaSelecionadaId)
           .update({
             [`propostas.${idParaUsar}`]: propostaData,
@@ -545,12 +574,15 @@ document.addEventListener('DOMContentLoaded', () => {
         entregaSelecionadaId = null;
         document.querySelectorAll('.delivery-card').forEach(c => c.classList.remove('selected'));
         botaoEnviar.disabled = true;
+        
+        // Feedback ao motorista
+        alert(`Proposta enviada com sucesso!\n\nPreço base: R$ ${precoBase.toFixed(2)}\nAjudantes: R$ ${custoAjudantes.toFixed(2)}\nPedágios: R$ ${custoPedagio.toFixed(2)}\n\nValor total ao cliente: R$ ${precoFinalCliente.toFixed(2)}`);
       })
       .catch(err => {
         console.error("Erro ao enviar proposta:", err);
         alert("Falha ao enviar proposta, tente novamente.");
       });
-  }
+}
 
   function garantirModalPropostaAceita(){
     let modal = document.getElementById('propostaAceitaModal');

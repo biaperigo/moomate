@@ -902,6 +902,7 @@ async function verMotoristas() {
 
   const tipoVeiculo = document.getElementById("tipoVeiculo").value;
   if (!tipoVeiculo) return alert("Selecione um tipo de veículo.");
+  
   const user = await obterUsuarioAtualAsync();
   if (!user) {
     alert('Faça login para criar o pedido (ou aguarde alguns segundos e tente novamente).');
@@ -941,16 +942,44 @@ async function verMotoristas() {
     dadosFormulario.clienteNome = (window.userNome || localStorage.getItem('clienteNome') || 'Cliente');
   }
 
+  // CALCULAR DISTÂNCIA BASE
   const dist = calcularDistancia(
-    origemCoords[0],
-    origemCoords[1],
-    destinoCoords[0],
-    destinoCoords[1]
+    origemCoords[0], origemCoords[1],
+    destinoCoords[0], destinoCoords[1]
   );
-  const precoEstimado = 50 + 2 * dist;
+
+  // NOVO: SIMULAR ROTA E DETECTAR PEDÁGIOS
+  console.log("🚗 Simulando rota para detectar pedágios...");
+  
+  let infoPedagio = { pedagio: 0, pedagios: [], detalhes: "Calculando..." };
+  
+  try {
+    infoPedagio = await calcularPrecoFinalComPedagio(
+      origemCoords,
+      destinoCoords,
+      tipoVeiculo,
+      0 // preço base temporário só para calcular pedágio
+    );
+  } catch (error) {
+    console.warn("Erro ao calcular pedágios:", error);
+    infoPedagio = { pedagio: 0, pedagios: [], detalhes: "Não foi possível calcular" };
+  }
+
+  // CALCULAR PREÇO FINAL
+  const precoBase = 50 + (2 * dist);
+  const precoFinal = precoBase + infoPedagio.pedagio;
 
   dadosFormulario.distancia = parseFloat(dist.toFixed(2));
-  dadosFormulario.precoEstimado = parseFloat(precoEstimado.toFixed(2));
+  dadosFormulario.precoEstimado = parseFloat(precoFinal.toFixed(2));
+  dadosFormulario.pedagio = {
+    valor: parseFloat(infoPedagio.pedagio.toFixed(2)),
+    pedagios: infoPedagio.pedagios,
+    temPedagio: infoPedagio.temPedagio,
+    detalhes: infoPedagio.detalhes
+  };
+
+  // MOSTRAR BREAKDOWN PARA O USUÁRIO
+  mostrarBreakdownPreco(precoBase, infoPedagio);
 
   try {
     if (db) {
@@ -964,22 +993,73 @@ async function verMotoristas() {
       } catch (e) { console.warn('Falha ao reforçar clienteId/nome na entrega:', e?.message||e); }
       currentEntregaId = docRef.id;
 
-    
       console.log("Dados salvos no Firebase:", dadosFormulario);
 
       ouvirPropostas(docRef.id);
       document.getElementById("propostasContainer").style.display = "block";
     } else {
       console.log("Dados que seriam salvos:", dadosFormulario);
-      alert(
-        `Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPREÇO: R$ ${dadosFormulario.precoEstimado.toFixed(
-          2
-        )}\n\nServiço temporariamente indisponível. Tente novamente.`
-      );
+      alert(`Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPEDÁGIO: R$ ${dadosFormulario.pedagio.valor.toFixed(2)}\nPREÇO TOTAL: R$ ${dadosFormulario.precoEstimado.toFixed(2)}\n\nServiço temporariamente indisponível. Tente novamente.`);
     }
   } catch (error) {
     console.error("Erro ao salvar pedido:", error);
     alert("Erro ao criar pedido. Tente novamente.");
+  }
+}
+// SUBSTITUA a função mostrarBreakdownPreco em homeC.js por esta:
+
+function mostrarBreakdownPreco(precoBase, infoPedagio) {
+  // Se não tem pedágio, não mostra o breakdown
+  if (!infoPedagio.temPedagio || !infoPedagio.pedagios || infoPedagio.pedagios.length === 0) {
+    return;
+  }
+
+  const antigoBreakdown = document.getElementById('priceBreakdown');
+  if (antigoBreakdown) antigoBreakdown.remove();
+
+  const breakdown = document.createElement('div');
+  breakdown.id = 'priceBreakdown';
+  breakdown.style.cssText = `
+    background: linear-gradient(135deg, #fff5ef 0%, #ffe8dc 100%);
+    padding: 20px;
+    border-radius: 12px;
+    margin: 15px 0;
+    border-left: 5px solid #ff6b35;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
+    font-size: 14px;
+  `;
+
+  let html = `
+    <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 0; border-left: 3px solid #f5a623;">
+      <strong style="color: #f5a623;">🛣️ Pedágios Detectados:</strong>
+      <ul style="margin: 8px 0 0 20px; padding: 0;">
+  `;
+  
+  infoPedagio.pedagios.forEach(p => {
+    html += `
+      <li style="margin: 4px 0; font-size: 13px;">
+        <strong>${p.nome}</strong> (${p.rodovia})
+        <span style="float: right; color: #f5a623;">R$ ${p.preco.toFixed(2)}</span>
+      </li>
+    `;
+  });
+
+  html += `
+      </ul>
+      <div style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f5a623;">
+        <span><strong>Total de Pedágios:</strong></span>
+        <span style="font-weight: 600; color: #f5a623;">R$ ${infoPedagio.pedagio.toFixed(2)}</span>
+      </div>
+    </div>
+  `;
+
+  breakdown.innerHTML = html;
+  
+  const propostasContainer = document.getElementById('propostasContainer');
+  if (propostasContainer) {
+    propostasContainer.parentNode.insertBefore(breakdown, propostasContainer);
+  } else {
+    document.querySelector('.form-fields').appendChild(breakdown);
   }
 }
 
