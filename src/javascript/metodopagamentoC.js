@@ -10,7 +10,7 @@ const firebaseConfig = {
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
  
-const mp = new MercadoPago('APP_USR-411b4926-6fcf-4838-8db8-4c4ae88da3c4', { locale: 'pt-BR' });
+const mp = new MercadoPago('APP_USR-cac0e3ef-746a-4184-ba39-12c83e1e329f', { locale: 'pt-BR' });
 
   const metodoSelect = document.getElementById('metodo');
   const cartaoFields = document.getElementById('cartao-fields');

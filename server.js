@@ -4,7 +4,7 @@ const path = require('path');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const client = new MercadoPagoConfig({
-  accessToken: 'APP_USR-1427866074323098-091520-1b6505fd270447a2d31bfb4839dacaec-2695373344',
+  accessToken: 'APP_USR-7882839633515337-101914-30042a2edb609bc7ff571c7cfd6b8e06-2932784581',
 });
 const preference = new Preference(client);
 
