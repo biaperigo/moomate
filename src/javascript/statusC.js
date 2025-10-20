@@ -1284,19 +1284,30 @@ async function criarPagamentoMercadoPago(dadosPagamento) {
     }
 
     const data = await resp.json().catch(e => { console.error('[MP] JSON inválido', e); return null; });
-    const init_point = data?.init_point;
-    const preference_id = data?.preference_id;
-    if (!init_point) throw new Error('init_point não retornado');
+    const init_point = data?.init_point || data?.response?.init_point;
+    const preference_id = data?.id || data?.response?.id;
+    
+    if (!init_point) {
+      console.error('[MP] init_point não retornado na resposta:', data);
+      throw new Error('init_point não retornado');
+    }
+    
     try {
       await db.collection(colecaoAtual).doc(corridaId).update({
         pagamento: {
           preferenceId: preference_id || null,
           valor: Number(valor),
           status: 'pendente',
-          criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+          criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+          init_point: init_point
         },
-        status: 'pagamento_pendente'
+        status: 'pagamento_pendente',
+        ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
       });
+      
+      // Redireciona para o link de pagamento do Mercado Pago
+      console.log('[MP] Redirecionando para:', init_point);
+      window.location.href = init_point;
     } catch {}
     try { localStorage.setItem('lastPayment', JSON.stringify({ valor: Number(valor), corridaId })); } catch {}
     console.log('Redirecionando para pagamento:', init_point);
