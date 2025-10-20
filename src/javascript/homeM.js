@@ -575,8 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.delivery-card').forEach(c => c.classList.remove('selected'));
         botaoEnviar.disabled = true;
         
-        // Feedback ao motorista
-        alert(`Proposta enviada com sucesso!\n\nPreço base: R$ ${precoBase.toFixed(2)}\nAjudantes: R$ ${custoAjudantes.toFixed(2)}\nPedágios: R$ ${custoPedagio.toFixed(2)}\n\nValor total ao cliente: R$ ${precoFinalCliente.toFixed(2)}`);
+        
       })
       .catch(err => {
         console.error("Erro ao enviar proposta:", err);
