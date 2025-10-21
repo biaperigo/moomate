@@ -1,7 +1,17 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { MercadoPagoConfig, Preference } = require('mercadopago');
+const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
+const admin = require('firebase-admin');
+
+// Inicializa o Firebase Admin
+const serviceAccount = require('./path-para-seu-arquivo-de-credenciais.json'); // Você precisa baixar este arquivo do Firebase Console
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
 
 const client = new MercadoPagoConfig({
   accessToken: 'APP_USR-7882839633515337-101914-30042a2edb609bc7ff571c7cfd6b8e06-2932784581',
@@ -78,6 +88,55 @@ async function createPreferenceHandler(req, res){
 
 app.post('/create-mercadopago-preference', createPreferenceHandler);
 app.post('/api/create-mercadopago-preference', createPreferenceHandler);
+
+// Rota para receber notificações do Mercado Pago
+app.post('/api/webhook', async (req, res) => {
+  try {
+    const { data, type } = req.body;
+    
+    if (type === 'payment') {
+      const paymentId = data.id;
+      const payment = new Payment(client);
+      
+      // Busca os detalhes do pagamento
+      const paymentInfo = await payment.get({ id: paymentId });
+      
+      // Atualiza o status no banco de dados
+      if (paymentInfo.body && paymentInfo.body.external_reference) {
+        const corridaId = paymentInfo.body.external_reference;
+        const status = paymentInfo.body.status;
+        
+        // Atualiza o status do pagamento no Firestore
+        await db.collection('pagamentos')
+          .where('corridaId', '==', corridaId)
+          .get()
+          .then(querySnapshot => {
+            querySnapshot.forEach(doc => {
+              doc.ref.update({
+                status: status,
+                updatedAt: new Date(),
+                paymentId: paymentId
+              });
+            });
+          });
+          
+        // Se o pagamento foi aprovado, atualiza o status da corrida
+        if (status === 'approved') {
+          await db.collection('corridas').doc(corridaId).update({
+            status: 'pago',
+            pagamentoAprovado: true,
+            atualizadoEm: new Date()
+          });
+        }
+      }
+    }
+    
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Erro no webhook:', error);
+    res.status(500).send('Erro ao processar notificação');
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
