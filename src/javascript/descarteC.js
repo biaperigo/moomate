@@ -1642,20 +1642,6 @@ const exibirProposta = async (proposta, descarteData) => {
             .onSnapshot(doc => {
                 if (doc.exists) {
                     const corridaData = doc.data();
-                    
-                    // Verifica se o status é para aguardar pagamento
-                    if (corridaData.status === 'aguardando_pagamento' || corridaData.clienteDevePagar) {
-                        // Redireciona diretamente para o Mercado Pago
-                        if (corridaData.pagamento?.init_point) {
-                            window.location.href = corridaData.pagamento.init_point;
-                        } else {
-                            console.error('Link de pagamento não encontrado');
-                        }
-                        stopListener();
-                        return;
-                    }
-                    
-                    // Se a corrida já estiver em andamento, redireciona normalmente
                     if (corridaData.status === 'em_andamento') {
                         modal.remove();
                         localStorage.setItem('ultimaCorridaCliente', descarteId);
@@ -1669,19 +1655,6 @@ const exibirProposta = async (proposta, descarteData) => {
             .onSnapshot(doc => {
                 if (doc.exists) {
                     const descarteData = doc.data();
-                    
-                    // Verifica se o status é para aguardar pagamento
-                    if (descarteData.status === 'aguardando_pagamento' || descarteData.pagamentoPendente) {
-                        // Redireciona diretamente para o Mercado Pago
-                        if (descarteData.pagamento?.init_point) {
-                            window.location.href = descarteData.pagamento.init_point;
-                        } else {
-                            console.error('Link de pagamento não encontrado');
-                        }
-                        stopDescarteListener();
-                        return;
-                    }
-                    
                     if (descarteData.status === 'pendente' || descarteData.motoristaRecusou) {
                         modal.remove();
                         alert('O motorista recusou a corrida. Escolha outra proposta.');

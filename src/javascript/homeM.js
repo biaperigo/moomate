@@ -776,7 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const corridaData = {
             entregaId: descarteId,
             tipo: 'descarte',
-            status: 'aguardando_pagamento',
+            status: 'em_andamento',
             iniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
             clienteId: descarteData.clienteId || null,
             clienteNome: nomeCliente || 'Cliente',
@@ -795,21 +795,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const corridaRef = db.collection('corridas').doc(descarteId);
         await corridaRef.set(corridaData, { merge: true });
         await corridaRef.collection('sync').doc('estado').set({ 
-            fase: 'aguardando_pagamento',
+            fase: 'indo_retirar',
             corridaId: descarteId,
             tipo: 'descarte'
         }, { merge: true });
         
         await db.collection('descartes').doc(descarteId).update({
-            status: 'aguardando_pagamento',
-            corridaIniciada: false,
+            status: 'em_corrida',
+            corridaIniciada: true,
             corridaIniciadaEm: firebase.firestore.FieldValue.serverTimestamp(),
             motoristaConfirmou: true,
             distancia: distancia
         });
-        
-        // Envia cliente para pagamento
-        await enviarClienteParaPagamento(descarteId, corridaData);
 
         todasSolicitacoes.delete(descarteId);
         atualizarInterface();
@@ -982,25 +979,14 @@ function mostrarModalPropostaAceita(entregaId, entregaData, collectionName) {
 // NOVA FUNÇÃO: Adicione após a função iniciarCorrida
 async function enviarClienteParaPagamento(corridaId, corridaData) {
     try {
-      // Atualiza a corrida para indicar que o cliente deve pagar
       await db.collection('corridas').doc(corridaId).update({
         clienteDevePagar: true,
-        pagamentoSolicitadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-        status: 'aguardando_pagamento'
+        pagamentoSolicitadoEm: firebase.firestore.FieldValue.serverTimestamp()
       });
-      
-      // Também atualiza o documento de descarte para manter consistência
-      await db.collection('descartes').doc(corridaId).update({
-        status: 'aguardando_pagamento',
-        pagamentoPendente: true,
-        ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      
-      console.log('Cliente notificado para efetuar o pagamento');
     } catch (error) {
-      console.error('Erro ao notificar cliente sobre pagamento:', error);
+      console.error('Erro ao solicitar pagamento:', error);
     }
-  }
+}
 
  async function recusarCorridaAposAceite(entregaId, collectionName) {
   try {
