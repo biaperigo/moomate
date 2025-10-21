@@ -109,15 +109,9 @@ app.post('/api/webhook', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-<<<<<<< HEAD
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
-});
-//
-=======
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
   console.log(`📝 Endpoints disponíveis:`);
   console.log(`   POST http://localhost:${PORT}/create-mercadopago-preference`);
   console.log(`   POST http://localhost:${PORT}/api/create-mercadopago-preference`);
   console.log(`   POST http://localhost:${PORT}/api/webhook`);
 });
->>>>>>> 82b15e17114ce9e77e2aa05ecfa9ed2a464a6232
