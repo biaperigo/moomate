@@ -1,12 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { MercadoPagoConfig, Preference } = require('mercadopago');
+const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 
 const client = new MercadoPagoConfig({
   accessToken: 'APP_USR-7882839633515337-101914-30042a2edb609bc7ff571c7cfd6b8e06-2932784581',
 });
 const preference = new Preference(client);
+const payment = new Payment(client);
 
 const app = express();
 app.use(cors());
@@ -37,7 +38,7 @@ async function createPreferenceHandler(req, res){
     const baseUrl = getBaseUrl(req);
     const defaultBackUrls = {
       success: `${baseUrl}/pagamento-sucesso.html?status=approved${corridaId?`&corrida=${encodeURIComponent(corridaId)}`:''}${Number(valor)>0?`&valor=${encodeURIComponent(String(valor))}`:''}`,
-      failure: `${baseUrl}/pagamento-erro.html` ,
+      failure: `${baseUrl}/pagamento-erro.html`,
       pending: `${baseUrl}/pagamento-erro.html`
     };
 
@@ -53,6 +54,8 @@ async function createPreferenceHandler(req, res){
       expires: true,
       expiration_date_from: new Date().toISOString(),
       expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      statement_descriptor: "MOOMATE",
+      three_d_secure_mode: "optional"
     };
 
     try {
@@ -79,8 +82,42 @@ async function createPreferenceHandler(req, res){
 app.post('/create-mercadopago-preference', createPreferenceHandler);
 app.post('/api/create-mercadopago-preference', createPreferenceHandler);
 
+// Webhook do Mercado Pago (opcional - para notificações em tempo real)
+app.post('/api/webhook', async (req, res) => {
+  try {
+    console.log('[WEBHOOK] Notificação recebida:', req.body);
+    const { data, type } = req.body;
+    
+    if (type === 'payment') {
+      const paymentId = data.id;
+      
+      // Busca os detalhes do pagamento
+      const paymentInfo = await payment.get({ id: paymentId });
+      
+      console.log('[WEBHOOK] Detalhes do pagamento:', paymentInfo.body);
+      
+      // Aqui você pode adicionar lógica para atualizar o Firebase
+      // se quiser usar webhooks ao invés de polling
+    }
+    
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('[WEBHOOK] Erro:', error);
+    res.status(500).send('Erro ao processar notificação');
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
+<<<<<<< HEAD
   console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
 //
+=======
+  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+  console.log(`📝 Endpoints disponíveis:`);
+  console.log(`   POST http://localhost:${PORT}/create-mercadopago-preference`);
+  console.log(`   POST http://localhost:${PORT}/api/create-mercadopago-preference`);
+  console.log(`   POST http://localhost:${PORT}/api/webhook`);
+});
+>>>>>>> 82b15e17114ce9e77e2aa05ecfa9ed2a464a6232
