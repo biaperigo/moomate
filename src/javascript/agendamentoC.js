@@ -448,9 +448,16 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!data){ try{ const s2 = await db.collection('agendamentos').doc(corridaId).get(); data = s2.exists ? (s2.data()||null) : null; }catch{} }
       if (!data) throw new Error('Corrida não encontrada');
       const proposta = data.propostaAceita || {};
-      const precoBase = (typeof proposta.preco === 'number') ? Number(proposta.preco) : Number(data.preco||data.valor||50);
-      let extras = 0; try{ const count = Number(proposta.ajudante||proposta.ajudantes||0); extras = 50*Math.max(0, count); }catch{}
-      const valor = Math.round(((Number(precoBase)+Number(extras)) * 1.0) * 100)/100;
+      const precoFinal = (function(){
+        const candidatos = [proposta.precoFinal, proposta.preco, data.precoFinal, data.preco, data.valor];
+        for (const c of candidatos){
+          if (c === undefined || c === null || c === '') continue;
+          const n = Number(String(c).replace(',', '.'));
+          if (Number.isFinite(n) && n > 0) return n;
+        }
+        return 50; // fallback
+      })();
+      const valor = Math.round(Number(precoFinal) * 100) / 100;
       return {
         corridaId,
         valor: Number.isFinite(valor)&&valor>0 ? valor : 50,
