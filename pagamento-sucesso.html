@@ -65,7 +65,12 @@
             await window.PagamentoSucesso.creditarAgora();
           }
         } catch(e){ console.warn(e); }
-        location.href = 'statusC.html';
+        const qs = new URLSearchParams(location.search);
+        const corrida = qs.get('corrida') || '';
+        const tipo = qs.get('tipo') || '';
+        const destino = (tipo === 'agendamento') ? 'statusA.html' : 'statusC.html';
+        const url = corrida ? `${destino}?corrida=${encodeURIComponent(corrida)}&tipo=cliente` : destino;
+        location.href = url;
       });
     </script>
 </body>

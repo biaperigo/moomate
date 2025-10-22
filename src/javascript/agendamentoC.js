@@ -125,10 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
           await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
           try{ localStorage.setItem('ultimaCorridaCliente', String(v.id)); }catch{}
         }catch(e){ console.warn('[agendamentoC] Falha ao preparar corrida agendada:', e?.message||e); }
-        showStartAgModalC('Seu agendamento começou. Acompanhe o status agora.', ()=>{
-          
-          window.location.href = `statusA.html?corrida=${encodeURIComponent(v.id)}`;
-        });
+        // Não mostrar modal para o cliente; fluxo de pagamento cuidará do redirecionamento
         delete window.__agStartTimersC[v.id];
       };
       if (ms <= 0){ fire(); return; }
@@ -332,6 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try{ attachCardStatusListener(v.id, card); }catch{}
 
         try{ scheduleStartReminderCliente(v); }catch{}
+        try{ attachPagamentoListenerAg(v.id); }catch{}
       });
       cardsContainer.appendChild(list);
       agendadosContainer.appendChild(cardsContainer);
@@ -418,6 +416,78 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return card;
   }
+
+  // ======== PAGAMENTO (AGENDAMENTO) ========
+  function attachPagamentoListenerAg(agendamentoId){
+    try{
+      const { firebase } = window; if (!firebase?.apps?.length) return;
+      const db = firebase.firestore();
+      if (!window.__agPayUnsubs) window.__agPayUnsubs = {};
+      if (window.__agPayUnsubs[agendamentoId]) return;
+      const unsub = db.collection('corridas').doc(String(agendamentoId))
+        .onSnapshot(async (doc)=>{
+          if (!doc.exists) return;
+          const d = doc.data()||{};
+          const st = String(d.status||'').toLowerCase();
+          if (d.clienteDevePagar === true && st === 'aguardando_pagamento'){
+            try{
+              const dados = await buscarDadosPagamentoAg(agendamentoId);
+              await criarPagamentoMercadoPagoAg(dados);
+            }catch(e){ console.error('[AG-PAGAMENTO] Erro ao processar pagamento:', e); alert('Erro ao iniciar pagamento. Tente novamente.'); }
+            try{ unsub(); delete window.__agPayUnsubs[agendamentoId]; }catch{}
+          }
+        });
+      window.__agPayUnsubs[agendamentoId] = unsub;
+    }catch(e){ console.warn('[AG-PAGAMENTO] Falha ao anexar listener:', e?.message||e); }
+  }
+
+  async function buscarDadosPagamentoAg(corridaId){
+    const { firebase } = window; const db = firebase.firestore();
+    try{
+      let data = null;
+      try{ const s1 = await db.collection('corridas').doc(corridaId).get(); data = s1.exists ? (s1.data()||null) : null; }catch{}
+      if (!data){ try{ const s2 = await db.collection('agendamentos').doc(corridaId).get(); data = s2.exists ? (s2.data()||null) : null; }catch{} }
+      if (!data) throw new Error('Corrida não encontrada');
+      const proposta = data.propostaAceita || {};
+      const precoBase = (typeof proposta.preco === 'number') ? Number(proposta.preco) : Number(data.preco||data.valor||50);
+      let extras = 0; try{ const count = Number(proposta.ajudante||proposta.ajudantes||0); extras = 50*Math.max(0, count); }catch{}
+      const valor = Math.round(((Number(precoBase)+Number(extras)) * 1.0) * 100)/100;
+      return {
+        corridaId,
+        valor: Number.isFinite(valor)&&valor>0 ? valor : 50,
+        clienteId: data.clienteId || null,
+        motoristaId: data.motoristaId || data.propostaAceita?.motoristaUid || null,
+        tipo: 'agendamento',
+        descricao: `Agendamento - ${String(corridaId).substring(0,8)}`
+      };
+    }catch(e){ console.error('[AG-PAGAMENTO] buscarDados', e); throw e; }
+  }
+
+  async function criarPagamentoMercadoPagoAg(dados){
+    const { corridaId, valor, clienteId, descricao } = dados;
+    const isVercel = /vercel\.app$/i.test(window.location.hostname);
+    const apiBase = isVercel ? `${window.location.origin}/api` : 'http://localhost:3000';
+    const items = [{ title: descricao, quantity: 1, unit_price: Number(valor), currency_id: 'BRL' }];
+    const pagesBase = isVercel ? window.location.origin : 'http://localhost:3000';
+    const back_urls = {
+      success: `${pagesBase}/pagamento-sucesso.html?corrida=${encodeURIComponent(corridaId)}&status=approved&valor=${valor}&tipo=agendamento`,
+      failure: `${pagesBase}/pagamento-erro.html?corrida=${encodeURIComponent(corridaId)}&tipo=agendamento`,
+      pending: `${pagesBase}/pagamento-erro.html?corrida=${encodeURIComponent(corridaId)}&tipo=agendamento`
+    };
+    const payer = { email: (firebase.auth?.currentUser?.email) || `${(clienteId||'cliente')}@moomate.app`, name: 'Cliente Moomate' };
+    const createUrl = isVercel ? `${apiBase}/create_preference` : `${apiBase}/create-mercadopago-preference`;
+    let resp = await fetch(createUrl, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ items, payer, payment_methods:{}, back_urls, external_reference: corridaId, auto_return:'approved' }) });
+    if (!resp.ok){
+      resp = await fetch('https://moomate-omrw.vercel.app/api/create_preference', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ corridaId, valor:Number(valor), clienteId, items, payer, back_urls, auto_return:'approved' }) });
+      if (!resp.ok){ const txt = await resp.text(); throw new Error(`HTTP ${resp.status}: ${txt||'sem mensagem'}`); }
+    }
+    const data = await resp.json();
+    const prefUrl = data.init_point || data.sandbox_init_point || data.url || null;
+    if (!prefUrl) throw new Error('Preferência sem URL');
+    try{ localStorage.setItem('lastPayment', JSON.stringify({ corridaId, valor })); }catch{}
+    window.location.href = prefUrl;
+  }
+  // ======== FIM PAGAMENTO ========
 
   window.iniciarAgendamentoAgora = async function(agendamentoId){
     try{

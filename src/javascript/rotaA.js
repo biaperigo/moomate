@@ -1,4 +1,4 @@
-﻿﻿﻿(() => {
+﻿(() => {
   const pick = (...ids) => ids.map((id) => document.getElementById(id)).find((el) => !!el) || null
 
 
@@ -44,6 +44,26 @@
   let dadosCorrida = null
   let corridaRef = null
   let syncRef = null
+  let __unsubCorridasPagamento = null
+
+  function ensurePagamentoModal(){
+    let modal = document.getElementById('mm-aguardando-pagamento');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'mm-aguardando-pagamento';
+    modal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:100000;';
+    modal.innerHTML = (
+      '<div style="background:#fff;border-radius:12px;padding:20px 18px;min-width:280px;max-width:92vw;box-shadow:0 16px 40px rgba(0,0,0,.35);text-align:center">'
+      + '<div style="font-size:28px;color:#ff6b35;margin-bottom:8px">⏳</div>'
+      + '<h3 style="margin:0 0 6px 0;color:#333">Aguardando pagamento</h3>'
+      + '<p style="margin:4px 0 0 0;color:#555">O cliente está realizando o pagamento. Assim que aprovado, a corrida iniciará.</p>'
+      + '</div>'
+    );
+    document.body.appendChild(modal);
+    return modal;
+  }
+  function showPagamentoModal(){ const m = ensurePagamentoModal(); m.style.display = 'flex'; }
+  function hidePagamentoModal(){ const m = document.getElementById('mm-aguardando-pagamento'); if (m) m.style.display = 'none'; }
 
 
   async function resolverNomeCliente({ docData, corridaId }) {
@@ -844,6 +864,23 @@
 
     corridaRef = db.collection('agendamentos').doc(corridaId)
     syncRef = corridaRef.collection("sync").doc("estado")
+
+    // Listener em corridas/{id} para aguardar pagamento do cliente
+    try { if (__unsubCorridasPagamento) { __unsubCorridasPagamento(); __unsubCorridasPagamento = null; } } catch {}
+    try {
+      __unsubCorridasPagamento = db.collection('corridas').doc(corridaId)
+        .onSnapshot((doc)=>{
+          if (!doc.exists) return;
+          const d = doc.data() || {};
+          const st = String(d.status||'').toLowerCase();
+          const deve = d.clienteDevePagar === true;
+          if (deve && st === 'aguardando_pagamento') {
+            showPagamentoModal();
+          } else if (st === 'em_andamento') {
+            hidePagamentoModal();
+          }
+        });
+    } catch (e) { console.warn('Falha ao observar corridas para pagamento:', e?.message||e); }
 
 
     if (syncRef) {

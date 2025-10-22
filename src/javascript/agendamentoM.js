@@ -138,7 +138,29 @@
           await corridaRef.set(base, { merge: true });
           await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
         }catch(e){ console.warn('[agendamentoM] Falha ao preparar corridaagendamento:', e?.message||e); }
-        showStartAgModalM('Seu agendamento começou. Inicie a corrida.', ()=>{
+        showStartAgModalM('Seu agendamento começou. Inicie a corrida.', async ()=>{
+          try {
+            // Cria/atualiza doc em corridas/{id} para disparar pagamento do cliente
+            const corridaDocRef = db.collection('corridas').doc(String(v.id));
+            const agSnap2 = await db.collection('agendamentos').doc(String(v.id)).get();
+            const ag2 = agSnap2.exists ? (agSnap2.data()||{}) : {};
+            const motoristaId = ag2.motoristaId || ag2.propostaAceita?.motoristaUid || (window.firebase?.auth()?.currentUser?.uid||null);
+            const clienteId = ag2.clienteId || ag2.clienteUid || null;
+            const origem = ag2.origem || (ag2.localRetirada ? { endereco: ag2.localRetirada } : null);
+            const destino = ag2.destino || (ag2.localEntrega ? { endereco: ag2.localEntrega } : null);
+            await corridaDocRef.set({
+              agendamento: true,
+              clienteId: clienteId || null,
+              motoristaId: motoristaId || null,
+              propostaAceita: ag2.propostaAceita || null,
+              tipo: 'mudanca',
+              origem: origem || null,
+              destino: destino || null,
+              status: 'aguardando_pagamento',
+              clienteDevePagar: true,
+              criadoEm: window.firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          } catch(e){ console.warn('[agendamentoM] Falha ao preparar corridas para pagamento:', e?.message||e); }
           window.location.href = `rotaA.html?agendamento=${encodeURIComponent(v.id)}`;
         });
         delete window.__agStartTimersM[v.id];
