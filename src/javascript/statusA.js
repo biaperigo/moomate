@@ -765,19 +765,12 @@ let __ratingOpenedOnceAg = false;
             currentUser?.uid
           );
           
-          console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!");
+          console.log("[AVALIAÇÃO] ✓ Avaliação salva com sucesso!")
           modal.style.display="none";
           
-          setTimeout(async () => {
-            try {
-              const dadosPagamento = await buscarDadosPagamento(corridaId);
-              await criarPagamentoMercadoPago(dadosPagamento);
-            } catch (error) {
-              console.error("Erro ao processar pagamento:", error);
-              alert("Erro ao processar pagamento. Redirecionando...");
-              window.location.href = `pagamentoC.html?corrida=${encodeURIComponent(corridaId)}`;
-            }
-          }, 500);
+          setTimeout(() => {
+            window.location.href = "homeC.html";
+          }, 400);
           
         } catch (error) {
           console.error("[AVALIAÇÃO] Erro ao enviar:", error);
