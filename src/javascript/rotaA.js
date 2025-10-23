@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const pick = (...ids) => ids.map((id) => document.getElementById(id)).find((el) => !!el) || null
 
 
@@ -45,6 +45,7 @@
   let corridaRef = null
   let syncRef = null
   let __unsubCorridasPagamento = null
+  let __aguardandoPagamento = false
 
   function ensurePagamentoModal(){
     let modal = document.getElementById('mm-aguardando-pagamento');
@@ -64,6 +65,13 @@
   }
   function showPagamentoModal(){ const m = ensurePagamentoModal(); m.style.display = 'flex'; }
   function hidePagamentoModal(){ const m = document.getElementById('mm-aguardando-pagamento'); if (m) m.style.display = 'none'; }
+
+  function setButtonsDisabled(dis){
+    try{
+      if (btnTudoPronto){ btnTudoPronto.disabled = !!dis; btnTudoPronto.style.opacity = dis?'.6':'1'; btnTudoPronto.style.pointerEvents = dis?'none':'auto'; }
+      if (btnFinalizar){ btnFinalizar.disabled = !!dis; btnFinalizar.style.opacity = dis?'.6':'1'; btnFinalizar.style.pointerEvents = dis?'none':'auto'; }
+    }catch{}
+  }
 
 
   async function resolverNomeCliente({ docData, corridaId }) {
@@ -875,9 +883,13 @@
           const st = String(d.status||'').toLowerCase();
           const deve = d.clienteDevePagar === true;
           if (deve && st === 'aguardando_pagamento') {
+            __aguardandoPagamento = true;
             showPagamentoModal();
+            setButtonsDisabled(true);
           } else if (st === 'em_andamento') {
+            __aguardandoPagamento = false;
             hidePagamentoModal();
+            setButtonsDisabled(false);
           }
         });
     } catch (e) { console.warn('Falha ao observar corridas para pagamento:', e?.message||e); }

@@ -120,7 +120,9 @@ document.addEventListener('DOMContentLoaded', function() {
           await corridaAgRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
           
           const corridaRef = db.collection('corridas').doc(String(v.id));
-          await corridaRef.set(base, { merge: true });
+          const baseSemStatus = { ...base };
+          try{ delete baseSemStatus.status; }catch{}
+          await corridaRef.set(baseSemStatus, { merge: true });
           await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
           try{ localStorage.setItem('ultimaCorridaCliente', String(v.id)); }catch{}
         }catch(e){ console.warn('[agendamentoC] Falha ao preparar corrida agendada:', e?.message||e); }
@@ -527,7 +529,9 @@ document.addEventListener('DOMContentLoaded', function() {
       await corridaAgRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
 
       const corridaRef = db.collection('corridas').doc(String(agendamentoId));
-      await corridaRef.set(base, { merge: true });
+      const baseSemStatus = { ...base };
+      try{ delete baseSemStatus.status; }catch{}
+      await corridaRef.set(baseSemStatus, { merge: true });
       await corridaRef.collection('sync').doc('estado').set({ fase: 'indo_retirar' }, { merge: true });
 
       try{ localStorage.setItem('ultimaCorridaCliente', String(agendamentoId)); }catch{}
