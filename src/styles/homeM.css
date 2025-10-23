@@ -1,11 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
 
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: 'Quicksand', sans-serif;
 }
+
 
 body {
   background-color: #f2eae5;
@@ -14,6 +16,7 @@ body {
   display: flex;
   flex-direction: column;
 }
+
 
 .top-bar {
   display: flex;
@@ -33,19 +36,23 @@ body {
   transition: opacity 0.3s, transform 0.3s;
 }
 
+
 .modal-content {
   transform: scale(0.9);
   transition: transform 0.3s;
 }
 
+
 .logo-area img {
   height: 45px;
 }
 
+
 .nav-links {
   display: flex;
-  gap: 2rem; 
+  gap: 2rem;
 }
+
 
 .nav-links a {
   text-decoration: none;
@@ -55,6 +62,7 @@ body {
   position: relative;
   transition: color 0.3s ease;
 }
+
 
 .nav-links a::after {
   content: '';
@@ -67,13 +75,16 @@ body {
   transition: width 0.3s ease-in-out;
 }
 
+
 .nav-links a:hover {
   color: #ff6c0c;
 }
 
+
 .nav-links a:hover::after {
   width: 100%;
 }
+
 
 .header-icons {
   display: flex;
@@ -82,15 +93,18 @@ body {
   margin-left: 2rem;
 }
 
+
 .header-icons a {
   color: #333;
   font-size: 1.45rem;
   transition: color 0.3s ease;
 }
 
+
 .header-icons a:hover {
   color: #ff6c0c;
 }
+
 
 .menu-toggle {
   display: none;
@@ -102,6 +116,7 @@ body {
   margin-left: auto;
 }
 
+
 .banner {
   position: relative;
   width: 100%;
@@ -109,12 +124,14 @@ body {
   overflow: hidden;
 }
 
+
 .banner img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center top;
 }
+
 
 .banner-text {
   position: absolute;
@@ -125,6 +142,7 @@ body {
   font-weight: 700;
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
 }
+
 
 .form-section {
   background-color: #ffffff;
@@ -138,6 +156,7 @@ body {
   gap: 1.5rem;
 }
 
+
 .input-box label,
 .dropdown-box label {
   font-size: 0.95rem;
@@ -148,6 +167,7 @@ body {
   align-items: center;
   gap: 0.5rem;
 }
+
 
 .input-box input,
 .dropdown-box select {
@@ -161,11 +181,13 @@ body {
   color: #333;
 }
 
+
 .input-box input:focus,
 .dropdown-box select:focus {
   border: 1.5px solid #ff6c0c;
   outline: none;
 }
+
 
 .btn-cta,
 .full-width {
@@ -183,10 +205,12 @@ body {
   margin-top: 1rem;
 }
 
+
 .btn-cta:hover,
 .full-width:hover {
   background-color: #d65300;
 }
+
 
 .btn-cta:disabled {
   background-color: #ccc;
@@ -194,8 +218,9 @@ body {
   cursor: not-allowed;
   box-shadow: none;
   opacity: 0.7;
-  
+ 
 }
+
 
 .delivery-section {
   background-color: #fff;
@@ -206,6 +231,7 @@ body {
   margin-bottom: 120px;
 }
 
+
 .delivery-section h3,
 .section-title {
   font-size: 1.1rem;
@@ -215,12 +241,14 @@ body {
   text-align: center;
 }
 
+
 .price-summary {
   font-size: 0.9rem;
   color: #666;
   margin: 1rem 0;
   text-align: center;
 }
+
 
 .ajudantes-container {
   margin: 15px auto;
@@ -234,12 +262,14 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+
 .no-helpers {
   text-align: center;
   color: #666;
   padding: 15px;
   font-size: 0.95rem;
 }
+
 
 .ajudante-item {
   margin-bottom: 12px;
@@ -250,14 +280,17 @@ body {
   overflow: hidden;
 }
 
+
 .ajudante-item:last-child {
   margin-bottom: 0;
 }
+
 
 .ajudante-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
 
 .ajudante-content {
   display: flex;
@@ -265,6 +298,7 @@ body {
   padding: 12px 15px;
   position: relative;
 }
+
 
 .ajudante-foto {
   width: 50px;
@@ -276,11 +310,13 @@ body {
   flex-shrink: 0;
 }
 
+
 .ajudante-info {
   flex: 1;
   text-align: left;
   padding-right: 15px;
 }
+
 
 .ajudante-nome {
   font-weight: 600;
@@ -292,12 +328,14 @@ body {
   text-overflow: ellipsis;
 }
 
+
 .ajudante-checkbox {
   width: 20px;
   height: 20px;
   cursor: pointer;
   accent-color: #ff6c0c;
 }
+
 
 /* Custom checkbox styling */
 .ajudante-checkbox {
@@ -314,10 +352,12 @@ body {
   transition: all 0.2s ease;
 }
 
+
 .ajudante-checkbox:checked {
   background-color: #ff6c0c;
   border-color: #ff6c0c;
 }
+
 
 .ajudante-checkbox:checked::after {
   content: '✓';
@@ -330,16 +370,19 @@ body {
   font-weight: bold;
 }
 
+
 .ajudante-selecionado {
   background-color: #fff8f0;
   border-left: 3px solid #ff6c0c;
 }
+
 
 #custo-ajudantes {
   margin-top: 5px;
   font-weight: 600;
   color: #ff6c0c;
 }
+
 
 .delivery-card {
   background-color: #fff;
@@ -353,16 +396,19 @@ body {
   transition: all 0.3s ease;
 }
 
+
 .delivery-card:hover {
   background-color: #fff9f4;
   box-shadow: 0 0 0 2px #ff6c0c44;
 }
+
 
 .delivery-card.selected {
   border-color: #ff6c0c;
   background-color: #fff3e5;
   box-shadow: 0 0 0 3px #ff6c0c66;
 }
+
 
 .alert-icon {
   position: absolute;
@@ -372,11 +418,13 @@ body {
   font-size: 1rem;
 }
 
+
 .card-info {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
 }
+
 
 .card-header {
   display: flex;
@@ -386,6 +434,7 @@ body {
   font-weight: 600;
   color: #1c1c1c;
 }
+
 
 .tempo {
   font-size: 0.8rem;
@@ -398,17 +447,19 @@ body {
   margin-top: 0.3rem;
 }
 
-.modal-aguardando, 
-#modalAguardando, 
+
+.modal-aguardando,
+#modalAguardando,
 #modalAguardandoMotorista {
   position: fixed;
   inset: 0;
-  display: none; 
+  display: none;
   align-items: center;
   justify-content: center;
   background: rgba(0,0,0,.45);
   z-index: 2000;
 }
+
 
 .modal-aguardando .modal-content,
 #modalAguardando .modal-content,
@@ -421,6 +472,7 @@ body {
   padding:0;
   overflow:hidden;
 }
+
 
 .modal-aguardando .modal-header,
 #modalAguardando .modal-header,
@@ -435,12 +487,14 @@ body {
   font-size:1.15rem;
 }
 
+
 .modal-aguardando .modal-body,
 #modalAguardando .modal-body,
 #modalAguardandoMotorista .modal-body{
   padding:20px 22px 18px;
   color:#333;
 }
+
 
 .modal-aguardando .ok-line{
   display:flex;
@@ -450,7 +504,9 @@ body {
   margin-bottom:10px;
 }
 
+
 .modal-aguardando .desc-line{ color:#555 }
+
 
 .entrega-agora {
   font-size: 0.8rem;
@@ -458,16 +514,19 @@ body {
   font-weight: 500;
 }
 
+
 .card-info p {
   font-size: 0.85rem;
   color: #444;
   line-height: 1.3;
 }
 
+
 .card-info p i {
   margin-right: 5px;
   color: #ff6c0c;
 }
+
 
 .agora {
   font-size: 0.7rem;
@@ -476,12 +535,14 @@ body {
   margin-top: 0.4rem;
 }
 
+
 footer {
   width: 100%;
   background-color: #1e1e1e;
   color: #fff;
   margin-top: auto;
 }
+
 
 #footer_content {
   display: flex;
@@ -494,6 +555,7 @@ footer {
   position: relative;
 }
 
+
 .footer-left {
   flex: 1 1 200px;
   display: flex;
@@ -501,11 +563,13 @@ footer {
   align-items: center;
 }
 
+
 #moomate_logo {
   height: 70px;
   width: auto;
   object-fit: contain;
 }
+
 
 .footer-social {
   display: flex;
@@ -515,16 +579,19 @@ footer {
   gap: 0.5rem;
 }
 
+
 .social-text {
   font-size: 1rem;
   font-weight: 600;
   color: #1e1e1e;
 }
 
+
 .social-icons {
   display: flex;
   gap: 0.6rem;
 }
+
 
 .social-icon {
   color: white;
@@ -538,9 +605,11 @@ footer {
   transition: transform 0.3s;
 }
 
+
 .social-icon:hover {
   transform: scale(1.1);
 }
+
 
 #footer_items {
   background-color: #141414;
@@ -549,6 +618,7 @@ footer {
   font-size: 0.85rem;
   opacity: 0.8;
 }
+
 
 @media screen and (max-width: 768px) {
   .nav-links {
@@ -564,13 +634,16 @@ footer {
     z-index: 200;
   }
 
+
   .nav-links.show {
     display: flex;
   }
 
+
   .menu-toggle {
     display: block;
   }
+
 
   .banner-text {
     font-size: 1.3rem;
@@ -578,10 +651,12 @@ footer {
     bottom: 20px;
   }
 
+
   .form-section {
     margin: 2rem 1rem;
     padding: 1.5rem;
   }
+
 
   #footer_content {
     flex-direction: column;
@@ -589,9 +664,11 @@ footer {
     text-align: center;
   }
 
+
   .footer-left {
     justify-content: center;
   }
+
 
   .footer-social {
     align-items: center;
@@ -600,10 +677,12 @@ footer {
     gap: 1rem;
   }
 
+
   .social-text {
     display: none;
   }
 }
+
 
 @media screen and (max-width: 500px) {
   .card-header {
@@ -612,22 +691,27 @@ footer {
     gap: 3px;
   }
 
+
   .delivery-card {
     padding-left: 2rem;
   }
+
 
   .section-title {
     font-size: 1rem;
   }
 
+
   .card-info p {
     font-size: 0.8rem;
   }
+
 
   .tempo {
     font-size: 0.75rem;
   }
 }
+
 
 .modal-overlay {
   position: fixed;
@@ -644,6 +728,7 @@ footer {
   transition: opacity 0.3s ease;
 }
 
+
 .modal-content {
   background: #eeeeee;
   padding: 30px;
@@ -657,6 +742,7 @@ footer {
   border: 3px solid #ff6b35;
 }
 
+
 #propostaAceitaModal .modal-content{
   background:#eeeeee !important;
   border:3px solid #ff6b35 !important;
@@ -665,12 +751,14 @@ footer {
   max-width:520px !important;
 }
 
+
 #propostaAceitaModal h2{
   text-align:center;
   font-size:1.6rem;
   color:#1e1e1e;
   font-weight:700;
 }
+
 
 #propostaAceitaModal .proposta-aceita-info strong{ color:#ff6b35 }
 #propostaAceitaModal .modal-buttons{ justify-content:flex-end }
@@ -695,6 +783,7 @@ footer {
   font-weight:700 !important;
 }
 
+
 .modal-close {
   position: absolute;
   top: 10px;
@@ -705,9 +794,11 @@ footer {
   cursor: pointer;
 }
 
+
 .modal-close:hover {
   color: #333;
 }
+
 
 .modal-content h2 {
   margin-top: 0;
@@ -715,14 +806,17 @@ footer {
   color: #333;
 }
 
+
 .modal-content p {
   margin-bottom: 25px;
   color: #666;
 }
 
+
 .modal-input-group {
   margin-bottom: 20px;
 }
+
 
 .modal-input-group label {
   display: block;
@@ -730,6 +824,7 @@ footer {
   font-weight: bold;
   color: #555;
 }
+
 
 .modal-input-group input {
   width: 100%;
@@ -739,10 +834,12 @@ footer {
   font-size: 16px;
 }
 
+
 .modal-input-group input:focus {
   outline: none;
   border-color: #ff6b35;
 }
+
 
 .modal-input-group small {
   display: block;
@@ -750,6 +847,8 @@ footer {
   color: #888;
   font-size: 12px;
 }
+
+
 
 
 .delivery-card .card-details {
@@ -760,9 +859,11 @@ footer {
   color: #555;
 }
 
+
 .delivery-card .card-details p {
   margin: 5px 0;
 }
+
 
 #loading-message {
   text-align: center;
@@ -770,6 +871,7 @@ footer {
   padding: 40px;
   font-style: italic;
 }
+
 
 .modal-input-group select {
   width: 100%;
@@ -787,6 +889,7 @@ footer {
   background-size: 10px auto;
 }
 
+
 .price-summary {
   display: block;
   text-align: center;
@@ -797,15 +900,19 @@ footer {
   font-style: italic;
 }
 
+
 .info-container{
   display:grid;
   grid-template-columns:1fr 1fr auto;
   gap:.4rem 1rem;
   align-items:start;
-  position:relative;     
+  position:relative;    
 }
 
+
 .info-esquerda p,.info-meio p{margin:.1rem 0}
+
+
 
 
 .info-container .info-meio:last-child{
@@ -813,6 +920,7 @@ footer {
   right:12px;
   bottom:12px;
 }
+
 
 .icon-area{
   display:inline-flex;
@@ -829,12 +937,14 @@ footer {
   color:#ff6c0c
 }
 
+
 .icon-area.box{
   border-color:#ff6c0c
 }
 .icon-area.box i{
   color:#ff6c0c
 }
+
 
 .icon-area.recycle{
   border-color:#1d5719
@@ -843,13 +953,14 @@ footer {
   color:#21631c
 }
 
+
 @media(max-width:640px){
   .info-container{ grid-template-columns:1fr }
   .info-container .info-meio:last-child{ right:10px; bottom:10px }
   .icon-area{ width:48px; height:48px }
   .icon-area i{ font-size:1.2rem }
 }
-.mm-modal{ 
+.mm-modal{
   position:fixed;
   inset:0;
   background:rgba(0,0,0,.45);
@@ -873,13 +984,14 @@ footer {
 .primario{ padding:10px 14px; background:#3DBE34; border:0; color:#fff; border-radius:8px; cursor:pointer }
 .secundario{ padding:10px 14px; background:#e7e7e7; border:0; color:#111; border-radius:8px; cursor:pointer }
 
+
 .btn-cta.full-width {
   position: fixed;
-  bottom: 20px;                 
+  bottom: 20px;                
   left: 50%;                    
   transform: translateX(-50%);  
   width: 90%;                  
-  max-width: 600px;             
+  max-width: 600px;            
   background-color: #ff6c0c;
   color: white;
   padding: 0.9rem 1rem;
@@ -893,6 +1005,7 @@ footer {
   z-index: 1500;              
 }
 
+
 .btn-cta.full-width.hidden-by-modal {
   opacity: 0;
   visibility: hidden;
@@ -900,9 +1013,12 @@ footer {
 }
 
 
+
+
 .btn-cta.full-width:hover {
   background-color: #d65300;
 }
+
 
 .btn-cta.full-width:disabled {
   background-color: #ccc;
@@ -912,6 +1028,7 @@ footer {
   opacity: 0.7;
 }
 
+
 @media screen and (max-width: 500px) {
   .btn-cta.full-width {
     width: 94%;
@@ -919,3 +1036,73 @@ footer {
     font-size: 0.95rem;
   }
 }
+/* ===== AJUSTE DE TAMANHO E ROLAGEM ===== */
+#proposalModal.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 20px;
+  overflow-y: auto; /* <-- ESSENCIAL */
+}
+
+
+/* O conteúdo do modal se adapta à tela */
+#proposalModal .modal-content {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 18px;
+  border: 3px solid #ff6c0c;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+  padding: 24px 22px 28px;
+  position: relative;
+  animation: zoomIn 0.3s ease;
+  max-height: 90vh; /* <-- Impede de ultrapassar a tela */
+  overflow-y: auto; /* <-- Permite rolagem interna */
+  scrollbar-width: thin;
+  scrollbar-color: #ff6c0c #f2f2f2;
+}
+
+
+/* Scroll mais bonito no Chrome */
+#proposalModal .modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+#proposalModal .modal-content::-webkit-scrollbar-thumb {
+  background-color: #ff6c0c;
+  border-radius: 10px;
+}
+
+
+/* Animação suave de entrada */
+@keyframes zoomIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 600px) {
+  #proposalModal.modal-overlay {
+    padding: 10px;
+    align-items: flex-start; /* Deixa o modal começar de cima em telas pequenas */
+  }
+
+
+  #proposalModal .modal-content {
+    margin-top: 2rem;
+    max-height: 88vh;
+  }
+}
+
+

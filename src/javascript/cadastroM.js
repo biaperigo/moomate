@@ -532,9 +532,9 @@ function validarFormulario() {
   if (tipoSelect) {
     const anterior = tipoSelect.value; 
     const opts = [
-      { value: "pequeno", label: "Caminhão 3/4 (pequeno)" },
-      { value: "medio",   label: "Caminhão toco (médio)" },
-      { value: "grande",  label: "Caminhão truck (grande)" }
+      { value: "pequeno", label: "Picape (pequeno)" },
+      { value: "medio",   label: "Caminhão baú (médio)" },
+      { value: "grande",  label: "Caminhão toco (grande)" }
     ];
     tipoSelect.innerHTML = "";
     opts.forEach(o => {

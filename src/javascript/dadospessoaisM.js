@@ -215,9 +215,9 @@ function formatarData(dataString) {
 
 function formatarTipoVeiculo(tipo) {
   const tipos = {
-    'pequeno': 'Caminhão 3/4 (pequeno)',
-    'medio': 'Caminhão toco (médio)',
-    'grande': 'Caminhão truck (grande)'
+    'pequeno': 'Picape (pequeno)',
+    'medio': 'Caminhão baú (médio)',
+    'grande': 'Caminhão toco (grande)'
   };
   return tipos[tipo] || tipo;
 }

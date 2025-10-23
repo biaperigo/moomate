@@ -772,27 +772,254 @@ footer {
   border-radius: 8px;
   border: 2px solid #e0e0e0;
 }
-
-.rating-stars {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+/* Modal de Avaliação do Usuário - Design Moderno */
+#user-rating-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(3px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
 }
 
-.rating-stars .star {
-  font-size: 2.5rem;
-  color: #ccc; 
-  cursor: pointer;
-  transition: color 0.2s, transform 0.2s;
+#user-rating-modal.open {
+    display: flex;
 }
 
-.rating-stars .star.active {
-  color: #FFB800;
+/* Conteúdo do Modal */
+#user-rating-modal .modal-content {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    max-width: 460px;
+    width: 90%;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
 }
 
-.rating-stars .star:hover {
-  transform: scale(1.2);
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
+/* Cabeçalho Laranja */
+#user-rating-modal .modal-header {
+    background: linear-gradient(135deg, #ff7a1a 0%, #ff6c0c 100%);
+    padding: 1.2rem 1.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#user-rating-modal .modal-header h3 {
+    color: #ffffff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Botão Fechar */
+#user-rating-modal .modal-close {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.3s ease;
+    padding: 0;
+}
+
+#user-rating-modal .modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Corpo do Modal */
+#user-rating-modal .modal-body {
+    padding: 1.8rem 2rem 1.2rem;
+    background: #ffffff;
+}
+
+/* Informações do Usuário */
+#user-rating-modal .user-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    padding: 0;
+    background-color: transparent;
+    border-radius: 0;
+}
+
+#user-rating-modal .user-avatar i {
+    display: none;
+}
+
+#user-rating-modal .user-details {
+    flex: 1;
+}
+
+#user-rating-modal .user-details p {
+    margin: 0.2rem 0;
+    font-size: 0.95rem;
+    color: #495057;
+    line-height: 1.5;
+}
+
+#user-rating-modal .user-details strong {
+    color: #212529;
+    font-weight: 600;
+}
+
+/* Seção de Avaliação */
+#user-rating-modal .rating-section {
+    text-align: center;
+    margin-bottom: 1.2rem;
+}
+
+#user-rating-modal .rating-label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #212529;
+    margin-bottom: 0.8rem;
+    display: block;
+}
+
+/* Estrelas - Cinzas por padrão */
+#user-rating-modal .rating-stars {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin: 1rem 0 1.5rem;
+}
+
+#user-rating-modal .star {
+    font-size: 2.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    filter: grayscale(100%) brightness(0.8);
+    opacity: 0.35;
+}
+
+#user-rating-modal .star:hover {
+    transform: scale(1.15);
+    opacity: 0.6;
+}
+
+#user-rating-modal .star.active {
+    filter: grayscale(0%) brightness(1);
+    opacity: 1;
+}
+
+/* Seção de Comentário */
+#user-rating-modal .comment-section {
+    margin-bottom: 0;
+}
+
+#user-rating-modal .comment-section label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+#user-rating-modal textarea#user-rating-comment {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-family: 'Quicksand', sans-serif;
+    font-size: 0.9rem;
+    resize: vertical;
+    min-height: 80px;
+    transition: all 0.3s ease;
+    color: #495057;
+}
+
+#user-rating-modal textarea#user-rating-comment:focus {
+    outline: none;
+    border-color: #ff6c0c;
+    box-shadow: 0 0 0 3px rgba(255, 108, 12, 0.1);
+}
+
+#user-rating-modal textarea#user-rating-comment::placeholder {
+    color: #adb5bd;
+}
+
+/* Rodapé do Modal */
+#user-rating-modal .modal-footer {
+    padding: 1.2rem 2rem 1.8rem;
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+}
+
+/* Botão de Enviar */
+#user-rating-modal .btn-primary {
+    background: linear-gradient(135deg, #ff6c0c 0%, #ff7a1a 100%);
+    color: #ffffff;
+    border: none;
+    padding: 0.8rem 2.2rem;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 3px 10px rgba(255, 108, 12, 0.25);
+}
+
+#user-rating-modal .btn-primary:hover {
+    background: linear-gradient(135deg, #e55a00 0%, #ff6c0c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 108, 12, 0.35);
+}
+
+#user-rating-modal .btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #user-rating-modal .modal-content {
+        width: 95%;
+        margin: 1rem;
+    }
+    
+    #user-rating-modal .modal-body {
+        padding: 1.5rem;
+    }
+    
+    #user-rating-modal .modal-footer {
+        padding: 1rem 1.5rem 1.5rem;
+    }
+    
+    #user-rating-modal .star {
+        font-size: 2rem;
+    }
+}
 

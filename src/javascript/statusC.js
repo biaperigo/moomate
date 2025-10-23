@@ -1035,7 +1035,7 @@ async function pickCorridaId(uid){
       
           // MUDANÇA AQUI: Redireciona para homeC ao invés de pagamento
           setTimeout(() => {
-            alert("Avaliação enviada com sucesso! Obrigado por usar o Moomate.");
+            alert("Obrigado por usar a Moomate.");
             window.location.href = "homeC.html";
           }, 500);
           
