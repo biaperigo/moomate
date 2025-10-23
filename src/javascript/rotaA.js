@@ -882,7 +882,7 @@
           const d = doc.data() || {};
           const st = String(d.status||'').toLowerCase();
           const deve = d.clienteDevePagar === true;
-          if (deve && st === 'aguardando_pagamento') {
+          if (deve && st !== 'em_andamento') {
             __aguardandoPagamento = true;
             showPagamentoModal();
             setButtonsDisabled(true);
