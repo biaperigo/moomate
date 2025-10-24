@@ -12,95 +12,7 @@
     <link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
     
-    <style>
-
-        .cancel-ride-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 15px;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
-        
-        .cancel-ride-btn:hover {
-            background: #c82333;
-            transform: translateY(-1px);
-        }
-        
-        .cancel-ride-btn:active {
-            transform: translateY(0);
-        }
-        
-        .cancel-modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        }
-        
-        .cancel-modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-        
-        .cancel-modal h3 {
-            color: #dc3545;
-            margin-bottom: 15px;
-            font-size: 24px;
-        }
-        
-        .cancel-modal p {
-            color: #666;
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-        
-        .cancel-modal-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-        
-        .cancel-modal-btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .confirm-cancel {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .confirm-cancel:hover {
-            background: #c82333;
-        }
-        
-        .keep-ride {
-            background: #6c757d;
-            color: white;
-        }
-        
-        .keep-ride:hover {
-            background: #5a6268;
-        }
-    </style>
+    
 </head>
 <body>
     <div id="map"></div>
@@ -116,10 +28,6 @@
                 <p><strong>Tempo estimado:</strong> <span id="estimated-time">Calculando...</span></p>
             </div>
 
-            <button id="cancel-ride-btn" class="cancel-ride-btn">
-                <i class="fas fa-times"></i> Cancelar Corrida
-            </button>
-            
             <div class="status-timeline">
                 <div class="timeline-item" id="timeline-accepted">
                     <div class="timeline-icon"><i class="fas fa-check"></i></div>
@@ -153,21 +61,7 @@
         </div>
     </div>
 
-    <div id="cancel-modal" class="cancel-modal">
-        <div class="cancel-modal-content">
-            <h3><i class="fas fa-exclamation-triangle"></i> Cancelar Corrida?</h3>
-            <p>Tem certeza que deseja cancelar esta corrida? O motorista será notificado imediatamente.</p>
-            <div class="cancel-modal-buttons">
-                <button id="confirm-cancel" class="cancel-modal-btn confirm-cancel">
-                    <i class="fas fa-times"></i> Sim, Cancelar
-                </button>
-                <button id="keep-ride" class="cancel-modal-btn keep-ride">
-                    <i class="fas fa-check"></i> Continuar Corrida
-                </button>
-            </div>
-        </div>
-    </div>
-  
+      
     <div id="driver-rating-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <h3>⭐ Avalie o motorista</h3>
