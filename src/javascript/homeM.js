@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let motoristaUid = null;
   let nomeMotoristaReal = "Motorista";
+  let motoristaTipoVeiculo = null;
   const CENTRO_SP_REF = { lat: -22.1900, lng: -48.7900 };
   
   const geocodingCache = new Map();
@@ -48,6 +49,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }catch{ return 1; }
   }
 
+  function rotuloVeiculo(valor){
+    const v = (valor||'').toString().toLowerCase();
+    if (v === 'medio' || v === 'médio') return 'Caminhão baú (médio)';
+    if (v === 'grande') return 'Caminhão toco (grande)';
+    return 'Picape (pequeno)';
+  }
+
+  function calcularBasePorVeiculo(distKm, tipo) {
+    const km = Number(distKm) || 0;
+    const t = (tipo || '').toString().toLowerCase();
+    if (t.includes('medio') || t === 'medio' || t === 'médio') {
+      return 6 * km + 450 + 200;
+    }
+    if (t.includes('grande') || t === 'grande') {
+      return 7 * km + 750 + 300;
+    }
+    return 3.5 * km + 180;
+  }
+
   auth.onAuthStateChanged(async (user) => {
     if (!user) return; 
     motoristaUid = user.uid;
@@ -55,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const snap = await db.collection("motoristas").doc(user.uid).get();
       const data = snap.exists ? snap.data() : null;
       nomeMotoristaReal = data?.dadosPessoais?.nome || data?.nome || user.displayName || nomeMotoristaReal;
+      motoristaTipoVeiculo = (data?.veiculo?.tipo || data?.tipoVeiculo || data?.tamanhoVeiculo || '').toString().toLowerCase() || null;
     } catch (err) {
       console.error("Erro ao buscar dados do motorista:", err);
     }
@@ -76,6 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
    
   // Variável para armazenar os ajudantes carregados
   let ajudantesCarregados = [];
+  let custoPedagioAtual = 0;
+  let listenersResumoAdicionados = false;
+  let valorMedioBaseAtual = 0;
 
   let entregaSelecionadaId = null;
   const fallbackMotoristaId = `motorista_${Math.random().toString(36).substr(2, 9)}`;
@@ -168,6 +192,11 @@ document.addEventListener('DOMContentLoaded', () => {
       inputPrecoProposta.parentElement.appendChild(hint);
     }
     return hint;
+  }
+
+  function atualizarResumoPreco() {
+    const hint = garantirElementoDicaPreco();
+    hint.textContent = `Valor médio: R$ ${Number(valorMedioBaseAtual||0).toFixed(2)}`;
   }
 
   function carregarTodasSolicitacoes() {
@@ -431,18 +460,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isDescarte = solicitacao.tipo === 'descarte';
     const distKm = estimarDistanciaKm(solicitacao);
-    limitesPrecoAtuais = calcularLimitesPrecoPorDistancia(distKm, isDescarte);
+    limitesPrecoAtuais = null; // removemos faixa de preço
 
-    inputPrecoProposta.value = "";
-    inputPrecoProposta.min = limitesPrecoAtuais.min.toFixed(2);
-    inputPrecoProposta.max = limitesPrecoAtuais.max.toFixed(2);
+    // set pedágio atual
+    custoPedagioAtual = solicitacao?.pedagio?.valor || 0;
+
+    // definir tipo do veículo a partir do cadastro do motorista
+    const tipoDefault = motoristaTipoVeiculo || 'pequeno';
+    inputVeiculoProposta.value = (tipoDefault.includes('medio') || tipoDefault.includes('médio')) ? 'medio' : (tipoDefault.includes('grande') ? 'grande' : 'pequeno');
+    inputVeiculoProposta.disabled = true;
+    inputVeiculoProposta.title = 'Tamanho carregado do seu cadastro';
+
+    // calcular e preencher base
+    const baseCalculada = calcularBasePorVeiculo(distKm, inputVeiculoProposta.value);
+    valorMedioBaseAtual = baseCalculada;
+    inputPrecoProposta.value = (Math.round(baseCalculada * 100) / 100).toFixed(2);
+    inputPrecoProposta.removeAttribute('min');
+    inputPrecoProposta.removeAttribute('max');
     inputPrecoProposta.step = "0.01";
     inputTempoProposta.value = "";
     inputAjudantesProposta.value = "0";
-    inputVeiculoProposta.value = "pequeno";
 
-    const hint = garantirElementoDicaPreco();
-    hint.textContent = `Faixa permitida: R$ ${limitesPrecoAtuais.min.toFixed(2)} a R$ ${limitesPrecoAtuais.max.toFixed(2)} (base: R$ ${limitesPrecoAtuais.base.toFixed(2)})`;
+    atualizarResumoPreco();
+
+    if (!listenersResumoAdicionados) {
+      listenersResumoAdicionados = true;
+      inputPrecoProposta.addEventListener('input', atualizarResumoPreco);
+      inputVeiculoProposta.addEventListener('change', () => {
+        const novoBase = calcularBasePorVeiculo(distKm, inputVeiculoProposta.value);
+        valorMedioBaseAtual = novoBase;
+        inputPrecoProposta.value = (Math.round(novoBase * 100) / 100).toFixed(2);
+        atualizarResumoPreco();
+      });
+      // Escutar mudanças de seleção de ajudantes
+      containerAjudantes.addEventListener('change', (e) => {
+        if (e.target && e.target.matches('input[type="checkbox"]')) {
+          atualizarContagemAjudantes();
+          atualizarResumoPreco();
+        }
+      });
+    }
 
     // Esconde o botão fixo
     botaoEnviar.classList.add('hidden-by-modal');
@@ -487,21 +544,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }).filter(Boolean);
 
     if (!entregaSelecionadaId) return alert("Entrega não selecionada.");
-    if (!limitesPrecoAtuais) return alert("Não foi possível calcular a faixa de preço desta entrega.");
     if (!precoBase || isNaN(precoBase)) return alert("Informe um valor base válido.");
-    if (precoBase < limitesPrecoAtuais.min || precoBase > limitesPrecoAtuais.max) {
-      return alert(`O valor deve estar entre R$ ${limitesPrecoAtuais.min.toFixed(2)} e R$ ${limitesPrecoAtuais.max.toFixed(2)}.`);
-    }
     if (!tempoChegada || tempoChegada <= 0) return alert("Informe o tempo até a retirada (minutos).");
     if (numAjudantes < 0 || numAjudantes > 10) return alert("Número de ajudantes inválido.");
 
-    const custoAjudantes = numAjudantes * 50;
+    const custoAjudantes = numAjudantes * 100;
     
     // NOVO: Incluir pedágio no preço total do motorista
     const precoTotalMotorista = precoBase + custoAjudantes + custoPedagio;
     
-    // Preço final do cliente (10% de taxa + pedágio já incluído)
-    const precoFinalCliente = precoTotalMotorista * 1.10;
+    // Preço final do cliente (20% de taxa)
+    const precoFinalCliente = precoTotalMotorista * 1.20;
 
     const auth = firebase.auth();
     const idParaUsar = auth?.currentUser?.uid || motoristaUid || null;

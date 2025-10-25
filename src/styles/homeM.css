@@ -889,6 +889,19 @@ footer {
   background-size: 10px auto;
 }
 
+/* Deixa o select desabilitado sem seta e com texto mais escuro */
+#proposalModal .modal-input-group select:disabled {
+  color: #222;
+  opacity: 1; /* evita cinza apagado padrão */
+  background-image: none; /* remove o caret */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  cursor: default;
+}
+/* Esconde a seta no IE/Edge legado */
+#proposalModal .modal-input-group select:disabled::-ms-expand { display: none; }
+
 
 .price-summary {
   display: block;
