@@ -32,10 +32,10 @@
       }
       const qs2 = new URLSearchParams(location.search);
       const last = JSON.parse(localStorage.getItem('lastPayment')||'{}');
-      const valorTotal = Number(last.valor ?? qs2.get('valor') ?? 0);
+      const valorClientePagou = Number(last.valor ?? qs2.get('valor') ?? 0);
       const corridaId = last.corridaId || qs2.get('corrida');
       
-      if (!valorTotal || valorTotal <= 0) {
+      if (!valorClientePagou || valorClientePagou <= 0) {
         ui.append('Valor do pagamento ausente.');
         return;
       }
@@ -69,8 +69,34 @@
         ui.append('Motorista da corrida não definido.');
         return;
       }
-      const valorMotorista = Math.round(valorTotal * 0.90 * 100) / 100;
-      const taxaPlataforma = Math.round(valorTotal * 0.10 * 100) / 100;
+
+      // NOVO: Busca a proposta do motorista para pegar base + ajudantes (SEM pedágio)
+      let valorMotorista = Math.round(valorClientePagou * 0.90 * 100) / 100; // fallback
+      let taxaPlataforma = Math.round(valorClientePagou * 0.10 * 100) / 100;
+      
+      try {
+        const propostaDoc = await db.collection('entregas')
+          .doc(corridaId)
+          .collection('propostas')
+          .doc(motoristaId)
+          .get();
+        
+        if (propostaDoc.exists) {
+          const proposta = propostaDoc.data();
+          const precoBase = Number(proposta?.precoOriginal?.base || 0);
+          const custoAjudantes = Number(proposta?.precoOriginal?.ajudantes || 0);
+          
+          // Motorista recebe APENAS base + ajudantes (SEM pedágio, SEM taxa 20%)
+          valorMotorista = Math.round((precoBase + custoAjudantes) * 100) / 100;
+          
+          // Taxa da plataforma = o que o cliente pagou - o que o motorista recebe
+          taxaPlataforma = Math.round((valorClientePagou - valorMotorista) * 100) / 100;
+          
+          console.log('[CRÉDITO] Base:', precoBase, '+ Ajudantes:', custoAjudantes, '= Motorista recebe:', valorMotorista);
+        }
+      } catch (e) {
+        console.warn('Falha ao buscar proposta para cálculo:', e);
+      }
 
       const motRef = db.collection('motoristas').doc(motoristaId);
       const corridaRef = db.collection(origemColecao).doc(corridaId);
@@ -94,25 +120,15 @@
             ...(corridaSnap.data()?.pagamento||{}), 
             creditado: true, 
             creditadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-            valorTotal: valorTotal,
+            valorTotal: valorClientePagou,
             valorMotorista: valorMotorista,
             taxaPlataforma: taxaPlataforma
-          } 
+          },
+          status: 'em_andamento',
+          corridaIniciada: true,
+          clienteDevePagar: false
         }, { merge: true });
-          // MUDANÇAS AQUI ↓↓↓
-  tx.set(corridaRef, { 
-    pagamento: { 
-      ...(corridaSnap.data()?.pagamento||{}), 
-      creditado: true, 
-      creditadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-      valorTotal: valorTotal,
-      valorMotorista: valorMotorista,
-      taxaPlataforma: taxaPlataforma
-    },
-    status: 'em_andamento',        // ← NOVO: Inicia corrida
-    corridaIniciada: true,          // ← NOVO: Marca como iniciada
-    clienteDevePagar: false         // ← NOVO: Remove flag
-  }, { merge: true });
+        
         return { already:false };
       });
       
@@ -125,7 +141,7 @@
               origem: 'mercado_pago',
               corridaId,
               valor: valorMotorista,
-              valorOriginal: valorTotal,
+              valorOriginal: valorClientePagou,
               taxaPlataforma: taxaPlataforma,
               moeda: 'BRL',
               status: 'aprovado',
@@ -139,7 +155,7 @@
             motoristaId,
             corridaId,
             valor: valorMotorista,
-            valorOriginal: valorTotal,
+            valorOriginal: valorClientePagou,
             taxaPlataforma: taxaPlataforma,
             moeda: 'BRL',
             status: 'aprovado',
