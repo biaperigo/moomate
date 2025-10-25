@@ -69,34 +69,8 @@
         ui.append('Motorista da corrida não definido.');
         return;
       }
-      
-      let propostaDoc = null;
-      try {
-        const propSnap = await db
-          .collection(origemColecao)
-          .doc(corridaId)
-          .collection('propostas')
-          .doc(motoristaId)
-          .get();
-        if (propSnap.exists) propostaDoc = propSnap.data();
-      } catch (e) { console.warn('Falha ao obter subdocumento de proposta:', e); }
-
-      // 2) Fallback de origem de dados (mesma estrutura gravada no doc principal)
-      if (!propostaDoc) {
-        propostaDoc = (corrida.propostas && corrida.propostas[motoristaId]) || corrida.propostaAceita || null;
-      }
-
-      const base = Number(propostaDoc?.precoOriginal?.base || propostaDoc?.precoBase || 0) || 0;
-      const ajudantesCusto = Number(propostaDoc?.precoOriginal?.ajudantes || propostaDoc?.ajudantes?.custo || 0) || 0;
-      const pedagioValor = Number(propostaDoc?.precoOriginal?.pedagio || propostaDoc?.pedagio?.valor || 0) || 0;
-      const brutoSemPedagio = base + ajudantesCusto;
-      const valorMotorista = Math.round((brutoSemPedagio * 0.80) * 100) / 100;
-      if (!(valorMotorista > 0)) {
-        ui.append('Não foi possível determinar base + ajudantes da proposta. Crédito não aplicado.');
-        return;
-      }
-      // Taxa da plataforma: valor pago pelo cliente menos pedágio e menos o que vai ao motorista
-      const taxaPlataforma = Math.max(0, Math.round((valorTotal - pedagioValor - valorMotorista) * 100) / 100);
+      const valorMotorista = Math.round(valorTotal * 0.90 * 100) / 100;
+      const taxaPlataforma = Math.round(valorTotal * 0.10 * 100) / 100;
 
       const motRef = db.collection('motoristas').doc(motoristaId);
       const corridaRef = db.collection(origemColecao).doc(corridaId);
@@ -122,10 +96,23 @@
             creditadoEm: firebase.firestore.FieldValue.serverTimestamp(),
             valorTotal: valorTotal,
             valorMotorista: valorMotorista,
-            taxaPlataforma: taxaPlataforma,
-            pedagioDesconsiderado: pedagioValor
-          }
+            taxaPlataforma: taxaPlataforma
+          } 
         }, { merge: true });
+          // MUDANÇAS AQUI ↓↓↓
+  tx.set(corridaRef, { 
+    pagamento: { 
+      ...(corridaSnap.data()?.pagamento||{}), 
+      creditado: true, 
+      creditadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      valorTotal: valorTotal,
+      valorMotorista: valorMotorista,
+      taxaPlataforma: taxaPlataforma
+    },
+    status: 'em_andamento',        // ← NOVO: Inicia corrida
+    corridaIniciada: true,          // ← NOVO: Marca como iniciada
+    clienteDevePagar: false         // ← NOVO: Remove flag
+  }, { merge: true });
         return { already:false };
       });
       
