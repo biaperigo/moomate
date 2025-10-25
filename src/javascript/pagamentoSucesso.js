@@ -69,11 +69,26 @@
         ui.append('Motorista da corrida não definido.');
         return;
       }
-      // Crédito EXATO: (base digitada) + (R$100 x ajudantes) — sem pedágio, sem percentual
-      const proposta = corrida.propostaAceita || (corrida.propostas && corrida.propostas[motoristaId]) || null;
-      const base = Number(proposta?.precoOriginal?.base || proposta?.precoBase || 0) || 0;
-      const qtdAjud = Number(proposta?.ajudantes?.quantidade || 0) || 0;
-      const valorMotorista = Math.round((base + (qtdAjud * 100)) * 100) / 100;
+      
+      let propostaDoc = null;
+      try {
+        const propSnap = await db
+          .collection(origemColecao)
+          .doc(corridaId)
+          .collection('propostas')
+          .doc(motoristaId)
+          .get();
+        if (propSnap.exists) propostaDoc = propSnap.data();
+      } catch (e) { console.warn('Falha ao obter subdocumento de proposta:', e); }
+
+      // 2) Fallback de origem de dados (mesma estrutura gravada no doc principal)
+      if (!propostaDoc) {
+        propostaDoc = (corrida.propostas && corrida.propostas[motoristaId]) || corrida.propostaAceita || null;
+      }
+
+      const base = Number(propostaDoc?.precoOriginal?.base || propostaDoc?.precoBase || 0) || 0;
+      const ajudantesCusto = Number(propostaDoc?.precoOriginal?.ajudantes || propostaDoc?.ajudantes?.custo || 0) || 0;
+      const valorMotorista = Math.round((base + ajudantesCusto) * 100) / 100;
       if (!(valorMotorista > 0)) {
         ui.append('Não foi possível determinar base + ajudantes da proposta. Crédito não aplicado.');
         return;
