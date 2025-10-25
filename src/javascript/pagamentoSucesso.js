@@ -102,15 +102,16 @@
         if (propostaDoc.exists) {
           const proposta = propostaDoc.data();
           const precoBase = Number(proposta?.precoOriginal?.base || 0);
-          const custoAjudantes = Number(proposta?.precoOriginal?.ajudantes || 0);
+          const numAjudantes = Number(proposta?.precoOriginal?.ajudantes || 0);
           
-          // Motorista recebe APENAS base + ajudantes (SEM pedágio, SEM taxa 20%)
+          // Motorista recebe: base + (100 reais por ajudante)
+          const custoAjudantes = numAjudantes * 100;
           valorMotorista = Math.round((precoBase + custoAjudantes) * 100) / 100;
           
           // Taxa da plataforma = o que o cliente pagou - o que o motorista recebe
           taxaPlataforma = Math.round((valorClientePagou - valorMotorista) * 100) / 100;
           
-          console.log('[CRÉDITO] Tipo:', tipoInferido, '| Base:', precoBase, '+ Ajudantes:', custoAjudantes, '= Motorista recebe:', valorMotorista);
+          console.log('[CRÉDITO] Tipo:', tipoInferido, '| Base:', precoBase, '+ Ajudantes:', numAjudantes, 'x R$100 =', custoAjudantes, '| Motorista recebe:', valorMotorista);
         } else {
           console.warn('[CRÉDITO] Proposta não encontrada para', corridaId, '- usando cálculo fallback (90%)');
         }
