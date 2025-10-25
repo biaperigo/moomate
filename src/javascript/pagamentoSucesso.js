@@ -83,23 +83,27 @@
       let taxaPlataforma = Math.round(valorClientePagou * 0.10 * 100) / 100;
       
       try {
-        // Tenta buscar na subcoleção 'propostas' da coleção 'entregas' (corridas normais)
-        let propostaDoc = await db.collection('entregas')
-          .doc(corridaId)
-          .collection('propostas')
-          .doc(motoristaId)
-          .get();
+        let propostaDoc = null;
         
-        // Se não encontrou, tenta buscar na coleção 'agendamentos' (agendamentos)
-        if (!propostaDoc.exists && origemColecao === 'agendamentos') {
+        // Para agendamentos, busca na própria coleção agendamentos
+        if (origemColecao === 'agendamentos') {
           propostaDoc = await db.collection('agendamentos')
             .doc(corridaId)
             .collection('propostas')
             .doc(motoristaId)
             .get();
+          console.log('[CRÉDITO] Buscando proposta em agendamentos/', corridaId, '/propostas/', motoristaId, '- Encontrou:', propostaDoc.exists);
+        } else {
+          // Para corridas normais e descartes, busca em entregas
+          propostaDoc = await db.collection('entregas')
+            .doc(corridaId)
+            .collection('propostas')
+            .doc(motoristaId)
+            .get();
+          console.log('[CRÉDITO] Buscando proposta em entregas/', corridaId, '/propostas/', motoristaId, '- Encontrou:', propostaDoc.exists);
         }
         
-        if (propostaDoc.exists) {
+        if (propostaDoc && propostaDoc.exists) {
           const proposta = propostaDoc.data();
           const precoBase = Number(proposta?.precoOriginal?.base || 0);
           const numAjudantes = Number(proposta?.precoOriginal?.ajudantes || 0);
@@ -111,9 +115,9 @@
           // Taxa da plataforma = o que o cliente pagou - o que o motorista recebe
           taxaPlataforma = Math.round((valorClientePagou - valorMotorista) * 100) / 100;
           
-          console.log('[CRÉDITO] Tipo:', tipoInferido, '| Base:', precoBase, '+ Ajudantes:', numAjudantes, 'x R$100 =', custoAjudantes, '| Motorista recebe:', valorMotorista);
+          console.log('[CRÉDITO] Tipo:', tipoInferido, '| Base:', precoBase, '+ Ajudantes:', numAjudantes, 'x R$100 =', custoAjudantes, '| Motorista recebe:', valorMotorista, '| Cliente pagou:', valorClientePagou);
         } else {
-          console.warn('[CRÉDITO] Proposta não encontrada para', corridaId, '- usando cálculo fallback (90%)');
+          console.warn('[CRÉDITO] Proposta não encontrada para', corridaId, 'na coleção', origemColecao, '- usando cálculo fallback (90%). Valor cliente:', valorClientePagou);
         }
       } catch (e) {
         console.warn('Falha ao buscar proposta para cálculo:', e);
