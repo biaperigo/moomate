@@ -586,7 +586,8 @@ function validarFormulario() {
     },
     fotoPerfil: fotoPerfil,
     rg: document.getElementById("rg").value,  
-    cnh: document.getElementById("cnh").value,  
+    cnh: document.getElementById("cnh").value,
+    cnhCategoria: document.getElementById("cnh-categoria").value,
     certidaoArquivo: certidaoArquivo
   },
   veiculo: {
