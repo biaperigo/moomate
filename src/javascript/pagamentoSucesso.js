@@ -44,12 +44,20 @@
         return;
       }
 
+      // Busca a corrida em todas as coleções possíveis
       let corridaDoc = await db.collection('corridas').doc(corridaId).get();
       let origemColecao = 'corridas';
+      
       if (!corridaDoc.exists) {
         corridaDoc = await db.collection('descartes').doc(corridaId).get();
         origemColecao = corridaDoc.exists ? 'descartes' : origemColecao;
       }
+      
+      if (!corridaDoc.exists) {
+        corridaDoc = await db.collection('agendamentos').doc(corridaId).get();
+        origemColecao = corridaDoc.exists ? 'agendamentos' : origemColecao;
+      }
+      
       if (!corridaDoc.exists) {
         ui.append('Documento da corrida não encontrado.');
         return;
@@ -60,7 +68,7 @@
         const t = (corrida?.tipo||'').toString().toLowerCase();
         if (t) return t;
         if (origemColecao === 'descartes') return 'descarte';
-        if (corrida?.agendamento === true) return 'agendamento';
+        if (origemColecao === 'agendamentos' || corrida?.agendamento === true) return 'agendamento';
         return 'mudanca';
       })();
       
@@ -70,16 +78,26 @@
         return;
       }
 
-      // NOVO: Busca a proposta do motorista para pegar base + ajudantes (SEM pedágio)
+      // BUSCA A PROPOSTA DO MOTORISTA PARA PEGAR BASE + AJUDANTES (SEM PEDÁGIO)
       let valorMotorista = Math.round(valorClientePagou * 0.90 * 100) / 100; // fallback
       let taxaPlataforma = Math.round(valorClientePagou * 0.10 * 100) / 100;
       
       try {
-        const propostaDoc = await db.collection('entregas')
+        // Tenta buscar na subcoleção 'propostas' da coleção 'entregas' (corridas normais)
+        let propostaDoc = await db.collection('entregas')
           .doc(corridaId)
           .collection('propostas')
           .doc(motoristaId)
           .get();
+        
+        // Se não encontrou, tenta buscar na coleção 'agendamentos' (agendamentos)
+        if (!propostaDoc.exists && origemColecao === 'agendamentos') {
+          propostaDoc = await db.collection('agendamentos')
+            .doc(corridaId)
+            .collection('propostas')
+            .doc(motoristaId)
+            .get();
+        }
         
         if (propostaDoc.exists) {
           const proposta = propostaDoc.data();
@@ -92,7 +110,9 @@
           // Taxa da plataforma = o que o cliente pagou - o que o motorista recebe
           taxaPlataforma = Math.round((valorClientePagou - valorMotorista) * 100) / 100;
           
-          console.log('[CRÉDITO] Base:', precoBase, '+ Ajudantes:', custoAjudantes, '= Motorista recebe:', valorMotorista);
+          console.log('[CRÉDITO] Tipo:', tipoInferido, '| Base:', precoBase, '+ Ajudantes:', custoAjudantes, '= Motorista recebe:', valorMotorista);
+        } else {
+          console.warn('[CRÉDITO] Proposta não encontrada para', corridaId, '- usando cálculo fallback (90%)');
         }
       } catch (e) {
         console.warn('Falha ao buscar proposta para cálculo:', e);
