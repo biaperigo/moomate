@@ -69,8 +69,27 @@
         ui.append('Motorista da corrida não definido.');
         return;
       }
-      const valorMotorista = Math.round(valorTotal * 0.90 * 100) / 100;
-      const taxaPlataforma = Math.round(valorTotal * 0.10 * 100) / 100;
+      // Novo critério de crédito: 80% de (base digitada + (R$100 x ajudantes)) — sem pedágio
+      let valorMotorista = null;
+      let taxaPlataforma = null;
+      try {
+        const proposta = corrida.propostaAceita || (corrida.propostas && corrida.propostas[motoristaId]) || null;
+        const base = Number(proposta?.precoOriginal?.base || proposta?.precoBase || 0) || 0;
+        const qtdAjud = Number(proposta?.ajudantes?.quantidade || 0) || 0;
+        const brutoMotorista = base + (qtdAjud * 100);
+        if (brutoMotorista > 0) {
+          valorMotorista = Math.round((brutoMotorista * 0.80) * 100) / 100;
+          taxaPlataforma = Math.round((brutoMotorista * 0.20) * 100) / 100;
+        }
+      } catch (e) { console.warn('Falha ao calcular crédito por base+ajudantes (80%), usando fallback:', e); }
+
+      // Fallback para 80% do valorTotal (compatibilidade)
+      if (valorMotorista === null) {
+        valorMotorista = Math.round(valorTotal * 0.80 * 100) / 100;
+      }
+      if (taxaPlataforma === null) {
+        taxaPlataforma = Math.round(valorTotal * 0.20 * 100) / 100;
+      }
 
       const motRef = db.collection('motoristas').doc(motoristaId);
       const corridaRef = db.collection(origemColecao).doc(corridaId);
