@@ -5,6 +5,14 @@
 
   const CENTRO_SP_REF = { lat: -23.55052, lng: -46.633308 };
 
+  function calcularBasePorVeiculo(distKm, tipo) {
+    const km = Number(distKm) || 0;
+    const t = (tipo || '').toString().toLowerCase();
+    if (t.includes('medio') || t === 'medio' || t === 'médio') return 6 * km + 450 + 200;
+    if (t.includes('grande') || t === 'grande') return 7 * km + 750 + 300;
+    return 3.5 * km + 180; // pequeno
+  }
+
   async function geocodificarEndereco(endereco){
     if (!endereco) return null;
     
@@ -261,6 +269,9 @@
   let ajudantesCarregados = [];
   const todasSolicitacoes = new Map();
   let limitesPrecoAtuais = null;
+  let custoPedagioAtual = 0;
+  let listenersResumoAdicionados = false;
+  let distKmAtual = 0;
 
   function calcularLimitesPrecoPorDistancia(distKm){
     const dist = Number(distKm)||0; let base = 24*dist; if(base<24) base=24;
@@ -769,13 +780,42 @@
     if(!entregaSelecionadaId) return alert('Selecione um agendamento!');
     const s = todasSolicitacoes.get(entregaSelecionadaId);
     const distKm = distanciaEstimativaKmFromDoc(s);
-    limitesPrecoAtuais = calcularLimitesPrecoPorDistancia(distKm);
-    inputPrecoProposta.value=''; 
-    inputAjudantesProposta.value='0'; 
-    inputVeiculoProposta.value='pequeno';
-    inputPrecoProposta.min = limitesPrecoAtuais.min.toFixed(2);
-    inputPrecoProposta.max = limitesPrecoAtuais.max.toFixed(2);
-    garantirElementoDicaPreco().textContent = `Faixa permitida: R$ ${limitesPrecoAtuais.min.toFixed(2)} a R$ ${limitesPrecoAtuais.max.toFixed(2)} (base: R$ ${limitesPrecoAtuais.base.toFixed(2)})`;
+    distKmAtual = distKm;
+    limitesPrecoAtuais = null; // removemos faixa
+    inputAjudantesProposta.value='0';
+    custoPedagioAtual = Number(s?.pedagio?.valor || 0) || 0;
+
+    // Pegar tipo do veículo do motorista e travar a seleção visualmente
+    inputVeiculoProposta.title = 'Tamanho carregado do seu cadastro';
+    try{
+      inputVeiculoProposta.style.appearance = 'none';
+      inputVeiculoProposta.style.MozAppearance = 'none';
+      inputVeiculoProposta.style.webkitAppearance = 'none';
+      inputVeiculoProposta.style.backgroundImage = 'none';
+      inputVeiculoProposta.style.pointerEvents = 'none';
+      inputVeiculoProposta.style.color = '#000';
+      inputVeiculoProposta.style.fontWeight = '400';
+    }catch{}
+    (async ()=>{
+      try{
+        const u = firebase.auth().currentUser;
+        if (u){
+          const snap = await db.collection('motoristas').doc(u.uid).get();
+          const tipoV = (snap.exists ? (snap.data()?.veiculo?.tipo || snap.data()?.tipoVeiculo || snap.data()?.tamanhoVeiculo) : '') || 'pequeno';
+          const tipoNorm = (String(tipoV).toLowerCase().includes('medio')||String(tipoV).toLowerCase().includes('médio'))? 'medio' : (String(tipoV).toLowerCase().includes('grande')? 'grande' : 'pequeno');
+          inputVeiculoProposta.value = tipoNorm;
+        } else {
+          inputVeiculoProposta.value = 'pequeno';
+        }
+      }catch{ inputVeiculoProposta.value='pequeno'; }
+
+      const base = calcularBasePorVeiculo(distKm, inputVeiculoProposta.value);
+      inputPrecoProposta.value = (Math.round(base*100)/100).toFixed(2);
+      inputPrecoProposta.removeAttribute('min');
+      inputPrecoProposta.removeAttribute('max');
+      inputPrecoProposta.step = '0.01';
+      atualizarResumoPrecoAg();
+    })();
     
     // CARREGA AJUDANTES AQUI
     containerAjudantes.innerHTML = '<p class="no-helpers">Carregando ajudantes...</p>';
@@ -789,12 +829,34 @@
       modalProposta.style.opacity='1'; 
       modalProposta.querySelector('.modal-content').style.transform='scale(1)'; 
     },10);
+
+    if (!listenersResumoAdicionados){
+      listenersResumoAdicionados = true;
+      inputPrecoProposta.addEventListener('input', atualizarResumoPrecoAg);
+      // change não deve ocorrer pois bloqueamos interação; mantemos caso futuro precise
+      inputVeiculoProposta.addEventListener('change', ()=>{
+        const novo = calcularBasePorVeiculo(distKmAtual, inputVeiculoProposta.value);
+        inputPrecoProposta.value = (Math.round(novo*100)/100).toFixed(2);
+        atualizarResumoPrecoAg();
+      });
+      containerAjudantes.addEventListener('change', (e)=>{
+        if (e.target && e.target.matches('input[type="checkbox"]')) atualizarResumoPrecoAg();
+      });
+    }
   }
   
   function fecharModal(){ 
     modalProposta.style.opacity='0'; 
     modalProposta.querySelector('.modal-content').style.transform='scale(0.9)'; 
     setTimeout(()=> modalProposta.style.display='none',300); 
+  }
+
+  function atualizarResumoPrecoAg(){
+    const hint = garantirElementoDicaPreco();
+    const baseMedio = calcularBasePorVeiculo(distKmAtual, inputVeiculoProposta.value);
+    hint.textContent = `Valor médio: R$ ${(Math.round(baseMedio*100)/100).toFixed(2)}`;
+    hint.style.color = '#000';
+    hint.style.fontWeight = '400';
   }
 
   async function enviarProposta(){
@@ -814,10 +876,7 @@
     }).filter(Boolean);
     
     if(!entregaSelecionadaId) return alert('Selecione um agendamento.');
-    if(!limitesPrecoAtuais) return alert('Faixa de preço indisponível.');
-    if(!precoBase || precoBase<limitesPrecoAtuais.min || precoBase>limitesPrecoAtuais.max) {
-      return alert(`Valor fora da faixa (R$ ${limitesPrecoAtuais.min.toFixed(2)} - ${limitesPrecoAtuais.max.toFixed(2)})`);
-    }
+    if(!precoBase || precoBase<=0) return alert('Informe um valor base válido.');
     if(ajud<0||ajud>10) return alert('Número de ajudantes inválido (0 a 10).');
 
     const auth = firebase.auth();
@@ -827,10 +886,9 @@
     const s = todasSolicitacoes.get(entregaSelecionadaId) || {};
     const collectionName = 'agendamentos';
 
-    const custoAjud = ajud*50;
-    const precoTotalMotorista = precoBase + custoAjud;
-    const taxaPlataforma = 0.10;
-    const precoCliente = Number((precoTotalMotorista * (1+taxaPlataforma)).toFixed(2));
+    const custoAjud = ajud*100;
+    const precoTotalMotorista = precoBase + custoAjud + (Number(s?.pedagio?.valor||0)||0);
+    const precoCliente = Number((precoTotalMotorista * 1.20).toFixed(2));
 
     let nomeMotorista = 'Motorista';
     let fotoMotoristaUrl = '';
@@ -854,10 +912,10 @@
       },
       veiculo: veic,
       precoOriginal: { 
-        base: Number(precoBase.toFixed(2)), 
-        ajudantes: Number(custoAjud.toFixed(2)), 
-        totalMotorista: Number(precoTotalMotorista.toFixed(2)), 
-        taxa: taxaPlataforma 
+        base: Number(precoBase.toFixed(2)),
+        ajudantes: Number(custoAjud.toFixed(2)),
+        pedagio: Number(s?.pedagio?.valor || 0),
+        total: Number(precoTotalMotorista.toFixed(2))
       },
       motoristaUid: idParaUsar,
       motoristaId: idParaUsar,
