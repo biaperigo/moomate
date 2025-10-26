@@ -878,7 +878,6 @@
     if(!entregaSelecionadaId) return alert('Selecione um agendamento.');
     if(!precoBase || precoBase<=0) return alert('Informe um valor base válido.');
     if(ajud<0||ajud>10) return alert('Número de ajudantes inválido (0 a 10).');
-
     const auth = firebase.auth();
     const idParaUsar = auth?.currentUser?.uid || null;
     if(!idParaUsar) return alert('Faça login como motorista.');
@@ -888,7 +887,10 @@
 
     const custoAjud = ajud*100;
     const precoTotalMotorista = precoBase + custoAjud + (Number(s?.pedagio?.valor||0)||0);
-    const precoCliente = Number((precoTotalMotorista * 1.20).toFixed(2));
+    // Taxa dinâmica do aplicativo: 25% quando distância > 201 km; senão 20%
+    const distKmParaTaxa = distanciaEstimativaKmFromDoc(s);
+    const taxaAplicativo = distKmParaTaxa > 201 ? 0.25 : 0.20;
+    const precoCliente = Number((precoTotalMotorista * (1 + taxaAplicativo)).toFixed(2));
 
     let nomeMotorista = 'Motorista';
     let fotoMotoristaUrl = '';
