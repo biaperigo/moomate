@@ -552,9 +552,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // NOVO: Incluir pedágio no preço total do motorista
     const precoTotalMotorista = precoBase + custoAjudantes + custoPedagio;
-    
-    // Preço final do cliente (20% de taxa)
-    const precoFinalCliente = precoTotalMotorista * 1.20;
+  
+    // Preço final do cliente com taxa dinâmica do app
+    // 25% quando distância > 201 km; senão 20%
+    const distKmParaTaxa = estimarDistanciaKm(solicitacao);
+    const taxaAplicativo = distKmParaTaxa > 201 ? 0.25 : 0.20;
+    const precoFinalCliente = precoTotalMotorista * (1 + taxaAplicativo);
 
     const auth = firebase.auth();
     const idParaUsar = auth?.currentUser?.uid || motoristaUid || null;
