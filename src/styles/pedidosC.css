@@ -98,6 +98,10 @@ body {
   white-space: nowrap;
 }
 
+.tab.tab-cancelado {
+  display: none;
+}
+
 .tab.active {
   color: #ff6c0c;
   border-color: #ff6c0c;
