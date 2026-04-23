@@ -427,7 +427,45 @@ async function selecionarItemAutocomplete(campo, item) {
   }
   atualizarRota();
 }
+async function geocodificarCampoManual(campo) {
+  const input = document.getElementById(campo);
+  const texto = input.value.trim();
 
+  if (!texto) return;
+
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+    texto
+  )}&format=json&addressdetails=1&limit=1&countrycodes=br`;
+
+  try {
+    const res = await fetch(url, { headers: { "Accept-Language": "pt-BR" } });
+    const resultados = await res.json();
+
+    if (!resultados.length) {
+      alert("Endereço não encontrado. Tente ser mais específico.");
+      return;
+    }
+
+    await selecionarItemAutocomplete(campo, resultados[0]);
+  } catch (err) {
+    console.error("Erro ao geocodificar:", err);
+    alert("Erro ao buscar o endereço. Verifique sua conexão.");
+  }
+}
+
+document.getElementById("localRetirada").addEventListener("blur", () =>
+  geocodificarCampoManual("localRetirada")
+);
+document.getElementById("localEntrega").addEventListener("blur", () =>
+  geocodificarCampoManual("localEntrega")
+);
+
+document.getElementById("localRetirada").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") geocodificarCampoManual("localRetirada");
+});
+document.getElementById("localEntrega").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") geocodificarCampoManual("localEntrega");
+});
 function atualizarRota() {
   if (routeLine) map.removeLayer(routeLine);
   if (origemCoords && destinoCoords) {
