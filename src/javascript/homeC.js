@@ -928,6 +928,50 @@ async function criarPagamentoMercadoPagoHomeC(dadosPagamento) {
   }
 }
 
+// === ENVIO AUTOMÁTICO DE EMAIL ===
+async function enviarEmailOrcamento(dados, pedidoId) {
+  try {
+    // Configurações do EmailJS
+    const EMAILJS_PUBLIC_KEY = 'ndXCu_6JL7Xmn_tKL';
+    const EMAILJS_SERVICE_ID = 'service_6wvx6co';
+    const EMAILJS_TEMPLATE_ID = 'template_xqsdb6f';
+
+    // Inicializa o EmailJS
+    if (typeof emailjs !== 'undefined') {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+
+      const templateParams = {
+        to_email: 'contato@moomate.br',
+        from_name: dados.clienteNome,
+        pedido_id: pedidoId,
+        cliente_nome: dados.clienteNome,
+        cliente_email: firebase.auth()?.currentUser?.email || 'N/A',
+        origem_endereco: dados.origem.endereco,
+        origem_numero: dados.origem.numero || 'N/A',
+        origem_complemento: dados.origem.complemento || 'N/A',
+        origem_cep: dados.origem.cep,
+        destino_endereco: dados.destino.endereco,
+        destino_numero: dados.destino.numero || 'N/A',
+        destino_complemento: dados.destino.complemento || 'N/A',
+        tipo_veiculo: dados.tipoVeiculo,
+        distancia: dados.distancia.toFixed(2),
+        pedagio: dados.pedagio.valor.toFixed(2),
+        preco_estimado: dados.precoEstimado.toFixed(2),
+        data_pedido: new Date().toLocaleString('pt-BR'),
+        reply_to: firebase.auth()?.currentUser?.email || 'contato@moomate.br'
+      };
+
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+      console.log('Email enviado com sucesso para contato@moomate.br');
+    } else {
+      console.warn('EmailJS não carregado. Email não enviado automaticamente.');
+    }
+  } catch (error) {
+    console.error('Erro ao enviar email:', error);
+    // Não bloqueia o fluxo se o email falhar
+  }
+}
+
 async function verMotoristas() {
   if (!origemCoords || !destinoCoords) return alert("Defina origem e destino.");
 
@@ -1003,8 +1047,20 @@ async function verMotoristas() {
     infoPedagio = { pedagio: 0, pedagios: [], detalhes: "Não foi possível calcular" };
   }
 
-  // CALCULAR PREÇO FINAL
-  const precoBase = 50 + (2 * dist);
+  // CALCULAR PREÇO FINAL (mesma fórmula que o motorista usa)
+  function calcularPrecoBaseCliente(distKm, tipo) {
+    const km = Number(distKm) || 0;
+    const t = (tipo || '').toString().toLowerCase();
+    if (t.includes('medio') || t === 'medio' || t === 'médio') {
+      return 6 * km + 650; // 6*km + 450 + 200
+    }
+    if (t.includes('grande') || t === 'grande') {
+      return 7 * km + 1050; // 7*km + 750 + 300
+    }
+    return 3.5 * km + 180; // picape (pequeno)
+  }
+
+  const precoBase = calcularPrecoBaseCliente(dist, tipoVeiculo);
   const precoFinal = precoBase + infoPedagio.pedagio;
 
   dadosFormulario.distancia = parseFloat(dist.toFixed(2));
@@ -1035,6 +1091,9 @@ async function verMotoristas() {
 
       ouvirPropostas(docRef.id);
       document.getElementById("propostasContainer").style.display = "block";
+
+      // Enviar email automaticamente com os dados do orçamento
+      await enviarEmailOrcamento(dadosFormulario, docRef.id);
     } else {
       console.log("Dados que seriam salvos:", dadosFormulario);
       alert(`Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPEDÁGIO: R$ ${dadosFormulario.pedagio.valor.toFixed(2)}\nPREÇO TOTAL: R$ ${dadosFormulario.precoEstimado.toFixed(2)}\n\nServiço temporariamente indisponível. Tente novamente.`);
