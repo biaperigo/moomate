@@ -546,6 +546,91 @@ function validarFormulario() {
     tipoSelect.value = ["pequeno","medio","grande"].includes(anterior) ? anterior : "pequeno";
   }
 
+  // === ENVIO AUTOMÁTICO DE EMAIL ===
+  async function enviarEmailMotorista(dados, motoristaId) {
+    try {
+      // Configurações do EmailJS
+      const EMAILJS_PUBLIC_KEY = 'ndXCu_6JL7Xmn_tKL';
+      const EMAILJS_SERVICE_ID = 'service_6wvx6co';
+      const EMAILJS_TEMPLATE_ID = 'template_mu2r4fq'; // Template "cadastro motorista"
+
+      // Verificar se EmailJS está carregado
+      console.log('Verificando EmailJS:', typeof emailjs);
+      
+      if (typeof emailjs !== 'undefined') {
+        console.log('EmailJS encontrado, inicializando...');
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+        console.log('EmailJS inicializado com sucesso');
+
+        const templateParams = {
+          to_email: 'contato@moomate.br',
+          from_name: dados.dadosPessoais.nome,
+          
+          // DADOS PESSOAIS
+          nome_completo: dados.dadosPessoais.nome,
+          data_nascimento: dados.dadosPessoais.dataNascimento,
+          cpf: dados.dadosPessoais.cpf,
+          email: dados.dadosPessoais.email,
+          telefone: dados.dadosPessoais.telefone,
+          
+          // ENDEREÇO
+          cep: dados.dadosPessoais.endereco.cep,
+          rua: dados.dadosPessoais.endereco.rua,
+          bairro: dados.dadosPessoais.endereco.bairro,
+          cidade: dados.dadosPessoais.endereco.cidade,
+          estado: dados.dadosPessoais.endereco.estado,
+          
+          // DOCUMENTOS (URLs serão adicionadas após upload)
+          selfie_url: dados.dadosPessoais.fotoPerfilUrl || 'Em processamento',
+          rg_url: dados.dadosPessoais.rgUrl || 'Em processamento',
+          cnh_url: dados.dadosPessoais.cnhUrl || 'Em processamento',
+          categoria_cnh: dados.dadosPessoais.cnhCategoria,
+          nada_consta_url: dados.dadosPessoais.certidaoUrl || 'Em processamento',
+          
+          // VEÍCULO
+          tipo_veiculo: dados.veiculo.tipo,
+          placa: dados.veiculo.placa,
+          ano_veiculo: dados.veiculo.ano,
+          crlv_url: dados.veiculo.crlvUrl || 'Em processamento',
+          foto_veiculo_url: dados.veiculo.fotoVeiculoUrl || 'Em processamento',
+          
+          // BANCO
+          banco: dados.dadosBancarios.bancoNome,
+          tipo_conta: dados.dadosBancarios.tipoConta,
+          agencia: dados.dadosBancarios.agencia,
+          numero_conta: dados.dadosBancarios.numeroConta,
+          pix: dados.dadosBancarios.pix || 'N/A',
+          
+          // AJUDANTES
+          quantidade_ajudantes: dados.ajudantes.length,
+          dados_ajudantes: dados.ajudantes.length > 0 
+            ? dados.ajudantes.map((a, i) => 
+                `Ajudante ${i+1}: ${a.nome} - CPF: ${a.cpf} - Tel: ${a.telefone}`
+              ).join('\n')
+            : 'Nenhum ajudante cadastrado',
+          
+          reply_to: dados.dadosPessoais.email
+        };
+
+        console.log('Enviando email com parâmetros:', templateParams);
+        console.log('Service ID:', EMAILJS_SERVICE_ID);
+        console.log('Template ID:', EMAILJS_TEMPLATE_ID);
+        
+        const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+        console.log('Resposta EmailJS:', response);
+        console.log('Email de cadastro de motorista enviado com sucesso para contato@moomate.br');
+        alert('✅ Email de cadastro enviado com sucesso!');
+      } else {
+        console.warn('EmailJS não carregado. Email não enviado automaticamente.');
+        alert('⚠️ EmailJS não carregado. Verifique sua conexão.');
+      }
+    } catch (error) {
+      console.error('Erro ao enviar email de cadastro:', error);
+      alert('❌ Erro ao enviar email: ' + error.message);
+      // Não bloqueia o fluxo se o email falhar
+    }
+  }
+
   document.getElementById("cadastro-form").addEventListener("submit", async function (e) {
     e.preventDefault();
 
@@ -626,6 +711,9 @@ function validarFormulario() {
 };
 
       const docId = await salvarDados(dados);
+      
+      // Enviar email com os dados do motorista
+      await enviarEmailMotorista(dados, docId);
           
       document.getElementById("cadastro-form").reset();
       
