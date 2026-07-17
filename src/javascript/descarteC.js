@@ -1153,8 +1153,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function isCEPSaoPaulo(cep) {
-        const cepNum = parseInt(cep.replace(/\D/g, ''), 10);
-        return cepNum >= 1000000 && cepNum <= 19999999;
+        const cepLimpo = cep.replace(/\D/g, '');
+        if (cepLimpo.length !== 8) return false;
+        const prefixo = parseInt(cepLimpo.substring(0, 2), 10);
+        // CEPs de São Paulo começam com 01, 02, 03, 04, 05, 06, 07, 08, 09, 11, 12, 13, 14, 15, 16, 17, 18, 19
+        return (prefixo >= 1 && prefixo <= 9) || (prefixo >= 11 && prefixo <= 19);
     }
 
     let timeoutAutocomplete;
@@ -1169,27 +1172,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const searchQuery = val.includes('SP') || val.includes('São Paulo') ? 
+            const searchQuery = val.includes('SP') || val.includes('São Paulo') ?
                 val : val + ', São Paulo, Brasil';
-            
+
             try {
                 const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=10&countrycodes=br`;
                 const res = await fetch(url);
                 const data = await res.json();
 
-                const spResults = data.filter(item => {
-                    const lat = parseFloat(item.lat);
-                    const lng = parseFloat(item.lon);
-                    return isWithinSaoPaulo(lat, lng) && 
-                           (item.address?.state?.toLowerCase().includes('são paulo') ||
-                            item.address?.state?.toLowerCase().includes('sp') ||
-                            item.display_name.toLowerCase().includes('são paulo'));
-                });
-
-                showAutocompleteList(campo, spResults.map(item => ({
+                showAutocompleteList(campo, data.map(item => ({
                     display: item.display_name,
                     endereco: item.display_name,
                     cep: item.address?.postcode || null,
+                    lat: parseFloat(item.lat),
+                    lng: parseFloat(item.lon),
                     tipo: 'endereco'
                 })));
             } catch (error) {
@@ -1278,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function selectAutocompleteItem(campo, item) {
         const input = document.getElementById(campo);
-        
+
         if (item.tipo === 'ecoponto') {
             input.value = `${item.nome} - ${item.endereco}`;
             input.dataset.nome = item.nome || '';
@@ -1292,8 +1288,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             input.value = item.endereco;
-            
-            if (campo === 'localRetirada' && item.cep && isCEPSaoPaulo(item.cep)) {
+
+            if (campo === 'localRetirada' && item.cep) {
                 document.getElementById('cep').value = formatarCEP(item.cep);
             }
         }
@@ -1315,18 +1311,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
             const data = await res.json();
-            
+
             if (data.erro) {
                 alert('CEP não encontrado!');
                 return;
             }
 
-            if (data.uf !== 'SP') {
-                alert('Este CEP não pertence ao estado de São Paulo.');
-                cepInput.value = '';
-                return;
-            }
-
+            // Removendo validação de UF para permitir CEPs de São Paulo
             const endereco = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
             localRetiradaInput.value = endereco;
 
@@ -1349,12 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cepInput.addEventListener('blur', () => {
             const cep = cepInput.value.replace(/\D/g, '');
             if (cep.length === 8) {
-                if (isCEPSaoPaulo(cep)) {
-                    buscarEnderecoPorCEP(cep);
-                } else {
-                    alert('Por favor, digite um CEP do estado de São Paulo.');
-                    cepInput.value = '';
-                }
+                buscarEnderecoPorCEP(cep);
             }
         });
     }
@@ -1394,6 +1380,69 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch { resolve(null); }
     });
 
+    // === FUNÇÃO PARA CALCULAR PRECO ESTIMADO ===
+    function calcularPrecoEstimado(distKm, tipoVeiculo) {
+      const km = Number(distKm) || 0;
+      const t = (tipoVeiculo || '').toString().toLowerCase();
+      if (t.includes('medio') || t === 'medio' || t === 'médio') return 6 * km + 450 + 200;
+      if (t.includes('grande') || t === 'grande') return 7 * km + 750 + 300;
+      return 3.5 * km + 180; // pequeno
+    }
+
+    // === FUNÇÃO PARA CALCULAR DISTÂNCIA ===
+    async function calcularDistancia(origem, destino) {
+      try {
+        const R = 6371;
+        const toRad = (deg) => deg * Math.PI / 180;
+
+        const oLat = origem?.lat;
+        const oLng = origem?.lng;
+        const dLat = destino?.lat;
+        const dLng = destino?.lng;
+
+        if ([oLat, oLng, dLat, dLng].every(Number.isFinite)) {
+          const dPhi = toRad(dLat - oLat);
+          const dLam = toRad(dLng - oLng);
+          const a = Math.sin(dPhi / 2) * Math.sin(dPhi / 2) +
+                   Math.cos(toRad(oLat)) * Math.cos(toRad(dLat)) *
+                   Math.sin(dLam / 2) * Math.sin(dLam / 2);
+          return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        return 10; // fallback se não conseguir calcular
+      } catch {
+        return 10;
+      }
+    }
+
+    // === ENVIO DE EMAIL VIA EMAILJS ===
+    async function enviarEmailDescarte(dados) {
+      try {
+        emailjs.init("OORggr-8TZT0BnPBW");
+
+        const templateParams = {
+          to_email: "suporte@moomate.com.br",
+          cliente_nome: dados.cliente_nome,
+          local_retirada: dados.local_retirada,
+          cep_retirada: dados.cep_retirada,
+          local_entrega: dados.local_entrega,
+          tipo_caminhao: dados.tipo_caminhao,
+          descricao_objetos: dados.descricao_objetos,
+          preco_estimado: dados.preco_estimado
+        };
+
+        const response = await emailjs.send(
+          "service_mdbmmef",
+          "template_y7von0h",
+          templateParams
+        );
+
+        console.log("Email enviado com sucesso:", response);
+      } catch (error) {
+        console.error("Erro ao enviar email:", error);
+      }
+    }
+
     const enviarParaFirebase = async (dadosDescarte) => {
         try {
             console.log('[Firebase] Enviando:', dadosDescarte);
@@ -1426,12 +1475,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             currentDescarteId = docRef.id;
             console.log('[Firebase] ✓ Descarte salvo:', currentDescarteId);
-            
+
+            // Calcular distância e preço estimado
+            const distKm = await calcularDistancia(dadosDescarte.origem, dadosDescarte.destino);
+            const precoEstimado = calcularPrecoEstimado(distKm, dadosDescarte.tipoCaminhao);
+
+            // Enviar email com os dados do descarte
+            await enviarEmailDescarte({
+              cliente_nome: clienteNome || 'Cliente',
+              local_retirada: dadosDescarte.localRetirada,
+              cep_retirada: dadosDescarte.cep,
+              local_entrega: dadosDescarte.localEntrega,
+              tipo_caminhao: dadosDescarte.tipoCaminhao,
+              descricao_objetos: dadosDescarte.descricao,
+              preco_estimado: `R$ ${precoEstimado.toFixed(2).replace('.', ',')}`
+            });
+
             propostasContainer.style.display = 'block';
             propostasContainer.scrollIntoView({ behavior: 'smooth' });
-            
+
             ouvirPropostas(currentDescarteId);
-            
+
             return currentDescarteId;
         } catch (error) {
             console.error('[Firebase] Erro:', error?.message || error);

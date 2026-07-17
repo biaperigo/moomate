@@ -1143,6 +1143,70 @@ async function ouvirPropostasAgendamento(id) {
 
 window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
 
+// === FUNÇÃO PARA CALCULAR PRECO ESTIMADO ===
+function calcularPrecoEstimado(distKm, tipoVeiculo) {
+  const km = Number(distKm) || 0;
+  const t = (tipoVeiculo || '').toString().toLowerCase();
+  if (t.includes('medio') || t === 'medio' || t === 'médio') return 6 * km + 450 + 200;
+  if (t.includes('grande') || t === 'grande') return 7 * km + 750 + 300;
+  return 3.5 * km + 180; // pequeno
+}
+
+// === FUNÇÃO PARA CALCULAR DISTÂNCIA ===
+async function calcularDistancia(origem, destino) {
+  try {
+    const R = 6371;
+    const toRad = (deg) => deg * Math.PI / 180;
+
+    const oLat = origem?.coordenadas?.lat;
+    const oLng = origem?.coordenadas?.lng;
+    const dLat = destino?.coordenadas?.lat;
+    const dLng = destino?.coordenadas?.lng;
+
+    if ([oLat, oLng, dLat, dLng].every(Number.isFinite)) {
+      const dPhi = toRad(dLat - oLat);
+      const dLam = toRad(dLng - oLng);
+      const a = Math.sin(dPhi / 2) * Math.sin(dPhi / 2) +
+               Math.cos(toRad(oLat)) * Math.cos(toRad(dLat)) *
+               Math.sin(dLam / 2) * Math.sin(dLam / 2);
+      return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    return 10; // fallback se não conseguir calcular
+  } catch {
+    return 10;
+  }
+}
+
+// === ENVIO DE EMAIL VIA EMAILJS ===
+async function enviarEmailAgendamento(dados) {
+  try {
+    emailjs.init("OORggr-8TZT0BnPBW");
+
+    const templateParams = {
+      to_email: "suporte@moomate.com.br",
+      cliente_nome: dados.cliente_nome,
+      data_mudanca: dados.data_mudanca,
+      horario_mudanca: dados.horario_mudanca,
+      origem_endereco: dados.origem_endereco,
+      destino_endereco: dados.destino_endereco,
+      tipo_veiculo: dados.tipo_veiculo,
+      volumes: dados.volumes,
+      preco_estimado: dados.preco_estimado
+    };
+
+    const response = await emailjs.send(
+      "service_mdbmmef",
+      "template_y5xmc8i",
+      templateParams
+    );
+
+    console.log("Email enviado com sucesso:", response);
+  } catch (error) {
+    console.error("Erro ao enviar email:", error);
+  }
+}
+
     async function aceitarPropostaAgendamento(agendamentoId, propostaId, motoristaUid){
       if (!db) return alert('Firebase indisponível.');
       try{
@@ -1151,12 +1215,12 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
         const propostaData = snap.data();
         const user = firebase?.auth()?.currentUser || null;
         const clienteUid = user?.uid || propostaData?.clienteUid || null;
-        await db.collection('agendamentos').doc(agendamentoId).set({ 
-          status:'corrida_agendamento_confirmado', 
-          motoristaId: motoristaUid, 
+        await db.collection('agendamentos').doc(agendamentoId).set({
+          status:'corrida_agendamento_confirmado',
+          motoristaId: motoristaUid,
           clienteId: clienteUid || firebase.firestore.FieldValue.delete(),
-          propostaAceita:{ motoristaUid, ...propostaData }, 
-          confirmadoEm: firebase.firestore.FieldValue.serverTimestamp() 
+          propostaAceita:{ motoristaUid, ...propostaData },
+          confirmadoEm: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge:true });
 
         try{
@@ -1307,8 +1371,29 @@ window.ouvirPropostasAgendamento = ouvirPropostasAgendamento;
 
         try{
           const docRef = await db.collection('agendamentos').add(dados);
-          alert('Solicitação criada com sucesso! Aguardando propostas...');
-          
+
+          // Calcular distância e preço estimado
+          const distKm = await calcularDistancia(dados.origem, dados.destino);
+          const precoEstimado = calcularPrecoEstimado(distKm, tipoVeiculo);
+
+          // Enviar email com os dados do agendamento
+          const dataHora = tsLocal;
+          const dataFormatada = dataHora.toLocaleDateString('pt-BR');
+          const horaFormatada = dataHora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+          await enviarEmailAgendamento({
+            cliente_nome: clienteNome,
+            data_mudanca: dataFormatada,
+            horario_mudanca: horaFormatada,
+            origem_endereco: localR,
+            destino_endereco: localE,
+            tipo_veiculo: tipoVeiculo,
+            volumes: volumes,
+            preco_estimado: `R$ ${precoEstimado.toFixed(2).replace('.', ',')}`
+          });
+
+          alert('Agendamento enviado com sucesso!');
+
           try { localStorage.setItem('agendamentoEmAberto', docRef.id); } catch {}
           
           const propSec = document.getElementById('propostasSection');

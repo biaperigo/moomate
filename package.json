@@ -7,8 +7,6 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "mercadopago": "^2.1.9"
+    "cors": "^2.8.5"
   }
 }

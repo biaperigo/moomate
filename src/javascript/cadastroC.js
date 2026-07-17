@@ -4,7 +4,28 @@ $(document).ready(function () {
   const auth = firebase.auth();
   const db = firebase.firestore();
   const googleProvider = new firebase.auth.GoogleAuthProvider();
-  
+// === ENVIO DE EMAIL VIA EMAILJS ===
+async function enviarEmailCliente(dados) {
+  try {
+    emailjs.init("3_ciGalagjcbiBHoe");
+
+    const templateParams = {
+      nome: dados.nome,
+      email: dados.email,
+      telefone: dados.telefone
+    };
+
+    const response = await emailjs.send(
+      "service_9pett46", // coloque o ID do seu serviço
+      "template_a5shp6w",
+      templateParams
+    );
+
+    console.log("Email enviado com sucesso:", response);
+  } catch (error) {
+    console.error("Erro ao enviar email:", error);
+  }
+}
   // login google
 
   $('#btn-google').on('click', function () {
@@ -113,8 +134,14 @@ $(document).ready(function () {
         tipoUsuario: "usuario"
       });
 
-      
-      window.location.href = "login.html";
+      // Enviar email com os dados do cliente
+      await enviarEmailCliente({
+        nome: nome,
+        telefone: telefone,
+        email: email
+    });
+
+        window.location.href = "login.html";
 
     } catch (error) {
       console.error("Erro no processo de cadastro:", error);
