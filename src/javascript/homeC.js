@@ -972,6 +972,56 @@ async function enviarEmailOrcamento(dados, pedidoId) {
   }
 }
 
+// === ENVIO DE EMAIL PARA O USUÁRIO LOGADO ===
+async function enviarEmailUsuario(dados, pedidoId) {
+  try {
+    // Configurações do EmailJS para envio ao usuário
+    const EMAILJS_PUBLIC_KEY = 'yCevAywqOBvBlkCY8';
+    const EMAILJS_SERVICE_ID = 'service_4bg2775';
+    const EMAILJS_TEMPLATE_ID = 'template_r664rns';
+
+    // Inicializa o EmailJS
+    if (typeof emailjs !== 'undefined') {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+
+      const userEmail = firebase.auth()?.currentUser?.email;
+      if (!userEmail) {
+        console.warn('Email do usuário não encontrado. Email não enviado para o usuário.');
+        return;
+      }
+
+      const templateParams = {
+        to_email: userEmail,
+        from_name: dados.clienteNome,
+        pedido_id: pedidoId,
+        cliente_nome: dados.clienteNome,
+        cliente_email: userEmail,
+        origem_endereco: dados.origem.endereco,
+        origem_numero: dados.origem.numero || 'N/A',
+        origem_complemento: dados.origem.complemento || 'N/A',
+        origem_cep: dados.origem.cep,
+        destino_endereco: dados.destino.endereco,
+        destino_numero: dados.destino.numero || 'N/A',
+        destino_complemento: dados.destino.complemento || 'N/A',
+        tipo_veiculo: dados.tipoVeiculo,
+        distancia: dados.distancia.toFixed(2),
+        pedagio: dados.pedagio.valor.toFixed(2),
+        preco_estimado: dados.precoEstimado.toFixed(2),
+        data_pedido: new Date().toLocaleString('pt-BR'),
+        reply_to: userEmail
+      };
+
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+      console.log('Email enviado com sucesso para o usuário:', userEmail);
+    } else {
+      console.warn('EmailJS não carregado. Email não enviado para o usuário.');
+    }
+  } catch (error) {
+    console.error('Erro ao enviar email para o usuário:', error);
+    // Não bloqueia o fluxo se o email falhar
+  }
+}
+
 async function verMotoristas() {
   if (!origemCoords || !destinoCoords) return alert("Defina origem e destino.");
 
@@ -1094,6 +1144,9 @@ async function verMotoristas() {
 
       // Enviar email automaticamente com os dados do orçamento
       await enviarEmailOrcamento(dadosFormulario, docRef.id);
+      
+      // Enviar email para o usuário logado
+      await enviarEmailUsuario(dadosFormulario, docRef.id);
     } else {
       console.log("Dados que seriam salvos:", dadosFormulario);
       alert(`Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPEDÁGIO: R$ ${dadosFormulario.pedagio.valor.toFixed(2)}\nPREÇO TOTAL: R$ ${dadosFormulario.precoEstimado.toFixed(2)}\n\nServiço temporariamente indisponível. Tente novamente.`);
