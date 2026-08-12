@@ -975,18 +975,26 @@ async function enviarEmailOrcamento(dados, pedidoId) {
 // === ENVIO DE EMAIL PARA O USUÁRIO LOGADO ===
 async function enviarEmailUsuario(dados, pedidoId) {
   try {
+    console.log('[EMAIL USUÁRIO] Iniciando envio de email para o usuário...');
+    
     // Configurações do EmailJS para envio ao usuário
     const EMAILJS_PUBLIC_KEY = 'yCevAywqOBvBlkCY8';
     const EMAILJS_SERVICE_ID = 'service_4bg2775';
     const EMAILJS_TEMPLATE_ID = 'template_r664rns';
 
+    console.log('[EMAIL USUÁRIO] Configurações:', { EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID });
+
     // Inicializa o EmailJS
     if (typeof emailjs !== 'undefined') {
+      console.log('[EMAIL USUÁRIO] EmailJS está carregado, inicializando...');
       emailjs.init(EMAILJS_PUBLIC_KEY);
+      console.log('[EMAIL USUÁRIO] EmailJS inicializado com a chave:', EMAILJS_PUBLIC_KEY);
 
       const userEmail = firebase.auth()?.currentUser?.email;
+      console.log('[EMAIL USUÁRIO] Email do usuário:', userEmail);
+      
       if (!userEmail) {
-        console.warn('Email do usuário não encontrado. Email não enviado para o usuário.');
+        console.warn('[EMAIL USUÁRIO] Email do usuário não encontrado. Email não enviado para o usuário.');
         return;
       }
 
@@ -1011,13 +1019,18 @@ async function enviarEmailUsuario(dados, pedidoId) {
         reply_to: userEmail
       };
 
-      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
-      console.log('Email enviado com sucesso para o usuário:', userEmail);
+      console.log('[EMAIL USUÁRIO] Parâmetros do template:', templateParams);
+      console.log('[EMAIL USUÁRIO] Enviando email...');
+      
+      const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+      console.log('[EMAIL USUÁRIO] Resposta do EmailJS:', response);
+      console.log('[EMAIL USUÁRIO] Email enviado com sucesso para o usuário:', userEmail);
     } else {
-      console.warn('EmailJS não carregado. Email não enviado para o usuário.');
+      console.warn('[EMAIL USUÁRIO] EmailJS não carregado. Email não enviado para o usuário.');
     }
   } catch (error) {
-    console.error('Erro ao enviar email para o usuário:', error);
+    console.error('[EMAIL USUÁRIO] Erro ao enviar email para o usuário:', error);
+    console.error('[EMAIL USUÁRIO] Detalhes do erro:', error.text, error.status, error.message);
     // Não bloqueia o fluxo se o email falhar
   }
 }
