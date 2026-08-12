@@ -998,6 +998,7 @@ async function enviarEmailUsuario(dados, pedidoId) {
         return;
       }
 
+      // Usando o mesmo formato da função que funciona
       const templateParams = {
         to_email: userEmail,
         from_name: dados.clienteNome,
@@ -1024,14 +1025,87 @@ async function enviarEmailUsuario(dados, pedidoId) {
       
       const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
       console.log('[EMAIL USUÁRIO] Resposta do EmailJS:', response);
-      console.log('[EMAIL USUÁRIO] Email enviado com sucesso para o usuário:', userEmail);
+      console.log('[EMAIL USUÁRIO] Status:', response.status);
+      console.log('[EMAIL USUÁRIO] Text:', response.text);
+      
+      if (response.status === 200 && response.text === 'OK') {
+        console.log('[EMAIL USUÁRIO] Email enviado com sucesso para o usuário:', userEmail);
+        alert('✅ Email de confirmação enviado para ' + userEmail);
+      } else {
+        console.warn('[EMAIL USUÁRIO] EmailJS retornou status inesperado:', response);
+      }
     } else {
       console.warn('[EMAIL USUÁRIO] EmailJS não carregado. Email não enviado para o usuário.');
     }
   } catch (error) {
     console.error('[EMAIL USUÁRIO] Erro ao enviar email para o usuário:', error);
     console.error('[EMAIL USUÁRIO] Detalhes do erro:', error.text, error.status, error.message);
+    alert('⚠️ Erro ao enviar email: ' + (error.text || error.message));
     // Não bloqueia o fluxo se o email falhar
+  }
+}
+
+// === ENVIO DE EMAIL PARA O USUÁRIO LOGADO (USANDO TEMPLATE QUE FUNCIONA) ===
+async function enviarEmailUsuarioTemplateExistente(dados, pedidoId) {
+  try {
+    console.log('[EMAIL USUÁRIO ALTERNATIVO] Iniciando envio usando template existente...');
+    
+    // Usando o service e template que já funcionam
+    const EMAILJS_PUBLIC_KEY = 'ndXCu_6JL7Xmn_tKL';
+    const EMAILJS_SERVICE_ID = 'service_6wvx6co';
+    const EMAILJS_TEMPLATE_ID = 'template_xqsdb6f';
+
+    console.log('[EMAIL USUÁRIO ALTERNATIVO] Configurações:', { EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID });
+
+    // Inicializa o EmailJS
+    if (typeof emailjs !== 'undefined') {
+      console.log('[EMAIL USUÁRIO ALTERNATIVO] EmailJS está carregado, inicializando...');
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+
+      const userEmail = firebase.auth()?.currentUser?.email;
+      console.log('[EMAIL USUÁRIO ALTERNATIVO] Email do usuário:', userEmail);
+      
+      if (!userEmail) {
+        console.warn('[EMAIL USUÁRIO ALTERNATIVO] Email do usuário não encontrado.');
+        return;
+      }
+
+      const templateParams = {
+        to_email: userEmail, // Mudando o destinatário para o email do usuário
+        from_name: dados.clienteNome,
+        pedido_id: pedidoId,
+        cliente_nome: dados.clienteNome,
+        cliente_email: userEmail,
+        origem_endereco: dados.origem.endereco,
+        origem_numero: dados.origem.numero || 'N/A',
+        origem_complemento: dados.origem.complemento || 'N/A',
+        origem_cep: dados.origem.cep,
+        destino_endereco: dados.destino.endereco,
+        destino_numero: dados.destino.numero || 'N/A',
+        destino_complemento: dados.destino.complemento || 'N/A',
+        tipo_veiculo: dados.tipoVeiculo,
+        distancia: dados.distancia.toFixed(2),
+        pedagio: dados.pedagio.valor.toFixed(2),
+        preco_estimado: dados.precoEstimado.toFixed(2),
+        data_pedido: new Date().toLocaleString('pt-BR'),
+        reply_to: userEmail
+      };
+
+      console.log('[EMAIL USUÁRIO ALTERNATIVO] Enviando email...');
+      
+      const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+      console.log('[EMAIL USUÁRIO ALTERNATIVO] Resposta:', response);
+      
+      if (response.status === 200 && response.text === 'OK') {
+        console.log('[EMAIL USUÁRIO ALTERNATIVO] Email enviado com sucesso para:', userEmail);
+        alert('✅ Email de confirmação enviado para ' + userEmail);
+      }
+    } else {
+      console.warn('[EMAIL USUÁRIO ALTERNATIVO] EmailJS não carregado.');
+    }
+  } catch (error) {
+    console.error('[EMAIL USUÁRIO ALTERNATIVO] Erro:', error);
+    alert('⚠️ Erro ao enviar email: ' + (error.text || error.message));
   }
 }
 
@@ -1158,8 +1232,8 @@ async function verMotoristas() {
       // Enviar email automaticamente com os dados do orçamento
       await enviarEmailOrcamento(dadosFormulario, docRef.id);
       
-      // Enviar email para o usuário logado
-      await enviarEmailUsuario(dadosFormulario, docRef.id);
+      // Enviar email para o usuário logado (usando template que funciona)
+      await enviarEmailUsuarioTemplateExistente(dadosFormulario, docRef.id);
     } else {
       console.log("Dados que seriam salvos:", dadosFormulario);
       alert(`Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPEDÁGIO: R$ ${dadosFormulario.pedagio.valor.toFixed(2)}\nPREÇO TOTAL: R$ ${dadosFormulario.precoEstimado.toFixed(2)}\n\nServiço temporariamente indisponível. Tente novamente.`);
