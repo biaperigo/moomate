@@ -1070,8 +1070,10 @@ async function enviarEmailUsuarioTemplateExistente(dados, pedidoId) {
         return;
       }
 
+      // Tentando diferentes campos para destinatário
       const templateParams = {
-        to_email: userEmail, // Mudando o destinatário para o email do usuário
+        to_email: userEmail, // Campo principal
+        to_name: dados.clienteNome, // Campo alternativo
         from_name: dados.clienteNome,
         pedido_id: pedidoId,
         cliente_nome: dados.clienteNome,
@@ -1088,23 +1090,30 @@ async function enviarEmailUsuarioTemplateExistente(dados, pedidoId) {
         pedagio: dados.pedagio.valor.toFixed(2),
         preco_estimado: dados.precoEstimado.toFixed(2),
         data_pedido: new Date().toLocaleString('pt-BR'),
-        reply_to: userEmail
+        reply_to: userEmail,
+        user_email: userEmail // Campo adicional
       };
 
       console.log('[EMAIL USUÁRIO ALTERNATIVO] Enviando email...');
+      console.log('[EMAIL USUÁRIO ALTERNATIVO] TemplateParams:', templateParams);
       
       const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
       console.log('[EMAIL USUÁRIO ALTERNATIVO] Resposta:', response);
+      console.log('[EMAIL USUÁRIO ALTERNATIVO] Status:', response.status);
+      console.log('[EMAIL USUÁRIO ALTERNATIVO] Text:', response.text);
       
       if (response.status === 200 && response.text === 'OK') {
         console.log('[EMAIL USUÁRIO ALTERNATIVO] Email enviado com sucesso para:', userEmail);
         alert('✅ Email de confirmação enviado para ' + userEmail);
+      } else {
+        console.warn('[EMAIL USUÁRIO ALTERNATIVO] Status inesperado:', response);
       }
     } else {
       console.warn('[EMAIL USUÁRIO ALTERNATIVO] EmailJS não carregado.');
     }
   } catch (error) {
     console.error('[EMAIL USUÁRIO ALTERNATIVO] Erro:', error);
+    console.error('[EMAIL USUÁRIO ALTERNATIVO] Detalhes:', error.text, error.status);
     alert('⚠️ Erro ao enviar email: ' + (error.text || error.message));
   }
 }
@@ -1232,8 +1241,8 @@ async function verMotoristas() {
       // Enviar email automaticamente com os dados do orçamento
       await enviarEmailOrcamento(dadosFormulario, docRef.id);
       
-      // Enviar email para o usuário logado (usando template que funciona)
-      await enviarEmailUsuarioTemplateExistente(dadosFormulario, docRef.id);
+      // Enviar email para o usuário logado (com suas credenciais)
+      await enviarEmailUsuario(dadosFormulario, docRef.id);
     } else {
       console.log("Dados que seriam salvos:", dadosFormulario);
       alert(`Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPEDÁGIO: R$ ${dadosFormulario.pedagio.valor.toFixed(2)}\nPREÇO TOTAL: R$ ${dadosFormulario.precoEstimado.toFixed(2)}\n\nServiço temporariamente indisponível. Tente novamente.`);
