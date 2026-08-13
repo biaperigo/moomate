@@ -1118,6 +1118,74 @@ async function enviarEmailUsuarioTemplateExistente(dados, pedidoId) {
   }
 }
 
+// === ENVIO DE EMAIL EXTRA PARA O USUÁRIO (TEMPLATE WI2JH26) ===
+async function enviarEmailUsuarioTemplateExtra(dados, pedidoId) {
+  try {
+    console.log('[EMAIL EXTRA] Iniciando envio com template_wi2jh26...');
+    
+    // Usando as mesmas credenciais do template r664rns
+    const EMAILJS_PUBLIC_KEY = 'yCevAywqOBvBlkCY8';
+    const EMAILJS_SERVICE_ID = 'service_4bg2775';
+    const EMAILJS_TEMPLATE_ID = 'template_wi2jh26';
+
+    console.log('[EMAIL EXTRA] Configurações:', { EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID });
+
+    // Inicializa o EmailJS
+    if (typeof emailjs !== 'undefined') {
+      console.log('[EMAIL EXTRA] EmailJS está carregado, inicializando...');
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+
+      const userEmail = firebase.auth()?.currentUser?.email;
+      console.log('[EMAIL EXTRA] Email do usuário:', userEmail);
+      
+      if (!userEmail) {
+        console.warn('[EMAIL EXTRA] Email do usuário não encontrado.');
+        return;
+      }
+
+      const templateParams = {
+        to_email: userEmail,
+        from_name: dados.clienteNome,
+        pedido_id: pedidoId,
+        cliente_nome: dados.clienteNome,
+        cliente_email: userEmail,
+        origem_endereco: dados.origem.endereco,
+        origem_numero: dados.origem.numero || 'N/A',
+        origem_complemento: dados.origem.complemento || 'N/A',
+        origem_cep: dados.origem.cep,
+        destino_endereco: dados.destino.endereco,
+        destino_numero: dados.destino.numero || 'N/A',
+        destino_complemento: dados.destino.complemento || 'N/A',
+        tipo_veiculo: dados.tipoVeiculo,
+        distancia: dados.distancia.toFixed(2),
+        pedagio: dados.pedagio.valor.toFixed(2),
+        preco_estimado: dados.precoEstimado.toFixed(2),
+        data_pedido: new Date().toLocaleString('pt-BR'),
+        reply_to: userEmail
+      };
+
+      console.log('[EMAIL EXTRA] Enviando email...');
+      
+      const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+      console.log('[EMAIL EXTRA] Resposta:', response);
+      console.log('[EMAIL EXTRA] Status:', response.status);
+      console.log('[EMAIL EXTRA] Text:', response.text);
+      
+      if (response.status === 200 && response.text === 'OK') {
+        console.log('[EMAIL EXTRA] Email enviado com sucesso para:', userEmail);
+      } else {
+        console.warn('[EMAIL EXTRA] Status inesperado:', response);
+      }
+    } else {
+      console.warn('[EMAIL EXTRA] EmailJS não carregado.');
+    }
+  } catch (error) {
+    console.error('[EMAIL EXTRA] Erro:', error);
+    console.error('[EMAIL EXTRA] Detalhes:', error.text, error.status);
+    // Não bloqueia o fluxo se o email falhar
+  }
+}
+
 async function verMotoristas() {
   if (!origemCoords || !destinoCoords) return alert("Defina origem e destino.");
 
@@ -1243,6 +1311,9 @@ async function verMotoristas() {
       
       // Enviar email para o usuário logado (com suas credenciais)
       await enviarEmailUsuario(dadosFormulario, docRef.id);
+      
+      // Enviar email extra com template_wi2jh26 para o usuário
+      await enviarEmailUsuarioTemplateExtra(dadosFormulario, docRef.id);
     } else {
       console.log("Dados que seriam salvos:", dadosFormulario);
       alert(`Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPEDÁGIO: R$ ${dadosFormulario.pedagio.valor.toFixed(2)}\nPREÇO TOTAL: R$ ${dadosFormulario.precoEstimado.toFixed(2)}\n\nServiço temporariamente indisponível. Tente novamente.`);
