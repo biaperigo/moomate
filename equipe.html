@@ -1,277 +1,306 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Moomate</title>
 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>Equipe | Moomate</title>
 
-<link rel="stylesheet" href="src/styles/index.css" />
-<script src="src/javascript/jquery-3.7.1.min.js"></script>
-<script src="https://unpkg.com/scrollreveal"></script>
-<link rel="icon" type="image/x-icon" href="src/images/favicon.ico">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="src/styles/equipe.css"/>
+
+    
+
 </head>
 
 <body>
-<header id="header">
-<nav id="navbar">
-
-<img src="src/images/favicon.png" alt="Logo Moomate" id="navlogo" />
-
-<ul id="nav_list">
-<li class="nav-item active"><a href="#home">Início</a></li>
-<li class="nav-item"><a href="#ecoponto">Ecopontos</a></li>
-<!-- <li class="nav-item"><a href="#sobre">Sobre nós</a></li> -->
-<li class="nav-item"><a href="#motorista">Motorista</a></li>
-<li class="nav-item"><a href="#usuario">Usuário</a></li>
-</ul>
-
-<div class="nav-buttons">
-<a href=""><button class="btn-default">Entrar</button></a>
-<a href=""><button class="btn-outline">Cadastrar</button></a>
-</div>
-
-<button id="mobile_btn"><i class="fa-solid fa-bars"></i></button>
 
 
-</nav>
-</header>
+    <section class="banner-equipe">
 
-<main id="content">
-<section id="home">
-<div class="shape"></div>
-<div id="cta">
-<h1 class="title">Deixe a sua mudança <span>conosco</span></h1>
-<p class="description">Plataforma rápida, segura e econômica para conectar pessoas a motoristas de mudança disponíveis na sua região.</p>
+        <div>
 
-<div id="cta_buttons">
-<!-- <a href="#sobre" class="btn-laranja">Conheça a equipe</a>-->
-<a href="#" class="btn-cinza">COMECE JÁ</a>
-</div>
+            <h1>Nossa Equipe</h1>
 
-<div class="social_media_buttons">
-<a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
-<i class="fa-brands fa-instagram"></i>
-</a>
-</div>
-</div>
+            <p>
+                Conheça as pessoas responsáveis por transformar a Moomate
+                em uma solução inovadora para mudanças residenciais.
+            </p>
 
-<div id="banner">
-<img src="src/images/mudança.png" alt="Imagem de mudança" />
-</div>
-</section>
+        </div>
 
-<section id="ecoponto">
-<div class="content">
-<div class="box">
-<div id="map"></div>
-<div id="info">
-<strong>Selecione um ecoponto no mapa para ver os detalhes aqui.</strong>
-</div>
-<div class="button-wrapper">
-<a href="cadastroC.html"> <button id="btn-descarte">Preciso de um motorista para o descarte</button></a>
-</div>
-</div>
-</div>
-</section>
+    </section>
 
-<!-- <section id="sobre">
-<h2 class="section-title">Sobre nós</h2>
-<h3 class="section-subtitle">Conheça nossa equipe</h3>
+    <!-- QUEM SOMOS -->
 
-<div class="team-container">
+    <section class="sobre">
 
-<a href="https://www.linkedin.com/in/maria-eduarda-alves-3b57752b7/" target="_blank" class="team-member-link">
-<div class="team-member">
-<img src="src/images/Maria Eduarda Augusto.JPG" alt="Maria Eduarda Augusto" class="team-photo">
-<h3 class="team-name">Maria Eduarda Augusto</h3>
-<p class="team-role">Analista de Projeto</p>
-</div>
-</a>
+        <h2>Quem Somos</h2>
 
-<a href="https://www.linkedin.com/in/gabriel-shimizu-3479bb253/" target="_blank" class="team-member-link">
-<div class="team-member">
-<img src="src/images/Gabriel Massao.JPG" alt="Gabriel Massao" class="team-photo">
-<h3 class="team-name">Gabriel Massao</h3>
-<p class="team-role">Analista de Dados e Gerente Financeiro</p>
-</div>
-</a>
+        <p>
 
-<a href="https://www.linkedin.com/in/beatriz-p%C3%A9rigo-77b740365/" target="_blank" class="team-member-link">
-<div class="team-member">
-<img src="src/images/Beatriz.JPG" alt="Beatriz Périgo" class="team-photo">
-<h3 class="team-name">Beatriz Périgo</h3>
-<p class="team-role">Desenvolvedora Back-End</p>
-</div>
-</a>
+            A Moomate nasceu com o propósito de revolucionar a forma como as
+            mudanças residenciais são realizadas.
 
-<a href="https://www.linkedin.com/in/giovana-passos-de-moraes-01494b362/" target="_blank" class="team-member-link">
-<div class="team-member">
-<img src="src/images/Giovana Passos.JPG" alt="Giovana Passos" class="team-photo">
-<h3 class="team-name">Giovana Passos</h3>
-<p class="team-role">Desenvolvedora Front-End e Designer</p>
-</div>
-</a>
+            Nossa plataforma conecta clientes e motoristas de maneira simples,
+            segura e inteligente, utilizando tecnologia para facilitar todo
+            o processo.
 
-</div>
-</section> -->
+            Mais do que desenvolver um sistema, buscamos construir uma startup
+            preparada para inovar constantemente e entregar experiências
+            cada vez melhores aos nossos usuários.
 
-<section id="motorista">
-<div class="motorista-container">
-<div class="motorista-imagem">
-<img src="src/images/mulher.png" alt="Parceiro Moomate">
-</div>
-<div class="motorista-conteudo">
-<h2 class="section-title">Por que ser um motorista da Moomate?</h2>
-<ul class="beneficios-lista">
-<li>
-<i class="fa-solid fa-sack-dollar"></i>
-<div><strong>Complemento de renda</strong><p>Escolha suas entregas e defina seus valores.</p></div>
-</li>
-<li>
-<i class="fa-solid fa-clock"></i>
-<div><strong>Horários flexíveis</strong><p>Aceite apenas os pedidos que quiser, sem penalidades. Faça seu horário!</p></div>
-</li>
-<li>
-<i class="fa-solid fa-mobile-screen-button"></i>
-<div><strong>Ativação online</strong><p>Todo o processo é feito pelo celular, sem burocracia.</p></div>
-</li>
-<li>
+        </p>
 
-<div class="nav-buttons">
-<a href="loginM.html" class="btn-custom-motorista">Seja motorista</a>
-</div>
-</li>
-</ul>
+    </section>
 
-</div>
-</div>
+    <!-- EQUIPE -->
 
-<div class="requisitos-container">
-<h2 class="section-title">REQUISITOS PARA SER MOTORISTA MOOMATE</h2>
-<div class="requisitos-itens">
-<div class="requisito">
-<i class="fa-solid fa-truck-fast"></i>
-<strong>Tenha um veículo disponível</strong>
-<p>Aceitamos Caminhão 3/4, Toco e Truck</p>
-</div>
-<div class="requisito">
-<i class="fa-solid fa-id-card"></i>
-<strong>Tenha uma CNH válida</strong>
-</div>
-<div class="requisito">
-<i class="fa-solid fa-mobile"></i>
-<strong>Tenha um celular</strong>
-<p>Você precisa ter um smartphone conectado à internet</p>
-</div>
-</div>
-</div>
-</section>
+    <section class="equipe">
 
-<section id="usuario">
-<div class="usuario-container">
-<div class="usuario-conteudo">
-<h2 class="section-title">Vantagens de usar a Moomate para você</h2>
-<br>
-<ul class="beneficios-lista-usuario">
-<li>
-<i class="fa-solid fa-money-bill-wave"></i>
-<div><strong>Melhor custo-benefício</strong><p>Compare preços e escolha a melhor oferta para sua mudança.</p></div>
-</li>
-<li>
-<i class="fa-regular fa-clock"></i>
-<div><strong>Agilidade no atendimento</strong><p>Motoristas disponíveis na sua região com poucos cliques.</p></div>
-</li>
-<li>
-<i class="fa-solid fa-mobile-button"></i>
-<div><strong>Plataforma intuitiva</strong><p>Solicite sua mudança pelo celular com rapidez e segurança.</p></div>
-</li>
-<li>
-<div class="nav-buttons">
-<button class="btn-default" class="btn-cinza" id="btn-comecar">COMEÇAR</button>
-</div>
-</li>
-</ul>
-</div>
+        <h2>Nossa Equipe</h2>
 
-<div class="usuario-imagem">
-<img src="src/images/usuario.png" alt="Usuário Moomate">
-</div>
-</div>
-</section>
-</main>
+        <div class="cards">
+                        <!-- Gabriel -->
 
-<footer>
-<div id="footer_content">
-<div class="footer-left">
-<img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
-</div>
-<ul class="footer-list">
-<li><h3 class="footer-title">Serviço</h3></li>
-<li><a href="#motorista" class="footer-link">Motorista</a></li>
-<li><a href="#ecoponto" class="footer-link">Ecopontos</a></li>
-</ul>
-<!-- <ul class="footer-list">
-<li><h3 class="footer-title">Ajuda</h3></li>
-<li><a href="#sobre" class="footer-link">Equipe Moomate</a></li>
-<li><a href="#contato" class="footer-link">Contato</a></li>
-</ul> -->
-<div class="footer-social">
-<span class="social-text">Acompanhe nós</span>
-<div class="social-icons">
-<a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
-<i class="fa-brands fa-instagram"></i>
-</a>
-<a href="https://www.linkedin.com/company/moomate" class="social-icon" target="_blank">
-<i class="fa-brands fa-linkedin-in"></i>
-</a>
-</div>
-</div>
-</div>
+            <div class="card">
 
-<div id="footer_items">
-<span id="copyright">
-©️ 2025 Moomate. Todos os direitos reservados.
-</span>
-</div>
-</footer>
+                <img src="src/images/Gabriel Massao.JPG" alt="Gabriel Massao">
 
-<div id="modal-tipo-cadastro" class="modal hidden">
-<div class="modal-content">
-<h3>Como você deseja <strong>CADASTRAR-SE</strong>?</h3>
+                <h3>Gabriel Massao Barros Shimizu</h3>
 
-<button class="btn-opcao" data-destino="cadastroM.html">
-<i class="fa-solid fa-truck-moving"></i> Sou Motorista
-</button>
+                <span>Co-Fundador</span>
 
-<button class="btn-opcao" data-destino="cadastroC.html">
-<i class="fa-solid fa-user"></i> Quero Contratar
-</button>
-</div>
-</div>
+                <p>
+
+                    Participa do desenvolvimento da Moomate contribuindo para
+                    o planejamento estratégico, organização do projeto,
+                    validação das ideias e crescimento da startup.
+
+                    Seu comprometimento fortalece o desenvolvimento da empresa,
+                    mantendo o foco na inovação e na experiência dos usuários.
 
 
-<div id="modal-tipo-login" class="modal hidden">
-<div class="modal-content">
-<h3>Como você deseja <strong>ENTRAR</strong>?</h3>
+                </p>
 
-<button class="btn-opcao" data-destino="loginM.html">
-<i class="fa-solid fa-truck-moving"></i> Sou Motorista
-</button>
+            </div>
 
-<button class="btn-opcao" data-destino="login.html">
-<i class="fa-solid fa-user"></i> Quero Contratar
-</button>
-</div>
-</div>
+            <!-- Beatriz -->
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="src/javascript/Index/ecoponto.js"></script>
-<script src="src/javascript/Index/script.js"></script>
+            <div class="card">
+
+                <img src="src/images/Beatriz.JPG" alt="Beatriz Périgo">
+
+                <h3>Beatriz Périgo</h3>
+
+                <span>Fundadora • Desenvolvedora Full Stack</span>
+
+                <p>
+                    Idealizadora da Moomate e responsável pelo desenvolvimento
+                    da plataforma. Atua na arquitetura do sistema,
+                    desenvolvimento das funcionalidades, banco de dados e
+                    planejamento estratégico da startup.
+
+                    Seu objetivo é utilizar a tecnologia para transformar a
+                    experiência das mudanças residenciais, oferecendo uma
+                    solução moderna, prática e confiável.
+                    Participa do desenvolvimento da Moomate contribuindo para
+                    o planejamento estratégico, organização do projeto,
+                    validação das ideias e crescimento da startup.
+
+                    Seu comprometimento fortalece o desenvolvimento da empresa,
+                    mantendo o foco na inovação e na experiência dos usuários.
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- MENTORIA -->
+
+    <section class="mentoria">
+
+        <h2>Mentoria e Incubação</h2>
+
+        <p class="texto-centro">
+
+            Toda startup precisa de pessoas experientes para transformar
+            grandes ideias em grandes negócios.
+
+            A Moomate conta com o apoio de profissionais e parceiros que
+            impulsionam o crescimento da empresa.
+
+        </p>
+
+        <div class="cards">
+
+            <!-- Stanley -->
+
+            <div class="card mentor">
+
+                <img src="Imagens/stanley.jpg"
+                    alt="Stanley R. Souza">
+
+                <h3>Stanley R. Souza</h3>
+
+                <span>Mentor da Startup</span>
+
+                <p>
+
+                    Stanley é o responsável por acompanhar a evolução da
+                    Moomate, compartilhando conhecimentos técnicos,
+                    estratégicos e empresariais.
+
+                    Seu suporte tem sido essencial para transformar a ideia da
+                    startup em um projeto sólido, auxiliando nas tomadas de
+                    decisão, estruturação do negócio e crescimento da empresa.
+
+                </p>
+
+            </div>
+
+            <!-- STALEBU -->
+
+            <div class="card mentor">
+
+                <img src="Imagens/stalebu.png"
+                    alt="Stalebu">
+
+                <h3>Stalebu</h3>
+
+                <span>Empresa Incubadora</span>
+
+                <p>
+
+                    A Stalebu é a empresa responsável pela incubação da
+                    Moomate.
+
+                    Por meio de mentorias, direcionamentos estratégicos e
+                    acompanhamento contínuo, proporciona um ambiente ideal
+                    para que a startup evolua de forma sustentável,
+                    fortalecendo seu modelo de negócio e preparando a empresa
+                    para os desafios do mercado.
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- MISSÃO VISÃO -->
+
+    <section class="missao">
+
+        <h2>Nosso Propósito</h2>
+
+        <div class="cards-proposito">
+
+            <div class="proposito">
+
+                <i class="fa-solid fa-bullseye"></i>
+
+                <h3>Missão</h3>
+
+                <p>
+
+                    Desenvolver soluções tecnológicas que simplifiquem as
+                    mudanças residenciais, conectando clientes e motoristas
+                    com praticidade, segurança e inovação.
+
+                </p>
+
+            </div>
+
+            <div class="proposito">
+
+                <i class="fa-solid fa-eye"></i>
+
+                <h3>Visão</h3>
+
+                <p>
+
+                    Tornar-se a principal plataforma brasileira voltada para
+                    tecnologia em mudanças residenciais, sendo referência em
+                    inovação e qualidade.
+
+                </p>
+
+            </div>
+
+            <div class="proposito">
+
+                <i class="fa-solid fa-heart"></i>
+
+                <h3>Valores</h3>
+
+                <p>
+
+                    Inovação • Transparência • Compromisso • Colaboração •
+                    Tecnologia • Evolução Contínua • Foco no Cliente.
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- RODAPÉ -->
+
+    <footer>
+        <div id="footer_content">
+            <div class="footer-left">
+                <img src="src/images/logobranca.png" alt="Logo da Moomate" id="moomate_logo">
+            </div>
+            <ul class="footer-list">
+                <li><h3 class="footer-title">Serviço</h3></li>
+                <li><a href="#motorista" class="footer-link">Motorista</a></li>
+                <li><a href="#ecoponto" class="footer-link">Ecopontos</a></li>
+            </ul>
+            <ul class="footer-list">
+                <li><h3 class="footer-title">Ajuda</h3></li>
+                <li><a href="equipe.html" class="footer-link">Equipe Moomate</a></li>
+                <li><a href="sobrenos.html" class="footer-link">Contato</a></li>
+                <li><a href="termosdeusoCliente.html" class="footer-link">Termos de Uso do cliente</a></li>
+                <li><a href="termosdeusoParceiro.html" class="footer-link">Termos de Uso do parceiro</a></li>
+            </ul>
+            <div class="footer-social">
+                <span class="social-text">Acompanhe nós</span>
+                <div class="social-icons">
+                    <a href="https://www.instagram.com/moomateoficial" class="social-icon" target="_blank">
+                        <i class="fa-brands fa-instagram"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/company/moomateoficial/posts/?feedView=all" class="social-icon" target="_blank">
+                        <i class="fa-brands fa-linkedin-in"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="footer_items">
+            <span id="copyright">
+                © 2025 Moomate. Todos os direitos reservados.
+            </span>
+        </div>
+    </footer>
 
 </body>
-</html>
+
+</html> 

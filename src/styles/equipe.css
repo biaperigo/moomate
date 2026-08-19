@@ -1,0 +1,471 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
+@import url('footer.css');
+
+/* ============================
+   RESET
+============================ */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Quicksand',sans-serif;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    background:transparent;
+    color:#1e1e1e;
+}
+
+/* ============================
+   MENU
+============================ */
+
+.top-bar{
+    height:90px;
+    background:transparent;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 8%;
+    position:fixed;
+    width:100%;
+    top:0;
+    z-index:1000;
+    box-shadow:0 3px 12px rgba(0,0,0,.08);
+}
+
+.logo-area img{
+    width:140px;
+}
+
+.nav-links{
+    display:flex;
+    gap:45px;
+}
+
+.nav-links a{
+    color:#1e1e1e;
+    text-decoration:none;
+    font-size:18px;
+    transition:.3s;
+    position:relative;
+}
+
+.nav-links a:hover{
+    color:#de5114;
+}
+
+.nav-links .active{
+    color:#de5114;
+}
+
+.nav-links .active::after{
+    content:"";
+    position:absolute;
+    left:0;
+    bottom:-8px;
+    width:100%;
+    height:3px;
+    background:#de5114;
+    border-radius:10px;
+}
+
+.header-icons i{
+    font-size:22px;
+}
+
+/* ============================
+   BANNER
+============================ */
+
+.banner-equipe{
+
+    height:320px;
+
+    background:linear-gradient(135deg,#de5114,#ff7a3d);
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    text-align:center;
+
+    color:white;
+
+    padding:20px;
+
+}
+
+.banner-equipe h1{
+
+    font-size:52px;
+
+    margin-bottom:20px;
+
+}
+
+.banner-equipe p{
+
+    max-width:750px;
+
+    font-size:20px;
+
+    line-height:1.8;
+
+}
+
+/* ============================
+   SOBRE
+============================ */
+
+.sobre{
+
+    width:85%;
+
+    margin:80px auto;
+
+    text-align:center;
+
+}
+
+.sobre h2{
+
+    color:#de5114;
+
+    font-size:38px;
+
+    margin-bottom:25px;
+
+}
+
+.sobre p{
+
+    max-width:1000px;
+
+    margin:auto;
+
+    font-size:18px;
+
+    line-height:2;
+
+}
+
+/* ============================
+   TÍTULOS
+============================ */
+
+.equipe h2,
+.mentoria h2,
+.missao h2{
+
+    text-align:center;
+
+    color:#de5114;
+
+    font-size:38px;
+
+    margin-bottom:45px;
+
+}
+
+/* ============================
+   CARDS
+============================ */
+
+.cards{
+
+    width:88%;
+
+    margin:0 auto 80px;
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(330px,1fr));
+
+    gap:35px;
+
+}
+
+.card{
+
+    background:white;
+
+    border-radius:22px;
+
+    padding:35px;
+
+    text-align:center;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+
+    transition:.35s;
+
+}
+
+.card:hover{
+
+    transform:translateY(-10px);
+
+    box-shadow:0 20px 35px rgba(0,0,0,.15);
+
+}
+
+.card img{
+
+    width:150px;
+
+    height:150px;
+
+    object-fit:cover;
+
+    border-radius:50%;
+
+    border:5px solid #de5114;
+
+    margin-bottom:25px;
+
+}
+
+.card h3{
+
+    font-size:25px;
+
+    color:#1e1e1e;
+
+}
+
+.card span{
+
+    display:block;
+
+    color:#de5114;
+
+    font-weight:700;
+
+    margin:15px 0;
+
+}
+
+.card p{
+
+    line-height:1.9;
+
+    color:#555;
+
+}
+
+/* ============================
+   MENTORIA
+============================ */
+
+.mentoria{
+
+    background:white;
+
+    padding:80px 0;
+
+}
+
+.texto-centro{
+
+    width:70%;
+
+    margin:auto;
+
+    text-align:center;
+
+    font-size:18px;
+
+    line-height:1.8;
+
+    margin-bottom:60px;
+
+}
+
+.mentor{
+
+    border-top:8px solid #de5114;
+
+}
+
+/* ============================
+   MISSÃO
+============================ */
+
+.missao{
+
+    padding:80px 0;
+
+}
+
+.cards-proposito{
+
+    width:90%;
+
+    margin:auto;
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+
+    gap:30px;
+
+}
+
+.proposito{
+
+    background:white;
+
+    border-radius:20px;
+
+    text-align:center;
+
+    padding:40px 30px;
+
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+
+    transition:.3s;
+
+}
+
+.proposito:hover{
+
+    transform:translateY(-8px);
+
+}
+
+.proposito i{
+
+    font-size:45px;
+
+    color:#de5114;
+
+    margin-bottom:20px;
+
+}
+
+.proposito h3{
+
+    font-size:28px;
+
+    margin-bottom:20px;
+
+}
+
+.proposito p{
+
+    color:#555;
+
+    line-height:1.8;
+
+}
+
+/* ============================
+   ANIMAÇÃO
+============================ */
+
+.card,
+.proposito{
+
+    animation:fade .8s ease;
+
+}
+
+@keyframes fade{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(40px);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0);
+
+    }
+
+}
+
+/* ============================
+   RESPONSIVO
+============================ */
+
+@media(max-width:900px){
+
+    .nav-links{
+
+        display:none;
+
+    }
+
+    .banner-equipe h1{
+
+        font-size:40px;
+
+    }
+
+    .banner-equipe p{
+
+        font-size:18px;
+
+    }
+
+    .texto-centro{
+
+        width:90%;
+
+    }
+
+    .sobre{
+
+        width:92%;
+
+    }
+
+}
+
+@media(max-width:600px){
+
+    .banner-equipe{
+
+        height:260px;
+
+    }
+
+    .banner-equipe h1{
+
+        font-size:34px;
+
+    }
+
+    .banner-equipe p{
+
+        font-size:16px;
+
+    }
+
+    .cards{
+
+        width:95%;
+
+    }
+
+    .cards-proposito{
+
+        width:95%;
+
+    }
+
+}

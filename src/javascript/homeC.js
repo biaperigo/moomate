@@ -1311,9 +1311,6 @@ async function verMotoristas() {
       
       // Enviar email para o usuário logado (com suas credenciais)
       await enviarEmailUsuario(dadosFormulario, docRef.id);
-      
-      // Enviar email extra com template_wi2jh26 para o usuário
-      await enviarEmailUsuarioTemplateExtra(dadosFormulario, docRef.id);
     } else {
       console.log("Dados que seriam salvos:", dadosFormulario);
       alert(`Dados capturados com sucesso!\n\nORIGEM: ${dadosFormulario.origem.endereco}\nDESTINO: ${dadosFormulario.destino.endereco}\nTIPO: ${dadosFormulario.tipoVeiculo}\nDISTÂNCIA: ${dadosFormulario.distancia} km\nPEDÁGIO: R$ ${dadosFormulario.pedagio.valor.toFixed(2)}\nPREÇO TOTAL: R$ ${dadosFormulario.precoEstimado.toFixed(2)}\n\nServiço temporariamente indisponível. Tente novamente.`);
